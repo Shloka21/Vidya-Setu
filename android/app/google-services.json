@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "1016853804488",
+    "project_id": "vidya-setu-ede8a",
+    "storage_bucket": "vidya-setu-ede8a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1016853804488:android:ad5b52a693082d8fc2fcfd",
+        "android_client_info": {
+          "package_name": "com.example.vidyasetu"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1016853804488-kvno3g9mafo7kuq46jrpqgfvmn9ub9tv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.vidyasetu",
+            "certificate_hash": "f79aa5067d98dac654e8a4559b482f414287d7fb"
+          }
+        },
+        {
+          "client_id": "1016853804488-j5vh562u7jdk28kgoa5qdsvt0l5ie4tq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCNj890LQwJWnvCbNULqjv9rxmMp549KLQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1016853804488-5nt57lrm03vvm0rqtsfhv644ki48msif.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
