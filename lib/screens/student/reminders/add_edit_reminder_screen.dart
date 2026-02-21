@@ -22,7 +22,13 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
   String _repeatType = 'One-time';
 
   final _types = ['Exam', 'Assignment', 'Quiz', 'Study Session', 'Custom'];
-  final _subjects = ['Mathematics', 'Physics', 'Chemistry', 'English', 'Biology'];
+  final _subjects = [
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'English',
+    'Biology',
+  ];
   final _priorities = ['High', 'Medium', 'Low'];
   final _repeatOptions = ['One-time', 'Daily', 'Weekly'];
 
@@ -35,20 +41,21 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
-      case 'High': return AppTheme.errorRed;
-      case 'Medium': return AppTheme.warningAmber;
-      case 'Low': return AppTheme.successGreen;
-      default: return AppTheme.warningAmber;
+      case 'High':
+        return AppTheme.errorRed;
+      case 'Medium':
+        return AppTheme.warningAmber;
+      case 'Low':
+        return AppTheme.successGreen;
+      default:
+        return AppTheme.warningAmber;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        title: const Text('Add Reminder'),
-      ),
+      appBar: AppBar(title: const Text('Add Reminder')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -57,7 +64,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
             _buildLabel('Title'),
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(hintText: 'Enter reminder title'),
+              decoration: const InputDecoration(
+                hintText: 'Enter reminder title',
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -70,9 +79,13 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                   label: Text(type),
                   selected: isSelected,
                   onSelected: (_) => setState(() => _selectedType = type),
-                  selectedColor: AppTheme.primaryNavy,
+                  selectedColor: Theme.of(context).colorScheme.onSurface,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    color: isSelected
+                        ? Colors.white
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -83,9 +96,11 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
 
             _buildLabel('Subject'),
             DropdownButtonFormField<String>(
-              value: _selectedSubject,
+              initialValue: _selectedSubject,
               decoration: const InputDecoration(),
-              items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+              items: _subjects
+                  .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+                  .toList(),
               onChanged: (v) => setState(() => _selectedSubject = v!),
             ),
             const SizedBox(height: 20),
@@ -103,9 +118,13 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                             context: context,
                             initialDate: _selectedDate,
                             firstDate: DateTime.now(),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
+                            lastDate: DateTime.now().add(
+                              const Duration(days: 365),
+                            ),
                           );
-                          if (date != null) setState(() => _selectedDate = date);
+                          if (date != null) {
+                            setState(() => _selectedDate = date);
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(16),
@@ -115,11 +134,22 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 18, color: AppTheme.textLight),
+                              Icon(
+                                Icons.calendar_today,
+                                size: 18,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.4),
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
                               ),
                             ],
                           ),
@@ -140,7 +170,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                             context: context,
                             initialTime: _selectedTime,
                           );
-                          if (time != null) setState(() => _selectedTime = time);
+                          if (time != null) {
+                            setState(() => _selectedTime = time);
+                          }
                         },
                         child: Container(
                           padding: const EdgeInsets.all(16),
@@ -150,11 +182,22 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.access_time, size: 18, color: AppTheme.textLight),
+                              Icon(
+                                Icons.access_time,
+                                size: 18,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.4),
+                              ),
                               const SizedBox(width: 10),
                               Text(
                                 _selectedTime.format(context),
-                                style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface,
+                                  fontSize: 15,
+                                ),
                               ),
                             ],
                           ),
@@ -180,10 +223,16 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         decoration: BoxDecoration(
-                          color: isSelected ? color.withOpacity(0.15) : AppTheme.surface,
+                          color: isSelected
+                              ? color.withOpacity(0.15)
+                              : AppTheme.surface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? color : AppTheme.divider,
+                            color: isSelected
+                                ? color
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.outline.withOpacity(0.3),
                             width: 1.5,
                           ),
                         ),
@@ -191,7 +240,11 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                           child: Text(
                             p,
                             style: TextStyle(
-                              color: isSelected ? color : AppTheme.textSecondary,
+                              color: isSelected
+                                  ? color
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.onSurface.withOpacity(0.5),
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
@@ -209,7 +262,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: const InputDecoration(hintText: 'Add details about this reminder'),
+              decoration: const InputDecoration(
+                hintText: 'Add details about this reminder',
+              ),
             ),
             const SizedBox(height: 20),
 
@@ -218,16 +273,18 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppTheme.surface,
+                color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: AppTheme.cardBoxShadow,
+                boxShadow: Theme.of(context).brightness == Brightness.dark
+                    ? AppTheme.cardBoxShadowDark
+                    : AppTheme.cardBoxShadow,
               ),
               child: Column(
                 children: [
                   _buildToggle('Popup Notification', _popupNotification, (v) {
                     setState(() => _popupNotification = v);
                   }),
-                  const Divider(height: 24),
+                  Divider(height: 24),
                   _buildToggle('Voice Notification', _voiceNotification, (v) {
                     setState(() => _voiceNotification = v);
                   }),
@@ -245,9 +302,13 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                   label: Text(r),
                   selected: isSelected,
                   onSelected: (_) => setState(() => _repeatType = r),
-                  selectedColor: AppTheme.primaryNavy,
+                  selectedColor: Theme.of(context).colorScheme.onSurface,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    color: isSelected
+                        ? Colors.white
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -274,7 +335,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
       child: Text(
         text,
         style: TextStyle(
-          color: AppTheme.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -286,11 +347,17 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 15,
+          ),
+        ),
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppTheme.accentBlue,
+          activeThumbColor: AppTheme.accentBlue,
         ),
       ],
     );

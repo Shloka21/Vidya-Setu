@@ -18,7 +18,6 @@ class MyStudentsScreen extends StatelessWidget {
     final mentorId = authProvider.userModel?.uid ?? '';
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('My Students'),
         actions: [
@@ -46,7 +45,7 @@ class MyStudentsScreen extends StatelessWidget {
                         const SizedBox(height: 12),
                         Text('Error loading students',
                             style:
-                                TextStyle(color: AppTheme.textSecondary)),
+                                TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                       ],
                     ),
                   );
@@ -60,17 +59,17 @@ class MyStudentsScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.people_outline_rounded,
-                            color: AppTheme.textLight, size: 64),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), size: 64),
                         const SizedBox(height: 16),
                         Text('No students yet',
                             style: TextStyle(
-                                color: AppTheme.textSecondary,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600)),
                         const SizedBox(height: 8),
                         Text('Students will appear here when they connect',
                             style: TextStyle(
-                                color: AppTheme.textLight,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                 fontSize: 14)),
                       ],
                     ),
@@ -136,7 +135,7 @@ class MyStudentsScreen extends StatelessWidget {
                                     children: [
                                       Text(name,
                                           style: TextStyle(
-                                              color: AppTheme.textPrimary,
+                                              color: Theme.of(context).colorScheme.onSurface,
                                               fontSize: 16,
                                               fontWeight:
                                                   FontWeight.w700)),
@@ -145,7 +144,7 @@ class MyStudentsScreen extends StatelessWidget {
                                         'Level $level • 🔥 ${streak}d • ${hours.toStringAsFixed(0)}h studied',
                                         style: TextStyle(
                                             color:
-                                                AppTheme.textSecondary,
+                                                Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                             fontSize: 12),
                                       ),
                                     ],

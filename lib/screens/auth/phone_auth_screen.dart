@@ -16,8 +16,10 @@ class PhoneAuthScreen extends StatefulWidget {
 
 class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   final _phoneController = TextEditingController();
-  final List<TextEditingController> _otpControllers =
-      List.generate(6, (_) => TextEditingController());
+  final List<TextEditingController> _otpControllers = List.generate(
+    6,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _otpFocusNodes = List.generate(6, (_) => FocusNode());
 
   bool _codeSent = false;
@@ -40,8 +42,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
   String get _fullPhoneNumber => '$_countryCode${_phoneController.text.trim()}';
 
-  String get _otpCode =>
-      _otpControllers.map((c) => c.text).join();
+  String get _otpCode => _otpControllers.map((c) => c.text).join();
 
   Future<void> _sendOtp() async {
     if (_phoneController.text.trim().length < 10) {
@@ -50,7 +51,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           content: const Text('Please enter a valid phone number'),
           backgroundColor: AppTheme.errorRed,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -85,7 +88,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           content: const Text('Please enter the complete OTP'),
           backgroundColor: AppTheme.errorRed,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -108,7 +113,6 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
@@ -135,6 +139,8 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
   // ─── Phone Number Entry ──────────────────────────────────
   Widget _buildPhoneView() {
+    final scheme = Theme.of(context).colorScheme;
+
     return Column(
       key: const ValueKey('phone'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,17 +165,20 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
         Text(
           'Phone\nVerification',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primaryNavy,
-                height: 1.1,
-                letterSpacing: -1,
-              ),
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: scheme.onSurface,
+            height: 1.1,
+            letterSpacing: -1,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
           'We\'ll send you an OTP to verify your phone number',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+          style: TextStyle(
+            color: scheme.onSurface.withOpacity(0.5),
+            fontSize: 16,
+          ),
         ),
         const SizedBox(height: 36),
 
@@ -177,7 +186,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         Text(
           'Phone Number',
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: scheme.onSurface,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -205,7 +214,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   ],
                   onChanged: (v) => setState(() => _countryCode = v ?? '+91'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: scheme.onSurface,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
@@ -240,17 +249,24 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.errorRed.withOpacity(0.1),
+                    color: scheme.errorContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: AppTheme.errorRed, size: 20),
+                      Icon(
+                        Icons.error_outline,
+                        color: scheme.onErrorContainer,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           auth.error!,
-                          style: TextStyle(color: AppTheme.errorRed, fontSize: 13),
+                          style: TextStyle(
+                            color: scheme.onErrorContainer,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -279,6 +295,9 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
   // ─── OTP Verification ────────────────────────────────────
   Widget _buildOtpView() {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       key: const ValueKey('otp'),
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,7 +309,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
           width: 72,
           height: 72,
           decoration: BoxDecoration(
-            color: AppTheme.successGreen.withOpacity(0.1),
+            color: AppTheme.successGreen.withOpacity(isDark ? 0.15 : 0.1),
             borderRadius: BorderRadius.circular(20),
           ),
           child: const Icon(
@@ -303,23 +322,26 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
 
         Text(
           'Enter OTP',
-          style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.primaryNavy,
-                height: 1.1,
-                letterSpacing: -1,
-              ),
+          style: Theme.of(context).textTheme.displaySmall?.copyWith(
+            fontWeight: FontWeight.w800,
+            color: scheme.onSurface,
+            height: 1.1,
+            letterSpacing: -1,
+          ),
         ),
         const SizedBox(height: 8),
         RichText(
           text: TextSpan(
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+            style: TextStyle(
+              color: scheme.onSurface.withOpacity(0.5),
+              fontSize: 15,
+            ),
             children: [
               const TextSpan(text: 'We sent a 6-digit code to '),
               TextSpan(
                 text: _fullPhoneNumber,
                 style: TextStyle(
-                  color: AppTheme.primaryNavy,
+                  color: scheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -343,7 +365,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                 maxLength: 1,
                 inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 style: TextStyle(
-                  color: AppTheme.primaryNavy,
+                  color: scheme.onSurface,
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),
@@ -352,14 +374,14 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   contentPadding: EdgeInsets.zero,
                   filled: true,
                   fillColor: _otpControllers[i].text.isNotEmpty
-                      ? AppTheme.accentBlue.withOpacity(0.05)
-                      : const Color(0xFFF0F2F5),
+                      ? AppTheme.accentBlue.withOpacity(isDark ? 0.1 : 0.05)
+                      : scheme.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(
                       color: _otpControllers[i].text.isNotEmpty
                           ? AppTheme.accentBlue
-                          : Colors.transparent,
+                          : scheme.outline.withOpacity(0.3),
                     ),
                   ),
                   enabledBorder: OutlineInputBorder(
@@ -367,12 +389,15 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                     borderSide: BorderSide(
                       color: _otpControllers[i].text.isNotEmpty
                           ? AppTheme.accentBlue
-                          : Colors.transparent,
+                          : scheme.outline.withOpacity(0.3),
                     ),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppTheme.accentBlue, width: 2),
+                    borderSide: const BorderSide(
+                      color: AppTheme.accentBlue,
+                      width: 2,
+                    ),
                   ),
                 ),
                 onChanged: (value) {
@@ -403,17 +428,24 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: AppTheme.errorRed.withOpacity(0.1),
+                    color: scheme.errorContainer,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.error_outline, color: AppTheme.errorRed, size: 20),
+                      Icon(
+                        Icons.error_outline,
+                        color: scheme.onErrorContainer,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           auth.error!,
-                          style: TextStyle(color: AppTheme.errorRed, fontSize: 13),
+                          style: TextStyle(
+                            color: scheme.onErrorContainer,
+                            fontSize: 13,
+                          ),
                         ),
                       ),
                     ],
@@ -444,15 +476,17 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
               ? Text(
                   'Resend OTP in ${_resendSeconds}s',
                   style: TextStyle(
-                    color: AppTheme.textLight,
+                    color: scheme.onSurface.withOpacity(0.4),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 )
               : TextButton(
                   onPressed: () {
-                    final authProvider =
-                        Provider.of<AuthProvider>(context, listen: false);
+                    final authProvider = Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    );
                     authProvider.resendOtp(_fullPhoneNumber);
                     _startResendTimer();
                   },

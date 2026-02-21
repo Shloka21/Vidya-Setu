@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../app/theme.dart';
 import '../../models/timetable_model.dart';
 
 /// Interactive weekly grid for marking college lecture time slots.
@@ -64,8 +63,9 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
         }
       }
       if (slotStart != null) {
-        slots.add(CollegeSlot(
-            weekday: d, startHour: slotStart, endHour: endHour));
+        slots.add(
+          CollegeSlot(weekday: d, startHour: slotStart, endHour: endHour),
+        );
       }
     }
     widget.onChanged(slots);
@@ -105,7 +105,9 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5),
                           ),
                         ),
                       );
@@ -153,8 +155,11 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
                                 ),
                               ),
                               child: isSelected
-                                  ? Icon(Icons.school,
-                                      size: 14, color: Colors.red.shade700)
+                                  ? Icon(
+                                      Icons.school,
+                                      size: 14,
+                                      color: Colors.red.shade700,
+                                    )
                                   : null,
                             ),
                           );
@@ -171,7 +176,7 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
         Text(
           'Tap slots to mark college lectures. ${_selected.length} hours marked busy.',
           style: TextStyle(
-            color: AppTheme.textSecondary,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             fontSize: 12,
             fontStyle: FontStyle.italic,
           ),

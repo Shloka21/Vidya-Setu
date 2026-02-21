@@ -42,7 +42,6 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Send Feedback')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -56,11 +55,21 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
                   value: _selectedStudent,
-                  hint: Text('Choose a student',
-                      style: TextStyle(color: AppTheme.textLight)),
+                  hint: Text(
+                    'Choose a student',
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.4),
+                    ),
+                  ),
                   isExpanded: true,
-                  icon: Icon(Icons.keyboard_arrow_down_rounded,
-                      color: AppTheme.textSecondary),
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
+                  ),
                   items: _students
                       .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                       .toList(),
@@ -82,13 +91,17 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
                   selected: selected,
                   selectedColor: AppTheme.accentBlue.withOpacity(0.2),
                   labelStyle: TextStyle(
-                    color:
-                        selected ? AppTheme.accentBlue : AppTheme.textSecondary,
+                    color: selected
+                        ? AppTheme.accentBlue
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                     fontSize: 13,
                   ),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20)),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
                   onSelected: (_) => setState(() => _feedbackType = type),
                 );
               }).toList(),
@@ -148,7 +161,8 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
                     backgroundColor: AppTheme.successGreen,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 );
                 Navigator.pop(context);
@@ -164,32 +178,44 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
   Widget _label(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(text,
-          style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700)),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
-  Widget _buildField(TextEditingController controller, String hint,
-      {int maxLines = 1}) {
+  Widget _buildField(
+    TextEditingController controller,
+    String hint, {
+    int maxLines = 1,
+  }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
-      style: TextStyle(color: AppTheme.textPrimary),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
       decoration: InputDecoration(
         hintText: hint,
-        hintStyle: TextStyle(color: AppTheme.textLight),
+        hintStyle: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+        ),
         filled: true,
-        fillColor: AppTheme.surface,
+        fillColor: Theme.of(context).colorScheme.surface,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppTheme.divider),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: AppTheme.divider),
+          borderSide: BorderSide(
+            color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),

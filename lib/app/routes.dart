@@ -34,6 +34,7 @@ class AppRoutes {
   static const String createReminder = '/mentor/reminders/create';
   static const String mentorRemindersList = '/mentor/reminders';
   static const String mentorProfileScreen = '/mentor/profile';
+  static const String editMentorProfile = '/mentor/profile/edit';
   static const String mentorSettings = '/mentor/settings';
 
   // Chat

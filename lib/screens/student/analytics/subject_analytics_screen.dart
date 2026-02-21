@@ -19,7 +19,6 @@ class SubjectAnalyticsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Subject Analytics')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -47,13 +46,13 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                       children: [
                         Text(subjectName,
                             style: TextStyle(
-                                color: AppTheme.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700)),
                         const SizedBox(height: 4),
                         Text('38 hours studied • 60% complete',
                             style: TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 13)),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
                       ],
                     ),
                   ),
@@ -65,7 +64,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
             // Study hours chart
             Text('Study Hours by Topic',
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -95,7 +94,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                               showTitles: true, reservedSize: 30,
                               getTitlesWidget: (v, _) => Text('${v.toInt()}h',
                                   style: TextStyle(
-                                      color: AppTheme.textLight,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                                       fontSize: 10)))),
                       bottomTitles: AxisTitles(
                           sideTitles: SideTitles(
@@ -106,7 +105,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                                   padding: const EdgeInsets.only(top: 8),
                                   child: Text(names[v.toInt()],
                                       style: TextStyle(
-                                          color: AppTheme.textSecondary,
+                                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                           fontSize: 10)),
                                 );
                               })),
@@ -119,7 +118,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                         show: true,
                         drawVerticalLine: false,
                         getDrawingHorizontalLine: (v) => FlLine(
-                            color: AppTheme.divider, strokeWidth: 1)),
+                            color: Theme.of(context).colorScheme.outline.withOpacity(0.3), strokeWidth: 1)),
                     borderData: FlBorderData(show: false),
                   ),
                 ),
@@ -130,7 +129,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
             // Topics breakdown
             Text('Topic Breakdown',
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -165,13 +164,13 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                             children: [
                               Text(t['name'] as String,
                                   style: TextStyle(
-                                      color: AppTheme.textPrimary,
+                                      color: Theme.of(context).colorScheme.onSurface,
                                       fontSize: 15,
                                       fontWeight: FontWeight.w600)),
                               const SizedBox(height: 2),
                               Text('${t['hours']}h studied',
                                   style: TextStyle(
-                                      color: AppTheme.textSecondary,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       fontSize: 12)),
                             ],
                           ),

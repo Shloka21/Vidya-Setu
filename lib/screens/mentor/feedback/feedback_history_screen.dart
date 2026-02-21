@@ -47,7 +47,6 @@ class FeedbackHistoryScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Feedback History'),
         actions: [
@@ -89,13 +88,13 @@ class FeedbackHistoryScreen extends StatelessWidget {
                           children: [
                             Text(fb['title'] as String,
                                 style: TextStyle(
-                                    color: AppTheme.textPrimary,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700)),
                             const SizedBox(height: 2),
                             Text('To: ${fb['student']}',
                                 style: TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                     fontSize: 12)),
                           ],
                         ),
@@ -119,7 +118,7 @@ class FeedbackHistoryScreen extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(fb['date'] as String,
                               style: TextStyle(
-                                  color: AppTheme.textLight, fontSize: 11)),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 11)),
                         ],
                       ),
                     ],
@@ -142,7 +141,7 @@ class FeedbackHistoryScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(fb['message'] as String,
                       style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 13,
                           height: 1.5)),
                 ],

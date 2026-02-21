@@ -26,9 +26,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         // Check if student has created a timetable
         final user = authProvider.userModel;
         if (user != null && !user.isTimetableCreated) {
-           Navigator.pushReplacementNamed(context, AppRoutes.generateTimetable);
+          Navigator.pushReplacementNamed(context, AppRoutes.generateTimetable);
         } else {
-           Navigator.pushReplacementNamed(context, AppRoutes.studentDashboard);
+          Navigator.pushReplacementNamed(context, AppRoutes.studentDashboard);
         }
       } else {
         Navigator.pushReplacementNamed(context, AppRoutes.mentorDashboard);
@@ -38,8 +38,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -50,18 +51,17 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
               Text(
                 'Choose\nYour Role',
-                style: Theme.of(context).textTheme.displayMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.primaryNavy,
-                      height: 1.1,
-                      letterSpacing: -1,
-                    ),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  letterSpacing: -1,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
                 'Select how you want to use VidyaSetu',
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: scheme.onSurface.withOpacity(0.5),
                   fontSize: 16,
                 ),
               ),
@@ -112,6 +112,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     required Color color,
   }) {
     final isSelected = _selectedRole == role;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedRole = role),
@@ -120,15 +122,17 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         curve: Curves.easeInOut,
         padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryNavy : AppTheme.surface,
+          color: isSelected ? scheme.primary : scheme.surface,
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           border: Border.all(
-            color: isSelected ? AppTheme.primaryNavy : AppTheme.divider,
+            color: isSelected
+                ? scheme.primary
+                : scheme.outline.withOpacity(isDark ? 0.15 : 0.1),
             width: 2,
           ),
           boxShadow: isSelected
               ? AppTheme.elevatedShadow
-              : AppTheme.cardBoxShadow,
+              : (isDark ? AppTheme.cardBoxShadowDark : AppTheme.cardBoxShadow),
         ),
         child: Row(
           children: [
@@ -138,13 +142,13 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               decoration: BoxDecoration(
                 color: isSelected
                     ? Colors.white.withOpacity(0.15)
-                    : color.withOpacity(0.1),
+                    : color.withOpacity(isDark ? 0.15 : 0.1),
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
               child: Icon(
                 icon,
                 size: 32,
-                color: isSelected ? Colors.white : color,
+                color: isSelected ? scheme.onPrimary : color,
               ),
             ),
             const SizedBox(width: 20),
@@ -155,8 +159,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   Text(
                     title,
                     style: TextStyle(
-                      color:
-                          isSelected ? Colors.white : AppTheme.textPrimary,
+                      color: isSelected ? scheme.onPrimary : scheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -166,8 +169,8 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     description,
                     style: TextStyle(
                       color: isSelected
-                          ? Colors.white.withOpacity(0.7)
-                          : AppTheme.textSecondary,
+                          ? scheme.onPrimary.withOpacity(0.7)
+                          : scheme.onSurface.withOpacity(0.5),
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -183,9 +186,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   color: Colors.white.withOpacity(0.2),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.check_rounded,
-                  color: Colors.white,
+                  color: scheme.onPrimary,
                   size: 18,
                 ),
               ),

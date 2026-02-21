@@ -8,26 +8,51 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_button.dart';
 
-class EditProfileScreen extends StatefulWidget {
-  const EditProfileScreen({super.key});
+class EditMentorProfileScreen extends StatefulWidget {
+  const EditMentorProfileScreen({super.key});
 
   @override
-  State<EditProfileScreen> createState() => _EditProfileScreenState();
+  State<EditMentorProfileScreen> createState() =>
+      _EditMentorProfileScreenState();
 }
 
-class _EditProfileScreenState extends State<EditProfileScreen> {
+class _EditMentorProfileScreenState extends State<EditMentorProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _firestoreService = FirestoreService();
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
   late TextEditingController _bioController;
-  late TextEditingController _institutionController;
-  late TextEditingController _courseController;
+  late TextEditingController _qualificationController;
+  late TextEditingController _experienceController;
+  late TextEditingController _expertiseController;
+  late TextEditingController _hourlyRateController;
 
   bool _isLoading = false;
   File? _selectedImage;
   final ImagePicker _picker = ImagePicker();
+  List<String> _selectedSubjects = [];
+
+  final List<String> _availableSubjects = [
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'Computer Science',
+    'English',
+    'Hindi',
+    'History',
+    'Geography',
+    'Economics',
+    'Business Studies',
+    'Accountancy',
+    'Political Science',
+    'Psychology',
+    'Sociology',
+    'Art & Design',
+    'Music',
+    'Physical Education',
+  ];
 
   @override
   void initState() {
@@ -37,10 +62,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController = TextEditingController(text: user?.email ?? '');
     _phoneController = TextEditingController(text: user?.phone ?? '');
     _bioController = TextEditingController(text: user?.bio ?? '');
-    _institutionController = TextEditingController(
+    _qualificationController = TextEditingController(
       text: user?.institution ?? '',
     );
-    _courseController = TextEditingController(text: user?.course ?? '');
+    _experienceController = TextEditingController(
+      text: user?.experienceYears.toString() ?? '',
+    );
+    _expertiseController = TextEditingController(text: user?.course ?? '');
+    _hourlyRateController = TextEditingController(text: '');
+    _selectedSubjects = user?.subjectsTaught ?? [];
   }
 
   @override
@@ -49,8 +79,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     _emailController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
-    _institutionController.dispose();
-    _courseController.dispose();
+    _qualificationController.dispose();
+    _experienceController.dispose();
+    _expertiseController.dispose();
+    _hourlyRateController.dispose();
     super.dispose();
   }
 
@@ -87,12 +119,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: DesignSystem.primaryIndigo.withValues(alpha: 0.1),
+                  color: DesignSystem.primaryPurple.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.camera_alt_rounded,
-                  color: DesignSystem.primaryIndigo,
+                  color: DesignSystem.primaryPurple,
                 ),
               ),
               title: const Text('Take Photo'),
@@ -110,12 +142,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: DesignSystem.primaryPurple.withValues(alpha: 0.1),
+                  color: DesignSystem.primaryIndigo.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   Icons.photo_library_rounded,
-                  color: DesignSystem.primaryPurple,
+                  color: DesignSystem.primaryIndigo,
                 ),
               ),
               title: const Text('Choose from Gallery'),
@@ -155,6 +187,84 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  void _showSubjectPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => Container(
+          height: MediaQuery.of(context).size.height * 0.7,
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Select Subjects',
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pop(context);
+                            setState(() {});
+                          },
+                          child: const Text('Done'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: _availableSubjects.length,
+                  itemBuilder: (context, index) {
+                    final subject = _availableSubjects[index];
+                    final isSelected = _selectedSubjects.contains(subject);
+                    return CheckboxListTile(
+                      title: Text(subject),
+                      value: isSelected,
+                      activeColor: DesignSystem.primaryPurple,
+                      onChanged: (value) {
+                        setModalState(() {
+                          if (value == true) {
+                            _selectedSubjects.add(subject);
+                          } else {
+                            _selectedSubjects.remove(subject);
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _saveProfile() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -173,8 +283,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         'name': _nameController.text.trim(),
         'phone': _phoneController.text.trim(),
         'bio': _bioController.text.trim(),
-        'institution': _institutionController.text.trim(),
-        'course': _courseController.text.trim(),
+        'institution': _qualificationController.text.trim(),
+        'experienceYears': int.tryParse(_experienceController.text.trim()) ?? 0,
+        'course': _expertiseController.text.trim(),
+        'subjectsTaught': _selectedSubjects,
         'updatedAt': DateTime.now().toIso8601String(),
       };
 
@@ -240,6 +352,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: Form(
           key: _formKey,
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Avatar
               Center(
@@ -251,12 +364,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         width: 100,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: DesignSystem.primaryIndigo.withValues(
+                          color: DesignSystem.primaryPurple.withValues(
                             alpha: 0.1,
                           ),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: DesignSystem.primaryIndigo,
+                            color: DesignSystem.primaryPurple,
                             width: 3,
                           ),
                           image: _selectedImage != null
@@ -271,9 +384,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 child: Text(
                                   _nameController.text.isNotEmpty
                                       ? _nameController.text[0].toUpperCase()
-                                      : 'U',
+                                      : 'M',
                                   style: TextStyle(
-                                    color: DesignSystem.primaryIndigo,
+                                    color: DesignSystem.primaryPurple,
                                     fontSize: 40,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -291,7 +404,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           width: 36,
                           height: 36,
                           decoration: BoxDecoration(
-                            color: DesignSystem.primaryIndigo,
+                            color: DesignSystem.primaryPurple,
                             shape: BoxShape.circle,
                             border: Border.all(color: Colors.white, width: 2),
                           ),
@@ -307,6 +420,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               ),
               const SizedBox(height: 30),
+
+              // Section: Personal Information
+              _buildSectionHeader('Personal Information'),
               _buildField('Full Name', _nameController, Icons.person_rounded),
               _buildField(
                 'Email',
@@ -321,21 +437,102 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 keyboardType: TextInputType.phone,
               ),
               _buildField(
-                'Institution',
-                _institutionController,
-                Icons.school_rounded,
-              ),
-              _buildField(
-                'Course / Grade',
-                _courseController,
-                Icons.class_rounded,
-              ),
-              _buildField(
                 'Bio',
                 _bioController,
                 Icons.info_outline_rounded,
                 maxLines: 3,
+                hint: 'Tell students about yourself...',
               ),
+
+              const SizedBox(height: 16),
+
+              // Section: Professional Information
+              _buildSectionHeader('Professional Information'),
+              _buildField(
+                'Qualification',
+                _qualificationController,
+                Icons.school_rounded,
+                hint: 'e.g., M.Tech, PhD, B.Ed',
+              ),
+              _buildField(
+                'Years of Experience',
+                _experienceController,
+                Icons.work_rounded,
+                keyboardType: TextInputType.number,
+              ),
+              _buildField(
+                'Area of Expertise',
+                _expertiseController,
+                Icons.lightbulb_rounded,
+                hint: 'e.g., JEE Preparation, NEET Biology',
+              ),
+              _buildField(
+                'Hourly Rate (₹)',
+                _hourlyRateController,
+                Icons.currency_rupee_rounded,
+                keyboardType: TextInputType.number,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Section: Subjects
+              _buildSectionHeader('Subjects You Teach'),
+              const SizedBox(height: 8),
+              InkWell(
+                onTap: _showSubjectPicker,
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.menu_book_rounded,
+                        color: DesignSystem.primaryPurple,
+                        size: 22,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _selectedSubjects.isEmpty
+                            ? Text(
+                                'Select subjects you teach',
+                                style: TextStyle(
+                                  color: Theme.of(context).hintColor,
+                                ),
+                              )
+                            : Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _selectedSubjects.map((subject) {
+                                  return Chip(
+                                    label: Text(
+                                      subject,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    backgroundColor: DesignSystem.primaryPurple
+                                        .withValues(alpha: 0.1),
+                                    side: BorderSide.none,
+                                    padding: EdgeInsets.zero,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                  );
+                                }).toList(),
+                              ),
+                      ),
+                      const Icon(Icons.chevron_right_rounded),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 30),
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -351,6 +548,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.bold,
+          color: DesignSystem.primaryPurple,
+        ),
+      ),
+    );
+  }
+
   Widget _buildField(
     String label,
     TextEditingController controller,
@@ -358,6 +568,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     bool readOnly = false,
     TextInputType? keyboardType,
     int maxLines = 1,
+    String? hint,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -369,7 +580,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: DesignSystem.primaryIndigo, size: 22),
+          hintText: hint,
+          prefixIcon: Icon(icon, color: DesignSystem.primaryPurple, size: 22),
           filled: true,
           fillColor: Theme.of(context).colorScheme.surface,
           border: OutlineInputBorder(
@@ -386,7 +598,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide(color: DesignSystem.primaryIndigo, width: 2),
+            borderSide: BorderSide(color: DesignSystem.primaryPurple, width: 2),
           ),
         ),
         validator: (v) => label == 'Full Name' && (v == null || v.isEmpty)

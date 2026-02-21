@@ -41,14 +41,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Leaderboard'),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.accentBlue,
           labelColor: AppTheme.accentBlue,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           tabs: const [
             Tab(text: 'Weekly'),
             Tab(text: 'Monthly'),
@@ -132,7 +131,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           Text(
             (user['name'] as String).split(' ')[0],
             style: TextStyle(
-                color: AppTheme.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w700),
             textAlign: TextAlign.center,
@@ -183,7 +182,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               child: Text(
                 '#${user['rank']}',
                 style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 15,
                     fontWeight: FontWeight.w700),
               ),
@@ -212,12 +211,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                 children: [
                   Text(user['name'] as String,
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 15,
                           fontWeight: FontWeight.w600)),
                   Text('Level ${user['level']} • 🔥 ${user['streak']}d streak',
                       style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12)),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                 ],
               ),
             ),

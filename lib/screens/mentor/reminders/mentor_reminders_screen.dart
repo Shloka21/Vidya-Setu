@@ -39,7 +39,6 @@ class MentorRemindersScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Student Reminders'),
         actions: [
@@ -91,12 +90,12 @@ class MentorRemindersScreen extends StatelessWidget {
                           children: [
                             Text(r['title'] as String,
                                 style: TextStyle(
-                                    color: AppTheme.textPrimary,
+                                    color: Theme.of(context).colorScheme.onSurface,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w700)),
                             Text('To: ${r['student']}',
                                 style: TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                     fontSize: 12)),
                           ],
                         ),
@@ -126,13 +125,13 @@ class MentorRemindersScreen extends StatelessWidget {
                   const SizedBox(height: 10),
                   Text(r['message'] as String,
                       style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 13,
                           height: 1.4)),
                   const SizedBox(height: 8),
                   Text(r['date'] as String,
                       style: TextStyle(
-                          color: AppTheme.textLight, fontSize: 11)),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 11)),
                 ],
               ),
             ),

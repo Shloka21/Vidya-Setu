@@ -25,7 +25,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       color: AppTheme.accentBlue,
     ),
     OnboardingSlide(
-      icon: Icons.calendar_month_rounded,
+      icon: Icons.auto_awesome_rounded,
       title: 'AI-Powered Timetables',
       subtitle: 'Study smarter, not harder',
       description:
@@ -69,8 +69,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -84,7 +85,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     'Skip',
                     style: TextStyle(
-                      color: AppTheme.textLight,
+                      color: scheme.onSurface.withOpacity(0.4),
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
@@ -121,8 +122,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     height: 8,
                     decoration: BoxDecoration(
                       color: _currentPage == index
-                          ? AppTheme.primaryNavy
-                          : AppTheme.textLight.withOpacity(0.3),
+                          ? scheme.primary
+                          : scheme.onSurface.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -150,55 +151,61 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   Widget _buildSlide(OnboardingSlide slide) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scheme = Theme.of(context).colorScheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 40),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon Circle
+          // Icon with glow ring
           Container(
-            width: 140,
-            height: 140,
+            width: 150,
+            height: 150,
             decoration: BoxDecoration(
-              color: slide.color.withOpacity(0.1),
+              color: slide.color.withOpacity(isDark ? 0.08 : 0.06),
               shape: BoxShape.circle,
             ),
             child: Center(
               child: Container(
-                width: 90,
-                height: 90,
+                width: 96,
+                height: 96,
                 decoration: BoxDecoration(
-                  color: slide.color.withOpacity(0.15),
+                  color: slide.color.withOpacity(isDark ? 0.15 : 0.12),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
-                  slide.icon,
-                  size: 44,
-                  color: slide.color,
-                ),
+                child: Icon(slide.icon, size: 44, color: slide.color),
               ),
             ),
           ),
           const SizedBox(height: 48),
 
-          // Subtitle
-          Text(
-            slide.subtitle.toUpperCase(),
-            style: TextStyle(
-              color: slide.color,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 2,
+          // Subtitle label
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+            decoration: BoxDecoration(
+              color: slide.color.withOpacity(isDark ? 0.12 : 0.08),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              slide.subtitle.toUpperCase(),
+              style: TextStyle(
+                color: slide.color,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Title
           Text(
             slide.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppTheme.primaryNavy,
+            style: TextStyle(
+              color: scheme.onSurface,
               fontSize: 32,
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
@@ -212,9 +219,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             slide.description,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: scheme.onSurface.withOpacity(0.5),
               fontSize: 16,
-              height: 1.5,
+              height: 1.6,
             ),
           ),
         ],

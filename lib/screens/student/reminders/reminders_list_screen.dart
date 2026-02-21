@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
-import '../../../providers/auth_provider.dart';
 import '../../../widgets/common/app_card.dart';
 
 class RemindersListScreen extends StatefulWidget {
@@ -19,10 +17,14 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
-        title: Text('Reminders', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+        title: Text(
+          'Reminders',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
         elevation: 0,
       ),
       body: Column(
@@ -43,10 +45,14 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                     label: Text(filter),
                     selected: isSelected,
                     onSelected: (_) => setState(() => _selectedFilter = filter),
-                    backgroundColor: AppTheme.surface,
-                    selectedColor: AppTheme.primaryNavy,
+                    backgroundColor: Theme.of(context).colorScheme.surface,
+                    selectedColor: Theme.of(context).colorScheme.onSurface,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5),
                       fontWeight: FontWeight.w600,
                       fontSize: 13,
                     ),
@@ -54,7 +60,11 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     side: BorderSide(
-                      color: isSelected ? AppTheme.primaryNavy : AppTheme.divider,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(
+                              context,
+                            ).colorScheme.outline.withOpacity(0.3),
                     ),
                   ),
                 );
@@ -132,7 +142,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.addReminder),
-        backgroundColor: AppTheme.primaryNavy,
+        backgroundColor: Theme.of(context).colorScheme.onSurface,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
     );
@@ -150,11 +160,19 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
           children: [
             Text(
               '$count',
-              style: TextStyle(color: color, fontSize: 16, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
             Text(
               label,
-              style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
@@ -198,14 +216,17 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                             child: Text(
                               title,
                               style: TextStyle(
-                                color: AppTheme.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: priorityColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
@@ -224,12 +245,22 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                       const SizedBox(height: 4),
                       Text(
                         dateTime,
-                        style: TextStyle(color: AppTheme.textLight, fontSize: 13),
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
+                          fontSize: 13,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         description,
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                        style: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.5),
+                          fontSize: 13,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -244,18 +275,42 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
               children: [
                 TextButton.icon(
                   onPressed: () {},
-                  icon: Icon(Icons.check_circle_outline, size: 18, color: AppTheme.successGreen),
-                  label: Text('Done', style: TextStyle(color: AppTheme.successGreen, fontSize: 13)),
+                  icon: Icon(
+                    Icons.check_circle_outline,
+                    size: 18,
+                    color: AppTheme.successGreen,
+                  ),
+                  label: Text(
+                    'Done',
+                    style: TextStyle(
+                      color: AppTheme.successGreen,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: () {},
-                  icon: Icon(Icons.edit_outlined, size: 18, color: AppTheme.accentBlue),
-                  label: Text('Edit', style: TextStyle(color: AppTheme.accentBlue, fontSize: 13)),
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    size: 18,
+                    color: AppTheme.accentBlue,
+                  ),
+                  label: Text(
+                    'Edit',
+                    style: TextStyle(color: AppTheme.accentBlue, fontSize: 13),
+                  ),
                 ),
                 TextButton.icon(
                   onPressed: () {},
-                  icon: Icon(Icons.delete_outline, size: 18, color: AppTheme.errorRed),
-                  label: Text('Delete', style: TextStyle(color: AppTheme.errorRed, fontSize: 13)),
+                  icon: Icon(
+                    Icons.delete_outline,
+                    size: 18,
+                    color: AppTheme.errorRed,
+                  ),
+                  label: Text(
+                    'Delete',
+                    style: TextStyle(color: AppTheme.errorRed, fontSize: 13),
+                  ),
                 ),
               ],
             ),

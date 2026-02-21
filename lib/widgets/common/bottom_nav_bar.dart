@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../app/theme.dart';
 
@@ -15,46 +16,83 @@ class AppBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: isDark
+            ? const Color(0xFF1A1A3A).withOpacity(0.9)
+            : scheme.surface.withOpacity(0.95),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withOpacity(0.1)
+              : scheme.outline.withOpacity(0.1),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 20,
-            offset: const Offset(0, -5),
+            color: isDark
+                ? Colors.black.withOpacity(0.3)
+                : AppTheme.brandPrimary.withOpacity(0.1),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: SafeArea(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: List.generate(
-            items.length,
-            (index) => _buildNavItem(index, items[index]),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(
+                items.length,
+                (index) => _buildNavItem(context, index, items[index]),
+              ),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, AppNavItem item) {
+  Widget _buildNavItem(BuildContext context, int index, AppNavItem item) {
     final isSelected = currentIndex == index;
+    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeOutCubic,
         padding: EdgeInsets.symmetric(
-          horizontal: isSelected ? 20 : 12,
+          horizontal: isSelected ? 18 : 14,
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryNavy : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          gradient: isSelected
+              ? LinearGradient(
+                  colors: [AppTheme.brandPrimary, AppTheme.brandSecondary],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+              : null,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppTheme.brandPrimary.withOpacity(0.4),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -62,20 +100,31 @@ class AppBottomNavBar extends StatelessWidget {
             Icon(
               isSelected ? item.activeIcon : item.icon,
               size: 22,
-              color: isSelected ? Colors.white : AppTheme.textLight,
+              color: isSelected
+                  ? Colors.white
+                  : isDark
+                  ? scheme.onSurface.withOpacity(0.5)
+                  : scheme.onSurface.withOpacity(0.4),
             ),
-            if (isSelected) ...[
-              const SizedBox(width: 8),
-              Text(
-                item.label.toUpperCase(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                ),
-              ),
-            ],
+            AnimatedSize(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOutCubic,
+              child: isSelected
+                  ? Row(
+                      children: [
+                        const SizedBox(width: 8),
+                        Text(
+                          item.label,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),

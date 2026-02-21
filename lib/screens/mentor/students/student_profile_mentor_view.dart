@@ -9,7 +9,6 @@ class StudentProfileMentorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -38,23 +37,32 @@ class StudentProfileMentorView extends StatelessWidget {
                           border: Border.all(color: Colors.white, width: 3),
                         ),
                         child: const Center(
-                          child: Text('A',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w700)),
+                          child: Text(
+                            'A',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(height: 10),
-                      const Text('Ananya Kumar',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700)),
-                      Text('Class 12 • CBSE',
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 13)),
+                      const Text(
+                        'Ananya Kumar',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      Text(
+                        'Class 12 • CBSE',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 13,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -79,30 +87,65 @@ class StudentProfileMentorView extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Progress overview
-                  _section('Study Progress'),
+                  _section(context, 'Study Progress'),
                   AppCard(
                     child: Column(
                       children: [
-                        _progressRow('Mathematics', 0.75, AppTheme.accentBlue),
+                        _progressRow(
+                          context,
+                          'Mathematics',
+                          0.75,
+                          AppTheme.accentBlue,
+                        ),
                         const SizedBox(height: 12),
-                        _progressRow('Physics', 0.60, AppTheme.accentPurple),
+                        _progressRow(
+                          context,
+                          'Physics',
+                          0.60,
+                          AppTheme.accentPurple,
+                        ),
                         const SizedBox(height: 12),
-                        _progressRow('Chemistry', 0.45, AppTheme.warningAmber),
+                        _progressRow(
+                          context,
+                          'Chemistry',
+                          0.45,
+                          AppTheme.warningAmber,
+                        ),
                         const SizedBox(height: 12),
-                        _progressRow('English', 0.85, AppTheme.successGreen),
+                        _progressRow(
+                          context,
+                          'English',
+                          0.85,
+                          AppTheme.successGreen,
+                        ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Recent activity
-                  _section('Recent Activity'),
-                  _activityItem(Icons.timer_rounded, 'Completed 2h Math session',
-                      '2 hours ago', AppTheme.accentBlue),
-                  _activityItem(Icons.emoji_events_rounded, 'Earned "Math Wizard" badge',
-                      'Yesterday', AppTheme.warningAmber),
-                  _activityItem(Icons.check_circle_rounded, 'Finished Algebra chapter',
-                      '2 days ago', AppTheme.successGreen),
+                  _section(context, 'Recent Activity'),
+                  _activityItem(
+                    context,
+                    Icons.timer_rounded,
+                    'Completed 2h Math session',
+                    '2 hours ago',
+                    AppTheme.accentBlue,
+                  ),
+                  _activityItem(
+                    context,
+                    Icons.emoji_events_rounded,
+                    'Earned "Math Wizard" badge',
+                    'Yesterday',
+                    AppTheme.warningAmber,
+                  ),
+                  _activityItem(
+                    context,
+                    Icons.check_circle_rounded,
+                    'Finished Algebra chapter',
+                    '2 days ago',
+                    AppTheme.successGreen,
+                  ),
                   const SizedBox(height: 24),
 
                   // Action buttons
@@ -147,41 +190,60 @@ class StudentProfileMentorView extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text(value,
-                style: TextStyle(
-                    color: color, fontSize: 20, fontWeight: FontWeight.w700)),
-            Text(label,
-                style: TextStyle(
-                    color: color.withOpacity(0.7),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
+            Text(
+              value,
+              style: TextStyle(
+                color: color,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              label,
+              style: TextStyle(
+                color: color.withOpacity(0.7),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _section(String title) {
+  Widget _section(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(title,
-          style: TextStyle(
-              color: AppTheme.textPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w700)),
+      child: Text(
+        title,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
     );
   }
 
-  Widget _progressRow(String label, double value, Color color) {
+  Widget _progressRow(
+    BuildContext context,
+    String label,
+    double value,
+    Color color,
+  ) {
     return Row(
       children: [
         SizedBox(
           width: 90,
-          child: Text(label,
-              style: TextStyle(
-                  color: AppTheme.textPrimary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600)),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ),
         Expanded(
           child: ClipRRect(
@@ -189,21 +251,33 @@ class StudentProfileMentorView extends StatelessWidget {
             child: LinearProgressIndicator(
               value: value,
               minHeight: 8,
-              backgroundColor: AppTheme.divider,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.outline.withOpacity(0.3),
               valueColor: AlwaysStoppedAnimation(color),
             ),
           ),
         ),
         const SizedBox(width: 10),
-        Text('${(value * 100).toInt()}%',
-            style: TextStyle(
-                color: color, fontSize: 13, fontWeight: FontWeight.w700)),
+        Text(
+          '${(value * 100).toInt()}%',
+          style: TextStyle(
+            color: color,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ],
     );
   }
 
   Widget _activityItem(
-      IconData icon, String text, String time, Color color) {
+    BuildContext context,
+    IconData icon,
+    String text,
+    String time,
+    Color color,
+  ) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
@@ -223,14 +297,23 @@ class StudentProfileMentorView extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(text,
-                      style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600)),
-                  Text(time,
-                      style: TextStyle(
-                          color: AppTheme.textLight, fontSize: 12)),
+                  Text(
+                    text,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    time,
+                    style: TextStyle(
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurface.withOpacity(0.4),
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
             ),

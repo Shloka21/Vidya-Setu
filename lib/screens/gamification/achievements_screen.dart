@@ -8,16 +8,57 @@ class AchievementsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final achievements = [
-      {'title': 'First Steps', 'desc': 'Complete your first task', 'icon': Icons.flag_rounded, 'color': AppTheme.accentBlue, 'unlocked': true, 'xp': 50},
-      {'title': 'Week Warrior', 'desc': '7-day study streak', 'icon': Icons.local_fire_department_rounded, 'color': AppTheme.warningAmber, 'unlocked': true, 'xp': 100},
-      {'title': 'Quiz Master', 'desc': 'Score 100% on 5 quizzes', 'icon': Icons.quiz_rounded, 'color': AppTheme.accentPurple, 'unlocked': true, 'xp': 150},
-      {'title': 'Bookworm', 'desc': '50 hours of study time', 'icon': Icons.menu_book_rounded, 'color': AppTheme.successGreen, 'unlocked': false, 'xp': 200},
-      {'title': 'Social Star', 'desc': 'Connect with 5 mentors', 'icon': Icons.people_rounded, 'color': const Color(0xFFEC4899), 'unlocked': false, 'xp': 250},
-      {'title': 'Legend', 'desc': 'Reach Level 10', 'icon': Icons.stars_rounded, 'color': const Color(0xFFEF4444), 'unlocked': false, 'xp': 500},
+      {
+        'title': 'First Steps',
+        'desc': 'Complete your first task',
+        'icon': Icons.flag_rounded,
+        'color': AppTheme.accentBlue,
+        'unlocked': true,
+        'xp': 50,
+      },
+      {
+        'title': 'Week Warrior',
+        'desc': '7-day study streak',
+        'icon': Icons.local_fire_department_rounded,
+        'color': AppTheme.warningAmber,
+        'unlocked': true,
+        'xp': 100,
+      },
+      {
+        'title': 'Quiz Master',
+        'desc': 'Score 100% on 5 quizzes',
+        'icon': Icons.quiz_rounded,
+        'color': AppTheme.accentPurple,
+        'unlocked': true,
+        'xp': 150,
+      },
+      {
+        'title': 'Bookworm',
+        'desc': '50 hours of study time',
+        'icon': Icons.menu_book_rounded,
+        'color': AppTheme.successGreen,
+        'unlocked': false,
+        'xp': 200,
+      },
+      {
+        'title': 'Social Star',
+        'desc': 'Connect with 5 mentors',
+        'icon': Icons.people_rounded,
+        'color': const Color(0xFFEC4899),
+        'unlocked': false,
+        'xp': 250,
+      },
+      {
+        'title': 'Legend',
+        'desc': 'Reach Level 10',
+        'icon': Icons.stars_rounded,
+        'color': const Color(0xFFEF4444),
+        'unlocked': false,
+        'xp': 500,
+      },
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Achievements')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -40,7 +81,11 @@ class AchievementsScreen extends StatelessWidget {
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.emoji_events_rounded, color: Colors.amber, size: 32),
+                    child: const Icon(
+                      Icons.emoji_events_rounded,
+                      color: Colors.amber,
+                      size: 32,
+                    ),
                   ),
                   const SizedBox(width: 20),
                   Expanded(
@@ -49,12 +94,19 @@ class AchievementsScreen extends StatelessWidget {
                       children: [
                         Text(
                           '300 XP Earned!',
-                          style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '3 of 6 achievements unlocked',
-                          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                            fontSize: 14,
+                          ),
                         ),
                         const SizedBox(height: 10),
                         ClipRRect(
@@ -62,7 +114,9 @@ class AchievementsScreen extends StatelessWidget {
                           child: LinearProgressIndicator(
                             value: 3 / 6,
                             backgroundColor: Colors.white.withOpacity(0.2),
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.amber),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.amber,
+                            ),
                             minHeight: 6,
                           ),
                         ),
@@ -74,21 +128,43 @@ class AchievementsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            Text('Unlocked', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              'Unlocked',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
-            ...achievements.where((a) => a['unlocked'] == true).map((a) => _buildAchievementCard(a, true)),
+            ...achievements
+                .where((a) => a['unlocked'] == true)
+                .map((a) => _buildAchievementCard(context, a, true)),
 
             const SizedBox(height: 24),
-            Text('Locked', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              'Locked',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
-            ...achievements.where((a) => a['unlocked'] == false).map((a) => _buildAchievementCard(a, false)),
+            ...achievements
+                .where((a) => a['unlocked'] == false)
+                .map((a) => _buildAchievementCard(context, a, false)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAchievementCard(Map<String, dynamic> data, bool unlocked) {
+  Widget _buildAchievementCard(
+    BuildContext context,
+    Map<String, dynamic> data,
+    bool unlocked,
+  ) {
     final color = data['color'] as Color;
 
     return Padding(
@@ -116,7 +192,7 @@ class AchievementsScreen extends StatelessWidget {
                     Text(
                       data['title'] as String,
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -124,21 +200,35 @@ class AchievementsScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       data['desc'] as String,
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                      style: TextStyle(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.5),
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
-                  color: unlocked ? AppTheme.successGreen.withOpacity(0.1) : AppTheme.divider,
+                  color: unlocked
+                      ? AppTheme.successGreen.withOpacity(0.1)
+                      : Theme.of(context).colorScheme.outline.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   '+${data['xp']} XP',
                   style: TextStyle(
-                    color: unlocked ? AppTheme.successGreen : AppTheme.textLight,
+                    color: unlocked
+                        ? AppTheme.successGreen
+                        : Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -146,7 +236,11 @@ class AchievementsScreen extends StatelessWidget {
               ),
               if (unlocked) ...[
                 const SizedBox(width: 8),
-                Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 24),
+                Icon(
+                  Icons.check_circle_rounded,
+                  color: AppTheme.successGreen,
+                  size: 24,
+                ),
               ],
             ],
           ),

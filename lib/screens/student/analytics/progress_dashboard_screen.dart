@@ -8,7 +8,8 @@ class ProgressDashboardScreen extends StatefulWidget {
   const ProgressDashboardScreen({super.key});
 
   @override
-  State<ProgressDashboardScreen> createState() => _ProgressDashboardScreenState();
+  State<ProgressDashboardScreen> createState() =>
+      _ProgressDashboardScreenState();
 }
 
 class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
@@ -17,7 +18,6 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Analytics')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -34,9 +34,13 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     label: Text(p),
                     selected: isSelected,
                     onSelected: (_) => setState(() => _selectedPeriod = p),
-                    selectedColor: AppTheme.primaryNavy,
+                    selectedColor: Theme.of(context).colorScheme.onSurface,
                     labelStyle: TextStyle(
-                      color: isSelected ? Colors.white : AppTheme.textSecondary,
+                      color: isSelected
+                          ? Colors.white
+                          : Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.5),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -51,14 +55,24 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 140,
-                    child: StatCard(label: 'Study Hours', value: '24.5', icon: Icons.timer_rounded, iconColor: AppTheme.accentBlue),
+                    child: StatCard(
+                      label: 'Study Hours',
+                      value: '24.5',
+                      icon: Icons.timer_rounded,
+                      iconColor: AppTheme.accentBlue,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: SizedBox(
                     height: 140,
-                    child: StatCard(label: 'Tasks Done', value: '18', icon: Icons.task_alt_rounded, iconColor: AppTheme.successGreen),
+                    child: StatCard(
+                      label: 'Tasks Done',
+                      value: '18',
+                      icon: Icons.task_alt_rounded,
+                      iconColor: AppTheme.successGreen,
+                    ),
                   ),
                 ),
               ],
@@ -69,14 +83,24 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                 Expanded(
                   child: SizedBox(
                     height: 140,
-                    child: StatCard(label: 'Streak', value: '12', icon: Icons.local_fire_department_rounded, isDark: true),
+                    child: StatCard(
+                      label: 'Streak',
+                      value: '12',
+                      icon: Icons.local_fire_department_rounded,
+                      isDark: true,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: SizedBox(
                     height: 140,
-                    child: StatCard(label: 'Score', value: '87%', icon: Icons.stars_rounded, iconColor: AppTheme.warningAmber),
+                    child: StatCard(
+                      label: 'Score',
+                      value: '87%',
+                      icon: Icons.stars_rounded,
+                      iconColor: AppTheme.warningAmber,
+                    ),
                   ),
                 ),
               ],
@@ -84,7 +108,14 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             const SizedBox(height: 24),
 
             // Study time chart
-            Text('Study Time', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              'Study Time',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
             AppCard(
               padding: const EdgeInsets.all(20),
@@ -102,7 +133,15 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                           showTitles: true,
                           getTitlesWidget: (value, _) {
                             const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                            return Text(days[value.toInt()], style: TextStyle(color: AppTheme.textLight, fontSize: 12));
+                            return Text(
+                              days[value.toInt()],
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.4),
+                                fontSize: 12,
+                              ),
+                            );
                           },
                           reservedSize: 24,
                         ),
@@ -111,18 +150,35 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         sideTitles: SideTitles(
                           showTitles: true,
                           getTitlesWidget: (value, _) {
-                            return Text('${value.toInt()}h', style: TextStyle(color: AppTheme.textLight, fontSize: 11));
+                            return Text(
+                              '${value.toInt()}h',
+                              style: TextStyle(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.4),
+                                fontSize: 11,
+                              ),
+                            );
                           },
                           reservedSize: 28,
                         ),
                       ),
-                      topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      topTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
+                      rightTitles: const AxisTitles(
+                        sideTitles: SideTitles(showTitles: false),
+                      ),
                     ),
                     gridData: FlGridData(
                       show: true,
                       drawVerticalLine: false,
-                      getDrawingHorizontalLine: (value) => FlLine(color: AppTheme.divider, strokeWidth: 1),
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outline.withOpacity(0.3),
+                        strokeWidth: 1,
+                      ),
                     ),
                     borderData: FlBorderData(show: false),
                     barGroups: [
@@ -141,7 +197,14 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             const SizedBox(height: 24),
 
             // Subject distribution
-            Text('Subject Distribution', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              'Subject Distribution',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
             AppCard(
               padding: const EdgeInsets.all(20),
@@ -155,11 +218,36 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         sectionsSpace: 2,
                         centerSpaceRadius: 30,
                         sections: [
-                          PieChartSectionData(value: 30, color: const Color(0xFF4A7BF7), radius: 25, showTitle: false),
-                          PieChartSectionData(value: 25, color: const Color(0xFF7C4DFF), radius: 25, showTitle: false),
-                          PieChartSectionData(value: 20, color: const Color(0xFF10B981), radius: 25, showTitle: false),
-                          PieChartSectionData(value: 15, color: const Color(0xFFF59E0B), radius: 25, showTitle: false),
-                          PieChartSectionData(value: 10, color: const Color(0xFFEF4444), radius: 25, showTitle: false),
+                          PieChartSectionData(
+                            value: 30,
+                            color: const Color(0xFF4A7BF7),
+                            radius: 25,
+                            showTitle: false,
+                          ),
+                          PieChartSectionData(
+                            value: 25,
+                            color: const Color(0xFF7C4DFF),
+                            radius: 25,
+                            showTitle: false,
+                          ),
+                          PieChartSectionData(
+                            value: 20,
+                            color: const Color(0xFF10B981),
+                            radius: 25,
+                            showTitle: false,
+                          ),
+                          PieChartSectionData(
+                            value: 15,
+                            color: const Color(0xFFF59E0B),
+                            radius: 25,
+                            showTitle: false,
+                          ),
+                          PieChartSectionData(
+                            value: 10,
+                            color: const Color(0xFFEF4444),
+                            radius: 25,
+                            showTitle: false,
+                          ),
                         ],
                       ),
                     ),
@@ -168,11 +256,31 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                   Expanded(
                     child: Column(
                       children: [
-                        _buildLegendItem('Mathematics', '30%', const Color(0xFF4A7BF7)),
-                        _buildLegendItem('Physics', '25%', const Color(0xFF7C4DFF)),
-                        _buildLegendItem('Chemistry', '20%', const Color(0xFF10B981)),
-                        _buildLegendItem('English', '15%', const Color(0xFFF59E0B)),
-                        _buildLegendItem('Biology', '10%', const Color(0xFFEF4444)),
+                        _buildLegendItem(
+                          'Mathematics',
+                          '30%',
+                          const Color(0xFF4A7BF7),
+                        ),
+                        _buildLegendItem(
+                          'Physics',
+                          '25%',
+                          const Color(0xFF7C4DFF),
+                        ),
+                        _buildLegendItem(
+                          'Chemistry',
+                          '20%',
+                          const Color(0xFF10B981),
+                        ),
+                        _buildLegendItem(
+                          'English',
+                          '15%',
+                          const Color(0xFFF59E0B),
+                        ),
+                        _buildLegendItem(
+                          'Biology',
+                          '10%',
+                          const Color(0xFFEF4444),
+                        ),
                       ],
                     ),
                   ),
@@ -182,7 +290,14 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             const SizedBox(height: 24),
 
             // Task completion
-            Text('Task Completion', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(
+              'Task Completion',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             const SizedBox(height: 12),
             AppCard(
               padding: const EdgeInsets.all(20),
@@ -200,12 +315,23 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                           child: CircularProgressIndicator(
                             value: 0.75,
                             strokeWidth: 10,
-                            backgroundColor: AppTheme.divider,
-                            valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.successGreen),
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.outline.withOpacity(0.3),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              AppTheme.successGreen,
+                            ),
                             strokeCap: StrokeCap.round,
                           ),
                         ),
-                        Text('75%', style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700)),
+                        Text(
+                          '75%',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -257,8 +383,23 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
             decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 8),
-          Expanded(child: Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13))),
-          Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -273,9 +414,22 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            fontSize: 14,
+          ),
+        ),
         const Spacer(),
-        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(
+          value,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ],
     );
   }

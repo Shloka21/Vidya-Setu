@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
-import '../../../widgets/common/app_card.dart';
 
 class EditTimetableSlotScreen extends StatefulWidget {
   const EditTimetableSlotScreen({super.key});
 
   @override
-  State<EditTimetableSlotScreen> createState() => _EditTimetableSlotScreenState();
+  State<EditTimetableSlotScreen> createState() =>
+      _EditTimetableSlotScreenState();
 }
 
 class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Form Data
   String? _selectedSubject;
   final TextEditingController _topicController = TextEditingController();
@@ -23,7 +22,14 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
   final TextEditingController _notesController = TextEditingController();
   Color _selectedColor = AppTheme.accentBlue;
 
-  final List<String> _subjects = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'History'];
+  final List<String> _subjects = [
+    'Mathematics',
+    'Physics',
+    'Chemistry',
+    'Biology',
+    'English',
+    'History',
+  ];
   final List<Color> _colors = [
     AppTheme.accentBlue,
     AppTheme.accentPurple,
@@ -46,9 +52,11 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text('Edit Slot', style: Theme.of(context).textTheme.headlineSmall),
+        title: Text(
+          'Edit Slot',
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppTheme.errorRed),
@@ -119,19 +127,19 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Subject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Subject',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _selectedSubject,
+          initialValue: _selectedSubject,
           decoration: InputDecoration(
             prefixIcon: Icon(Icons.book_outlined, color: _selectedColor),
-            fillColor: AppTheme.surface,
+            fillColor: Theme.of(context).colorScheme.surface,
           ),
           items: _subjects.map((subject) {
-            return DropdownMenuItem(
-              value: subject,
-              child: Text(subject),
-            );
+            return DropdownMenuItem(value: subject, child: Text(subject));
           }).toList(),
           onChanged: (val) {
             setState(() {
@@ -154,15 +162,25 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: maxLines == 1 ? Icon(icon, color: AppTheme.textLight) : null,
-            fillColor: AppTheme.surface,
+            prefixIcon: maxLines == 1
+                ? Icon(
+                    icon,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.4),
+                  )
+                : null,
+            fillColor: Theme.of(context).colorScheme.surface,
             alignLabelWithHint: maxLines > 1,
           ),
           validator: (val) {
@@ -179,7 +197,10 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Day', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Day',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -194,10 +215,14 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
                   onSelected: (val) {
                     if (val) setState(() => _selectedDay = index + 1);
                   },
-                  selectedColor: AppTheme.primaryNavy,
+                  selectedColor: Theme.of(context).colorScheme.onSurface,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textPrimary,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                    color: isSelected
+                        ? Colors.white
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
                   ),
                 ),
               );
@@ -213,7 +238,10 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(isStart ? 'Start Time' : 'End Time', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(
+          isStart ? 'Start Time' : 'End Time',
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         GestureDetector(
           onTap: () async {
@@ -234,13 +262,21 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.divider),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.access_time, color: AppTheme.textLight, size: 20),
+                Icon(
+                  Icons.access_time,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.4),
+                  size: 20,
+                ),
                 const SizedBox(width: 8),
                 Text(
                   time.format(context),
@@ -258,7 +294,10 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        const Text(
+          'Color',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
@@ -273,7 +312,12 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
                 decoration: BoxDecoration(
                   color: color,
                   shape: BoxShape.circle,
-                  border: isSelected ? Border.all(color: AppTheme.primaryNavy, width: 3) : null,
+                  border: isSelected
+                      ? Border.all(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          width: 3,
+                        )
+                      : null,
                   boxShadow: [
                     BoxShadow(
                       color: color.withOpacity(0.4),
@@ -282,7 +326,9 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
                     ),
                   ],
                 ),
-                child: isSelected ? const Icon(Icons.check, color: Colors.white) : null,
+                child: isSelected
+                    ? const Icon(Icons.check, color: Colors.white)
+                    : null,
               ),
             );
           }).toList(),
@@ -295,9 +341,9 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     if (_formKey.currentState!.validate()) {
       // Save logic (mock)
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Slot Saved Successfully')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Slot Saved Successfully')));
     }
   }
 
@@ -306,7 +352,9 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Delete Slot?'),
-        content: const Text('Are you sure you want to delete this timetable slot?'),
+        content: const Text(
+          'Are you sure you want to delete this timetable slot?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -316,9 +364,9 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
             onPressed: () {
               Navigator.pop(ctx); // Close dialog
               Navigator.pop(context); // Close screen
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Slot Deleted')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Slot Deleted')));
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.errorRed),
             child: const Text('Delete'),

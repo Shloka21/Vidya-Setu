@@ -33,8 +33,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       _otherUserName = args['otherUserName'] as String? ?? 'User';
 
       // Mark messages as read
-      final currentUid =
-          Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      final currentUid = Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      ).userModel?.uid;
       if (_roomId != null && currentUid != null) {
         _firestoreService.markMessagesRead(_roomId!, currentUid);
       }
@@ -53,8 +55,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUid = authProvider.userModel?.uid ?? '';
 
-    final msgId =
-        FirebaseFirestore.instance.collection('_').doc().id; // Generate ID
+    final msgId = FirebaseFirestore.instance
+        .collection('_')
+        .doc()
+        .id; // Generate ID
     _firestoreService.sendMessage(_roomId!, {
       'id': msgId,
       'content': _messageController.text.trim(),
@@ -73,9 +77,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final displayName = _otherUserName ?? 'Chat';
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.surface,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         titleSpacing: 0,
         title: Row(
           children: [
@@ -92,9 +95,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     child: Text(
                       displayName.isNotEmpty ? displayName[0] : 'U',
                       style: TextStyle(
-                          color: AppTheme.accentBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
+                        color: AppTheme.accentBlue,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -104,22 +108,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(displayName,
-                    style: TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600)),
-                Text('Tap for info',
-                    style:
-                        TextStyle(color: AppTheme.textLight, fontSize: 12)),
+                Text(
+                  displayName,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Tap for info',
+                  style: TextStyle(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.4),
+                    fontSize: 12,
+                  ),
+                ),
               ],
             ),
           ],
         ),
         actions: [
           IconButton(
-            icon:
-                const Icon(Icons.videocam_rounded, color: AppTheme.accentBlue),
+            icon: const Icon(
+              Icons.videocam_rounded,
+              color: AppTheme.accentBlue,
+            ),
             onPressed: () {
               Navigator.pushNamed(context, AppRoutes.videoCall);
             },
@@ -140,8 +155,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     stream: _firestoreService.messagesStream(_roomId!),
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                            child: CircularProgressIndicator());
+                        return const Center(child: CircularProgressIndicator());
                       }
 
                       final docs = snapshot.data?.docs ?? [];
@@ -151,18 +165,33 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.chat_bubble_outline_rounded,
-                                  color: AppTheme.textLight, size: 48),
+                              Icon(
+                                Icons.chat_bubble_outline_rounded,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurface.withOpacity(0.4),
+                                size: 48,
+                              ),
                               const SizedBox(height: 12),
-                              Text('No messages yet',
-                                  style: TextStyle(
-                                      color: AppTheme.textSecondary,
-                                      fontSize: 16)),
+                              Text(
+                                'No messages yet',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.5),
+                                  fontSize: 16,
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              Text('Say hello! 👋',
-                                  style: TextStyle(
-                                      color: AppTheme.textLight,
-                                      fontSize: 14)),
+                              Text(
+                                'Say hello! 👋',
+                                style: TextStyle(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurface.withOpacity(0.4),
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
                         );
@@ -206,7 +235,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.surface,
+              color: Theme.of(context).colorScheme.surface,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -226,8 +255,11 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.attach_file_rounded,
-                          color: AppTheme.accentBlue, size: 20),
+                      icon: Icon(
+                        Icons.attach_file_rounded,
+                        color: AppTheme.accentBlue,
+                        size: 20,
+                      ),
                       onPressed: () {},
                     ),
                   ),
@@ -237,15 +269,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       controller: _messageController,
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: AppTheme.textLight),
+                        hintStyle: TextStyle(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.4),
+                        ),
                         filled: true,
-                        fillColor: AppTheme.background,
+                        fillColor: Theme.of(context).colorScheme.surface,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 12),
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),
@@ -255,12 +293,15 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                     width: 48,
                     height: 48,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryNavy,
+                      color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: const Icon(Icons.send_rounded,
-                          color: Colors.white, size: 22),
+                      icon: const Icon(
+                        Icons.send_rounded,
+                        color: Colors.white,
+                        size: 22,
+                      ),
                       onPressed: _sendMessage,
                     ),
                   ),
@@ -284,7 +325,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          color: isMe ? AppTheme.primaryNavy : AppTheme.surface,
+          color: isMe
+              ? Theme.of(context).colorScheme.primary
+              : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(20),
             topRight: const Radius.circular(20),
@@ -299,7 +342,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Text(
               text,
               style: TextStyle(
-                color: isMe ? Colors.white : AppTheme.textPrimary,
+                color: isMe
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
                 height: 1.4,
               ),
@@ -308,8 +353,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             Text(
               time,
               style: TextStyle(
-                color:
-                    isMe ? Colors.white.withOpacity(0.6) : AppTheme.textLight,
+                color: isMe
+                    ? Colors.white.withOpacity(0.6)
+                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
                 fontSize: 11,
               ),
             ),
