@@ -59,7 +59,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                         style: TextStyle(
                             color: AppTheme.textLight, fontSize: 12)),
                     value: _availableForNew,
-                    activeColor: AppTheme.accentBlue,
+                    activeThumbColor: AppTheme.accentBlue,
                     onChanged: (v) =>
                         setState(() => _availableForNew = v),
                     contentPadding:
@@ -98,7 +98,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                     secondary: Icon(Icons.dark_mode_rounded,
                         color: AppTheme.textSecondary, size: 22),
                     value: _darkMode,
-                    activeColor: AppTheme.accentBlue,
+                    activeThumbColor: AppTheme.accentBlue,
                     onChanged: (v) => setState(() => _darkMode = v),
                   ),
                   const Divider(height: 1),
@@ -171,7 +171,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       title: Text(label,
           style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
       value: value,
-      activeColor: AppTheme.accentBlue,
+      activeThumbColor: AppTheme.accentBlue,
       onChanged: onChanged,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
     );

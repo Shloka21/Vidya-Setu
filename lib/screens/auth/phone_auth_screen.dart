@@ -190,7 +190,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
               height: 56,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF0F2F5),
+                color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
               ),
               child: DropdownButtonHideUnderline(
@@ -353,7 +353,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   filled: true,
                   fillColor: _otpControllers[i].text.isNotEmpty
                       ? AppTheme.accentBlue.withOpacity(0.05)
-                      : const Color(0xFFF0F2F5),
+                      : AppTheme.surface,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
                     borderSide: BorderSide(

@@ -83,7 +83,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
 
             _buildLabel('Subject'),
             DropdownButtonFormField<String>(
-              value: _selectedSubject,
+              initialValue: _selectedSubject,
               decoration: const InputDecoration(),
               items: _subjects.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
               onChanged: (v) => setState(() => _selectedSubject = v!),
@@ -110,7 +110,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0F2F5),
+                            color: AppTheme.surface,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
@@ -145,7 +145,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF0F2F5),
+                            color: AppTheme.surface,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: Row(
@@ -290,7 +290,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
         Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppTheme.accentBlue,
+          activeThumbColor: AppTheme.accentBlue,
         ),
       ],
     );

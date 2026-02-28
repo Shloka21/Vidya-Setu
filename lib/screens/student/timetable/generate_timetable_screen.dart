@@ -43,8 +43,8 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   // Step 6: Exam Schedule (NEW)
   int _ptCount = 1;
   // Each PT has a start and end date
-  List<DateTime?> _ptStartDates = [null, null, null];
-  List<DateTime?> _ptEndDates = [null, null, null];
+  final List<DateTime?> _ptStartDates = [null, null, null];
+  final List<DateTime?> _ptEndDates = [null, null, null];
   DateTime? _finalExamStartDate;
   DateTime? _finalExamEndDate;
 
@@ -112,7 +112,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                     shape: BoxShape.circle,
                     color: isActive
                         ? AppTheme.accentBlue
-                        : Colors.grey.shade300,
+                        : const Color(0xFF383E47),
                     boxShadow: isCurrent
                         ? [
                             BoxShadow(
@@ -126,7 +126,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   child: Text(
                     '${index + 1}',
                     style: TextStyle(
-                      color: isActive ? Colors.white : Colors.grey.shade600,
+                      color: isActive ? Colors.white : const Color(0xFF5F6B7C),
                       fontWeight: FontWeight.bold,
                       fontSize: isCurrent ? 9 : 7,
                     ),
@@ -138,7 +138,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                       height: 2,
                       color: isActive
                           ? AppTheme.accentBlue
-                          : Colors.grey.shade300,
+                          : const Color(0xFF383E47),
                     ),
                   ),
               ],

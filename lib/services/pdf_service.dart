@@ -104,7 +104,9 @@ class PdfService {
         if (parts.join(' ').length > 10) {
           final peek = (j + 1 < lines.length) ? lines[j + 1].trim() : '';
           if (RegExp(r'^[\d\s\-–\+\*\#\.]+$').hasMatch(peek) ||
-              RegExp(r'^\d{7}$').hasMatch(peek)) break;
+              RegExp(r'^\d{7}$').hasMatch(peek)) {
+            break;
+          }
         }
       }
 
@@ -210,7 +212,9 @@ class PdfService {
       }
       if (currentNum == 0 && !romanRegex.hasMatch(line) &&
           arabicModuleRegex.firstMatch(line) == null &&
-          !line.startsWith('1 ')) continue;
+          !line.startsWith('1 ')) {
+        continue;
+      }
 
       // ── Roman numeral module boundary ─────────────────────────────────
       if (romanRegex.hasMatch(line)) {

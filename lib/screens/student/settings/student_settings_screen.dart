@@ -120,7 +120,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
                     secondary: Icon(Icons.dark_mode_rounded,
                         color: AppTheme.textSecondary, size: 22),
                     value: _darkMode,
-                    activeColor: AppTheme.accentBlue,
+                    activeThumbColor: AppTheme.accentBlue,
                     onChanged: (v) => setState(() => _darkMode = v),
                   ),
                   const Divider(height: 1),
@@ -225,7 +225,7 @@ class _StudentSettingsScreenState extends State<StudentSettingsScreen> {
       title: Text(label,
           style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
       value: value,
-      activeColor: AppTheme.accentBlue,
+      activeThumbColor: AppTheme.accentBlue,
       onChanged: onChanged,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
     );

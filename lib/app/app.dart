@@ -55,6 +55,8 @@ class VidyaSetuApp extends StatelessWidget {
         title: 'VidyaSetu',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.lightTheme,
+        themeMode: ThemeMode.dark,
         initialRoute: AppRoutes.splash,
         routes: {
           AppRoutes.splash: (_) => const SplashScreen(),

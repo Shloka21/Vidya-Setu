@@ -122,7 +122,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
         const Text('Subject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: _selectedSubject,
+          initialValue: _selectedSubject,
           decoration: InputDecoration(
             prefixIcon: Icon(Icons.book_outlined, color: _selectedColor),
             fillColor: AppTheme.surface,

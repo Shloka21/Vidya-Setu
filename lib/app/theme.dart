@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  // ─── Colors ───────────────────────────────────────────────
-  static const Color primaryNavy = Color(0xFF1B2838);
-  static const Color primaryDark = Color(0xFF0F1923);
-  static const Color accentBlue = Color(0xFF4A7BF7);
-  static const Color accentPurple = Color(0xFF7C4DFF);
-  static const Color successGreen = Color(0xFF10B981);
-  static const Color warningAmber = Color(0xFFF59E0B);
-  static const Color errorRed = Color(0xFFEF4444);
-  static const Color background = Color(0xFFF5F7FA);
-  static const Color surface = Color(0xFFFFFFFF);
-  static const Color textPrimary = Color(0xFF1B2838);
-  static const Color textSecondary = Color(0xFF6B7280);
-  static const Color textLight = Color(0xFF9CA3AF);
-  static const Color divider = Color(0xFFE5E7EB);
-  static const Color cardShadow = Color(0x0F000000);
+  // ─── Dark Blueprint Colors ─────────────────────────────────
+  static const Color primaryNavy = Color(0xFF2D72D2);    // Blueprint blue (active)
+  static const Color primaryDark = Color(0xFF10161A);    // Deepest dark
+  static const Color accentBlue = Color(0xFF4C90F0);     // Blueprint link blue
+  static const Color accentPurple = Color(0xFF7C4DFF);   // Kept for gradients
+  static const Color successGreen = Color(0xFF3DCC91);   // Blueprint intent-success
+  static const Color warningAmber = Color(0xFFFFB366);   // Blueprint intent-warning
+  static const Color errorRed = Color(0xFFFF7373);       // Blueprint intent-danger
+  static const Color background = Color(0xFF1C2127);     // Blueprint dark bg
+  static const Color surface = Color(0xFF252A31);        // Blueprint dark card
+  static const Color textPrimary = Color(0xFFF6F7F9);    // Blueprint dark text primary
+  static const Color textSecondary = Color(0xFFABB3BF);  // Blueprint dark text secondary
+  static const Color textLight = Color(0xFF5F6B7C);      // Blueprint dark text muted
+  static const Color divider = Color(0xFF383E47);        // Blueprint dark border
+  static const Color cardShadow = Color(0x40000000);
 
   // ─── Gradients ────────────────────────────────────────────
   static const LinearGradient primaryGradient = LinearGradient(
@@ -26,7 +26,7 @@ class AppTheme {
   );
 
   static const LinearGradient navyGradient = LinearGradient(
-    colors: [Color(0xFF1B2838), Color(0xFF2D3F54)],
+    colors: [Color(0xFF2D72D2), Color(0xFF1B4F8A)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -34,13 +34,13 @@ class AppTheme {
   // ─── Shadows ──────────────────────────────────────────────
   static List<BoxShadow> get cardBoxShadow => [
     BoxShadow(
-      color: Colors.black.withOpacity(0.04),
+      color: Colors.black.withOpacity(0.25),
       blurRadius: 20,
       offset: const Offset(0, 4),
       spreadRadius: 0,
     ),
     BoxShadow(
-      color: Colors.black.withOpacity(0.02),
+      color: Colors.black.withOpacity(0.15),
       blurRadius: 6,
       offset: const Offset(0, 2),
       spreadRadius: 0,
@@ -49,7 +49,7 @@ class AppTheme {
 
   static List<BoxShadow> get elevatedShadow => [
     BoxShadow(
-      color: accentBlue.withOpacity(0.15),
+      color: accentBlue.withOpacity(0.25),
       blurRadius: 24,
       offset: const Offset(0, 8),
       spreadRadius: 0,
@@ -68,10 +68,10 @@ class AppTheme {
 
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.light,
+      brightness: Brightness.dark,
       scaffoldBackgroundColor: background,
       primaryColor: primaryNavy,
-      colorScheme: const ColorScheme.light(
+      colorScheme: const ColorScheme.dark(
         primary: primaryNavy,
         secondary: accentBlue,
         tertiary: accentPurple,
@@ -207,7 +207,7 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primaryNavy,
+          foregroundColor: accentBlue,
           side: const BorderSide(color: divider, width: 1.5),
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -221,7 +221,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF0F2F5),
+        fillColor: const Color(0xFF2F343C),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMedium),
           borderSide: BorderSide.none,
@@ -250,14 +250,14 @@ class AppTheme {
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
         backgroundColor: surface,
-        selectedItemColor: primaryNavy,
+        selectedItemColor: accentBlue,
         unselectedItemColor: textLight,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
         showUnselectedLabels: true,
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: const Color(0xFFF0F2F5),
+        backgroundColor: const Color(0xFF2F343C),
         selectedColor: primaryNavy,
         labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
         shape: RoundedRectangleBorder(

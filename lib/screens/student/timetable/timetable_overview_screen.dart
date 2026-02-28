@@ -150,7 +150,7 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: 7,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final date = startOfWeek.add(Duration(days: index));
           final isSelected = date.day == _selectedDate.day && date.month == _selectedDate.month;

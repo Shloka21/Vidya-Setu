@@ -169,7 +169,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 12,
-              backgroundColor: Colors.grey.shade200,
+              backgroundColor: const Color(0xFF383E47),
               valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.accentBlue),
             ),
           ),
