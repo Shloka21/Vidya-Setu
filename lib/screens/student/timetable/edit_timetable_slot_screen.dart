@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
-import '../../../widgets/common/app_card.dart';
 
 class EditTimetableSlotScreen extends StatefulWidget {
   const EditTimetableSlotScreen({super.key});
