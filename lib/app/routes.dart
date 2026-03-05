@@ -41,6 +41,10 @@ class AppRoutes {
   static const String chatConversation = '/chat/conversation';
   static const String videoCall = '/chat/video-call';
 
+  // Timetable extras
+  static const String sessionDetail = '/student/timetable/session';
+  static const String sessionQuiz = '/student/timetable/quiz';
+
   // Gamification
   static const String achievements = '/gamification/achievements';
   static const String leaderboard = '/gamification/leaderboard';

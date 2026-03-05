@@ -17,7 +17,7 @@ class AchievementsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Achievements')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

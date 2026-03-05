@@ -128,7 +128,7 @@ class _SignupScreenState extends State<SignupScreen> {
     final passwordStrength = _getPasswordStrength(_passwordController.text);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

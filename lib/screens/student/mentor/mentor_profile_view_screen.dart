@@ -8,21 +8,28 @@ class MentorProfileViewScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Mock mentor data (would come via route args in production)
-    const mentor = {
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    
+    // Fallback to mock data if no args (development)
+    final mentor = args ?? {
       'name': 'Dr. Sharma',
-      'specialization': 'Mathematics, Statistics',
+      'subjectsTaught': ['Mathematics', 'Statistics'],
       'bio': 'PhD in Applied Mathematics with 15 years of teaching experience. Passionate about making complex concepts simple and accessible for every student.',
       'rating': 4.8,
-      'students': 24,
+      'studentCount': 24,
       'sessions': 156,
-      'yearsExp': 15,
+      'experienceYears': 15,
       'languages': 'Hindi, English',
       'availability': 'Mon-Fri, 4:00 PM - 8:00 PM',
     };
 
+    final mentorName = mentor['name']?.toString() ?? 'Mentor';
+    final subjects = List<String>.from(mentor['subjectsTaught'] ?? []);
+    final specialization = subjects.isNotEmpty ? subjects.join(', ') : (mentor['specialization']?.toString() ?? 'General');
+    final bio = mentor['bio']?.toString() ?? 'No bio provided.';
+
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       body: CustomScrollView(
         slivers: [
           // Header
@@ -54,8 +61,8 @@ class MentorProfileViewScreen extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
-                        child: const Center(
-                          child: Text('D',
+                        child: Center(
+                          child: Text(mentorName.isNotEmpty ? mentorName[0].toUpperCase() : 'M',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 34,
@@ -63,13 +70,13 @@ class MentorProfileViewScreen extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      Text(mentor['name'] as String,
+                      Text(mentorName,
                           style: const TextStyle(
                               color: Colors.white,
                               fontSize: 22,
                               fontWeight: FontWeight.w700)),
                       const SizedBox(height: 4),
-                      Text(mentor['specialization'] as String,
+                      Text(specialization,
                           style: TextStyle(
                               color: Colors.white.withOpacity(0.8),
                               fontSize: 14)),
@@ -90,9 +97,9 @@ class MentorProfileViewScreen extends StatelessWidget {
                   Row(
                     children: [
                       _buildStat('⭐', '${mentor['rating']}', 'Rating'),
-                      _buildStat('👨‍🎓', '${mentor['students']}', 'Students'),
-                      _buildStat('📹', '${mentor['sessions']}', 'Sessions'),
-                      _buildStat('🎓', '${mentor['yearsExp']}y', 'Experience'),
+                      _buildStat('👨‍🎓', '${mentor['studentCount'] ?? 0}', 'Students'),
+                      _buildStat('📹', '${mentor['sessions'] ?? 0}', 'Sessions'),
+                      _buildStat('🎓', '${mentor['experienceYears'] ?? 0}y', 'Experience'),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -105,7 +112,7 @@ class MentorProfileViewScreen extends StatelessWidget {
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   AppCard(
-                    child: Text(mentor['bio'] as String,
+                    child: Text(bio,
                         style: TextStyle(
                             color: AppTheme.textSecondary,
                             fontSize: 14,
@@ -125,13 +132,13 @@ class MentorProfileViewScreen extends StatelessWidget {
                     child: Column(
                       children: [
                         _detailItem(Icons.language_rounded, 'Languages',
-                            mentor['languages'] as String),
+                            mentor['languages']?.toString() ?? 'English'),
                         const Divider(height: 1),
                         _detailItem(Icons.schedule_rounded, 'Availability',
-                            mentor['availability'] as String),
+                            mentor['availability']?.toString() ?? 'Flexible'),
                         const Divider(height: 1),
                         _detailItem(Icons.star_rounded, 'Specialization',
-                            mentor['specialization'] as String),
+                            specialization),
                       ],
                     ),
                   ),

@@ -84,8 +84,8 @@ class FirestoreService {
     await roomRef.set({
       'id': roomRef.id,
       'participants': [userId1, userId2],
-      'lastMessage': null,
-      'lastMessageTime': null,
+      'lastMessage': 'Chat room created',
+      'lastMessageTime': Timestamp.now(),
       'lastMessageSenderId': null,
       'unreadCount': {userId1: 0, userId2: 0},
     });
@@ -240,5 +240,142 @@ class FirestoreService {
       }
     }
     await studyPlansCollection(userId).doc(planId).update({'sessions': sessions});
+  }
+
+  Future<void> updateSessionNotes(
+      String userId, String planId, String sessionId, String notes) async {
+    final doc = await studyPlansCollection(userId).doc(planId).get();
+    if (!doc.exists) return;
+    final data = doc.data() as Map<String, dynamic>;
+    final sessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+    for (var session in sessions) {
+      if (session['id'] == sessionId) {
+        session['notes'] = notes;
+        break;
+      }
+    }
+    await studyPlansCollection(userId).doc(planId).update({'sessions': sessions});
+  }
+
+  Future<void> updateSessionQuizCompleted(
+      String userId, String planId, String sessionId, bool completed) async {
+    final doc = await studyPlansCollection(userId).doc(planId).get();
+    if (!doc.exists) return;
+    final data = doc.data() as Map<String, dynamic>;
+    final sessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+    for (var session in sessions) {
+      if (session['id'] == sessionId) {
+        session['quizCompleted'] = completed;
+        session['isCompleted'] = completed;
+        break;
+      }
+    }
+    await studyPlansCollection(userId).doc(planId).update({'sessions': sessions});
+  }
+
+  Future<void> rescheduleSession(
+      String userId, String planId, String sessionId, DateTime newDate) async {
+    final doc = await studyPlansCollection(userId).doc(planId).get();
+    if (!doc.exists) return;
+    final data = doc.data() as Map<String, dynamic>;
+    final sessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+    for (var session in sessions) {
+      if (session['id'] == sessionId) {
+        final oldStartTime = DateTime.parse(session['startTime']);
+        final newStartTime = DateTime(
+          newDate.year, newDate.month, newDate.day,
+          oldStartTime.hour, oldStartTime.minute,
+        );
+        session['date'] = newDate.toIso8601String();
+        session['startTime'] = newStartTime.toIso8601String();
+        break;
+      }
+    }
+    await studyPlansCollection(userId).doc(planId).update({'sessions': sessions});
+  }
+
+  // ─── Dashboard Helpers ─────────────────────────────────────
+  Stream<QuerySnapshot> upcomingRemindersStream(String userId, {int limit = 3}) {
+    return remindersCollection(userId)
+        .where('dateTime', isGreaterThanOrEqualTo: Timestamp.now())
+        .where('status', isEqualTo: 'pending')
+        .orderBy('dateTime', descending: false)
+        .limit(limit)
+        .snapshots();
+  }
+
+  Future<List<Map<String, dynamic>>> getConnectedStudents(String mentorId) async {
+    final connections = await connectionsCollection
+        .where('mentorId', isEqualTo: mentorId)
+        .where('status', isEqualTo: 'approved')
+        .get();
+
+    final students = <Map<String, dynamic>>[];
+    for (var doc in connections.docs) {
+      final conn = doc.data() as Map<String, dynamic>;
+      final studentDoc = await usersCollection.doc(conn['studentId']).get();
+      if (studentDoc.exists) {
+        final data = studentDoc.data() as Map<String, dynamic>;
+        data['connectionId'] = doc.id;
+        students.add(data);
+      }
+    }
+    return students;
+  }
+
+  Future<int> getPendingRequestsCount(String mentorId) async {
+    final snapshot = await connectionsCollection
+        .where('mentorId', isEqualTo: mentorId)
+        .where('status', isEqualTo: 'pending')
+        .get();
+    return snapshot.docs.length;
+  }
+
+  // ─── Connected Mentors (for student chat suggestions) ─────
+  Future<List<Map<String, dynamic>>> getConnectedMentors(String studentId) async {
+    final connections = await connectionsCollection
+        .where('studentId', isEqualTo: studentId)
+        .where('status', isEqualTo: 'approved')
+        .get();
+
+    final mentors = <Map<String, dynamic>>[];
+    for (var doc in connections.docs) {
+      final conn = doc.data() as Map<String, dynamic>;
+      final mentorDoc = await usersCollection.doc(conn['mentorId']).get();
+      if (mentorDoc.exists) {
+        final data = mentorDoc.data() as Map<String, dynamic>;
+        data['connectionId'] = doc.id;
+        mentors.add(data);
+      }
+    }
+    return mentors;
+  }
+
+  // ─── Meetings (mentor scheduling) ─────────────────────────
+  CollectionReference get meetingsCollection =>
+      _firestore.collection('meetings');
+
+  Future<void> scheduleMeeting(Map<String, dynamic> data) async {
+    await meetingsCollection.doc(data['id']).set(data);
+  }
+
+  Stream<QuerySnapshot> meetingsStream(String userId) {
+    return meetingsCollection
+        .where('participants', arrayContains: userId)
+        .orderBy('scheduledAt', descending: false)
+        .snapshots();
+  }
+
+  // ─── Unread Count Helper ──────────────────────────────────
+  Stream<int> totalUnreadCountStream(String userId) {
+    return chatRoomsStream(userId).map((snapshot) {
+      int total = 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final unread = (data['unreadCount'] as Map<String, dynamic>?)?[userId] ?? 0;
+        total += (unread as num).toInt();
+      }
+      return total;
+    });
   }
 }

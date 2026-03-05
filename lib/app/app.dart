@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'theme.dart';
 import 'routes.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
 import '../screens/splash/splash_screen.dart';
 import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/auth/login_screen.dart';
@@ -16,6 +17,8 @@ import '../screens/student/timetable/timetable_overview_screen.dart';
 import '../screens/student/timetable/generate_timetable_screen.dart';
 import '../screens/student/timetable/edit_timetable_slot_screen.dart';
 import '../screens/student/timetable/daily_study_plan_screen.dart';
+import '../screens/student/timetable/session_detail_screen.dart';
+import '../screens/student/timetable/session_quiz_screen.dart';
 import '../screens/student/analytics/progress_dashboard_screen.dart';
 import '../screens/student/analytics/subject_analytics_screen.dart';
 import '../screens/student/mentor/find_mentor_screen.dart';
@@ -50,11 +53,17 @@ class VidyaSetuApp extends StatelessWidget {
         ChangeNotifierProvider<AuthProvider>(
           create: (_) => AuthProvider(),
         ),
+        ChangeNotifierProvider<ThemeProvider>(
+          create: (_) => ThemeProvider(),
+        ),
       ],
-      child: MaterialApp(
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp(
         title: 'VidyaSetu',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: themeProvider.themeMode,
         initialRoute: AppRoutes.splash,
         routes: {
           AppRoutes.splash: (_) => const SplashScreen(),
@@ -98,12 +107,16 @@ class VidyaSetuApp extends StatelessWidget {
           AppRoutes.chatConversation: (_) => const ChatRoomScreen(),
           AppRoutes.videoCall: (_) => const VideoCallScreen(),
 
+          // Timetable extras
+          AppRoutes.sessionDetail: (_) => const SessionDetailScreen(),
+          AppRoutes.sessionQuiz: (_) => const SessionQuizScreen(),
+
           // Gamification
           AppRoutes.achievements: (_) => const AchievementsScreen(),
           AppRoutes.leaderboard: (_) => const LeaderboardScreen(),
           AppRoutes.pointSystem: (_) => const PointSystemScreen(),
         },
-      ),
+      )),
     );
   }
 }

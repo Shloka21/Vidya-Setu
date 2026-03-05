@@ -9,7 +9,7 @@ class StudentProfileMentorView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       body: CustomScrollView(
         slivers: [
           SliverAppBar(

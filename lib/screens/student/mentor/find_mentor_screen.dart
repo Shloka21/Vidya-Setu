@@ -19,12 +19,14 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
   final _searchController = TextEditingController();
   List<Map<String, dynamic>> _mentors = [];
   List<Map<String, dynamic>> _filteredMentors = [];
+  Map<String, String> _connectionStatus = {}; // mentorId -> status
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadMentors();
+    _loadConnectionStatuses();
   }
 
   @override
@@ -47,6 +49,24 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
       setState(() => _isLoading = false);
       debugPrint('Error loading mentors: $e');
     }
+  }
+
+  Future<void> _loadConnectionStatuses() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final studentId = auth.userModel?.uid ?? '';
+    if (studentId.isEmpty) return;
+
+    _firestoreService.studentConnectionsStream(studentId).listen((snapshot) {
+      if (!mounted) return;
+      final statuses = <String, String>{};
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final mentorId = data['mentorId'] as String? ?? '';
+        final status = data['status'] as String? ?? '';
+        if (mentorId.isNotEmpty) statuses[mentorId] = status;
+      }
+      setState(() => _connectionStatus = statuses);
+    });
   }
 
   void _filterMentors(String query) {
@@ -90,29 +110,42 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
             content: Text('Request sent to ${mentor['name']}!'),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
-            shape:
-                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
+    }
+  }
+
+  Future<void> _openChat(Map<String, dynamic> mentor) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final uid = auth.userModel?.uid ?? '';
+    final mentorId = mentor['uid'] as String? ?? '';
+    if (uid.isEmpty || mentorId.isEmpty) return;
+
+    final roomId = await _firestoreService.getOrCreateChatRoom(uid, mentorId);
+    if (mounted) {
+      Navigator.pushNamed(context, AppRoutes.chatConversation, arguments: {
+        'roomId': roomId,
+        'otherUserId': mentorId,
+        'otherUserName': mentor['name'] ?? 'Mentor',
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Find a Mentor')),
       body: Column(
         children: [
-          // Search bar
           Padding(
             padding: const EdgeInsets.all(20),
             child: TextField(
@@ -122,8 +155,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
               decoration: InputDecoration(
                 hintText: 'Search by name or subject...',
                 hintStyle: TextStyle(color: AppTheme.textLight),
-                prefixIcon:
-                    Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+                prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textSecondary),
                 filled: true,
                 fillColor: AppTheme.surface,
                 border: OutlineInputBorder(
@@ -133,8 +165,6 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
               ),
             ),
           ),
-
-          // Mentor list
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -143,18 +173,13 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.person_search_rounded,
-                                color: AppTheme.textLight, size: 64),
+                            Icon(Icons.person_search_rounded, color: AppTheme.textLight, size: 64),
                             const SizedBox(height: 16),
                             Text('No mentors found',
-                                style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600)),
+                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 18, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 8),
                             Text('Try a different search term',
-                                style: TextStyle(
-                                    color: AppTheme.textLight, fontSize: 14)),
+                                style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
                           ],
                         ),
                       )
@@ -180,12 +205,13 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
     final maxStudents = mentor['maxStudents'] ?? 20;
     final yearsExp = mentor['experienceYears'] ?? 0;
     final bio = mentor['bio'] as String? ?? '';
+    final mentorId = mentor['uid'] as String? ?? '';
+    final status = _connectionStatus[mentorId]; // null, 'pending', 'approved', 'rejected'
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: AppCard(
-        onTap: () =>
-            Navigator.pushNamed(context, AppRoutes.mentorProfile, arguments: mentor),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.mentorProfile, arguments: mentor),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -201,10 +227,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                   child: Center(
                     child: Text(
                       name.isNotEmpty ? name[0] : 'M',
-                      style: TextStyle(
-                          color: AppTheme.accentBlue,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700),
+                      style: TextStyle(color: AppTheme.accentBlue, fontSize: 22, fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),
@@ -213,15 +236,10 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name,
-                          style: TextStyle(
-                              color: AppTheme.textPrimary,
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700)),
+                      Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
                       if (subjects.isNotEmpty)
                         Text(subjects.join(', '),
-                            style: TextStyle(
-                                color: AppTheme.textSecondary, fontSize: 13),
+                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                     ],
@@ -232,18 +250,12 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                     Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star_rounded,
-                            color: AppTheme.warningAmber, size: 18),
+                        const Icon(Icons.star_rounded, color: AppTheme.warningAmber, size: 18),
                         Text(' ${rating.toStringAsFixed(1)}',
-                            style: TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w700)),
+                            style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w700)),
                       ],
                     ),
-                    Text('$yearsExp yrs',
-                        style: TextStyle(
-                            color: AppTheme.textLight, fontSize: 11)),
+                    Text('$yearsExp yrs', style: TextStyle(color: AppTheme.textLight, fontSize: 11)),
                   ],
                 ),
               ],
@@ -251,10 +263,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
             if (bio.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(bio,
-                  style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      fontSize: 13,
-                      height: 1.4),
+                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ],
@@ -262,8 +271,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: students < maxStudents
                         ? AppTheme.successGreen.withOpacity(0.1)
@@ -271,39 +279,96 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    students < maxStudents
-                        ? '${maxStudents - students} spots available'
-                        : 'Full',
+                    students < maxStudents ? '${maxStudents - students} spots available' : 'Full',
                     style: TextStyle(
-                      color: students < maxStudents
-                          ? AppTheme.successGreen
-                          : AppTheme.errorRed,
+                      color: students < maxStudents ? AppTheme.successGreen : AppTheme.errorRed,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
                 const Spacer(),
-                SizedBox(
-                  height: 36,
-                  child: ElevatedButton.icon(
-                    onPressed:
-                        students < maxStudents ? () => _sendRequest(mentor) : null,
-                    icon: const Icon(Icons.person_add_rounded, size: 16),
-                    label: const Text('Connect',
-                        style: TextStyle(fontSize: 13)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.accentBlue,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10)),
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                  ),
-                ),
+                _buildConnectionButton(mentor, status),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectionButton(Map<String, dynamic> mentor, String? status) {
+    final students = mentor['studentCount'] ?? 0;
+    final maxStudents = mentor['maxStudents'] ?? 20;
+
+    if (status == 'approved') {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppTheme.successGreen.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 16),
+                const SizedBox(width: 4),
+                Text('Connected', style: TextStyle(color: AppTheme.successGreen, fontSize: 12, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          SizedBox(
+            height: 36,
+            child: ElevatedButton.icon(
+              onPressed: () => _openChat(mentor),
+              icon: const Icon(Icons.chat_rounded, size: 16),
+              label: const Text('Message', style: TextStyle(fontSize: 13)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryNavy,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (status == 'pending') {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppTheme.warningAmber.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.hourglass_top_rounded, color: AppTheme.warningAmber, size: 16),
+            const SizedBox(width: 4),
+            Text('Request Sent', style: TextStyle(color: AppTheme.warningAmber, fontSize: 12, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      );
+    }
+
+    // No connection or rejected — show Connect button
+    return SizedBox(
+      height: 36,
+      child: ElevatedButton.icon(
+        onPressed: students < maxStudents ? () => _sendRequest(mentor) : null,
+        icon: const Icon(Icons.person_add_rounded, size: 16),
+        label: const Text('Connect', style: TextStyle(fontSize: 13)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppTheme.accentBlue,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
         ),
       ),
     );

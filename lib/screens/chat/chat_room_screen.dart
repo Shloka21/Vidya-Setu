@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -66,6 +67,107 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     _messageController.clear();
   }
 
+  void _showScheduleMeetingDialog() {
+    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
+    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+    final titleController = TextEditingController(text: 'Study Session');
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: AppTheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Schedule Meeting', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: titleController,
+                decoration: InputDecoration(
+                  labelText: 'Meeting Title',
+                  filled: true,
+                  fillColor: AppTheme.background,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                ),
+              ),
+              const SizedBox(height: 14),
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.calendar_today_rounded, color: AppTheme.accentBlue),
+                title: Text(DateFormat('EEE, MMM d, yyyy').format(selectedDate)),
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: ctx,
+                    initialDate: selectedDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 90)),
+                  );
+                  if (picked != null) setDialogState(() => selectedDate = picked);
+                },
+              ),
+              ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(Icons.access_time_rounded, color: AppTheme.accentPurple),
+                title: Text(selectedTime.format(ctx)),
+                onTap: () async {
+                  final picked = await showTimePicker(context: ctx, initialTime: selectedTime);
+                  if (picked != null) setDialogState(() => selectedTime = picked);
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+            ElevatedButton(
+              onPressed: () async {
+                final auth = Provider.of<AuthProvider>(ctx, listen: false);
+                final uid = auth.userModel?.uid ?? '';
+                final scheduledAt = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
+                final meetingId = FirebaseFirestore.instance.collection('_').doc().id;
+                await _firestoreService.scheduleMeeting({
+                  'id': meetingId,
+                  'title': titleController.text.trim(),
+                  'scheduledAt': Timestamp.fromDate(scheduledAt),
+                  'createdBy': uid,
+                  'participants': [uid, _otherUserId ?? ''],
+                  'roomId': _roomId ?? '',
+                  'status': 'scheduled',
+                });
+                // Send system message
+                final msgId = FirebaseFirestore.instance.collection('_').doc().id;
+                await _firestoreService.sendMessage(_roomId!, {
+                  'id': msgId,
+                  'content': '📅 Meeting scheduled: ${titleController.text.trim()} on ${DateFormat('MMM d').format(scheduledAt)} at ${selectedTime.format(ctx)}',
+                  'senderId': uid,
+                  'receiverId': _otherUserId ?? '',
+                  'timestamp': Timestamp.now(),
+                  'type': 'system',
+                });
+                if (ctx.mounted) Navigator.pop(ctx);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: const Text('Meeting scheduled!'),
+                      backgroundColor: AppTheme.successGreen,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  );
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
+              child: const Text('Schedule'),
+            ),
+          ],
+        ),
+      ),
+    );
+    titleController.dispose;
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid =
@@ -73,7 +175,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final displayName = _otherUserName ?? 'Chat';
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(
         backgroundColor: AppTheme.surface,
         titleSpacing: 0,
@@ -121,12 +223,26 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             icon:
                 const Icon(Icons.videocam_rounded, color: AppTheme.accentBlue),
             onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.videoCall);
+              Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
+                'roomId': _roomId ?? 'default',
+                'otherUserName': _otherUserName ?? 'User',
+              });
             },
           ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
-            onPressed: () {},
+            onSelected: (value) {
+              if (value == 'schedule') _showScheduleMeetingDialog();
+            },
+            itemBuilder: (context) {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final role = auth.userModel?.role ?? 'student';
+              return [
+                if (role == 'mentor')
+                  const PopupMenuItem(value: 'schedule', child: Text('Schedule Meeting')),
+                const PopupMenuItem(value: 'info', child: Text('Contact Info')),
+              ];
+            },
           ),
         ],
       ),

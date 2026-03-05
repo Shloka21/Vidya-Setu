@@ -35,7 +35,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Create Reminder')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

@@ -16,7 +16,7 @@ class StudentAnalyticsMentorScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Student Analytics')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

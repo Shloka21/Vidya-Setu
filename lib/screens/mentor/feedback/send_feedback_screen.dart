@@ -42,7 +42,7 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Send Feedback')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

@@ -46,7 +46,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(
         title: Text('Edit Slot', style: Theme.of(context).textTheme.headlineSmall),
         actions: [

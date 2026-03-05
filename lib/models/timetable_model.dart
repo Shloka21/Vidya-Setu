@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+
 
 // ─── Subject Info (from PDF extraction) ─────────────────────────────────────
 class SubjectInfo {
@@ -7,6 +7,7 @@ class SubjectInfo {
   final List<ModuleInfo> modules;
   final int totalHours;
   final int credits;
+  final int? semester;
   bool isSelected;
 
   SubjectInfo({
@@ -15,6 +16,7 @@ class SubjectInfo {
     required this.modules,
     this.totalHours = 0,
     this.credits = 0,
+    this.semester,
     this.isSelected = true,
   });
 
@@ -32,6 +34,7 @@ class SubjectInfo {
         'modules': modules.map((m) => m.toMap()).toList(),
         'totalHours': totalHours,
         'credits': credits,
+        'semester': semester,
         'isSelected': isSelected,
       };
 
@@ -44,6 +47,7 @@ class SubjectInfo {
             [],
         totalHours: map['totalHours'] ?? 0,
         credits: map['credits'] ?? 0,
+        semester: map['semester'],
         isSelected: map['isSelected'] ?? true,
       );
 }
@@ -280,6 +284,9 @@ class TimetableSession {
   final String? location;
   final String? notes;
   final bool isHolidaySession;
+  List<String> resourceLinks;
+  List<String> youtubeLinks;
+  bool quizCompleted;
 
   TimetableSession({
     required this.id,
@@ -294,6 +301,9 @@ class TimetableSession {
     this.location,
     this.notes,
     this.isHolidaySession = false,
+    this.resourceLinks = const [],
+    this.youtubeLinks = const [],
+    this.quizCompleted = false,
   });
 
   DateTime get endTime => startTime.add(Duration(minutes: durationMinutes));
@@ -311,6 +321,9 @@ class TimetableSession {
         'location': location,
         'notes': notes,
         'isHolidaySession': isHolidaySession,
+        'resourceLinks': resourceLinks,
+        'youtubeLinks': youtubeLinks,
+        'quizCompleted': quizCompleted,
       };
 
   factory TimetableSession.fromMap(Map<String, dynamic> map) =>
@@ -327,6 +340,9 @@ class TimetableSession {
         location: map['location'],
         notes: map['notes'],
         isHolidaySession: map['isHolidaySession'] ?? false,
+        resourceLinks: List<String>.from(map['resourceLinks'] ?? []),
+        youtubeLinks: List<String>.from(map['youtubeLinks'] ?? []),
+        quizCompleted: map['quizCompleted'] ?? false,
       );
 }
 

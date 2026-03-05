@@ -19,7 +19,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Subject Analytics')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

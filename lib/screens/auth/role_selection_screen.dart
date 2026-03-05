@@ -39,7 +39,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),

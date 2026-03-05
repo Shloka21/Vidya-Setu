@@ -32,7 +32,7 @@ class PointSystemScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(title: const Text('Point System')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

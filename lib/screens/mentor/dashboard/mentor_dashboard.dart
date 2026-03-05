@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/stat_card.dart';
 import '../../../widgets/common/bottom_nav_bar.dart';
@@ -17,11 +19,71 @@ class MentorDashboard extends StatefulWidget {
 
 class _MentorDashboardState extends State<MentorDashboard> {
   int _currentNavIndex = 0;
+  final FirestoreService _firestore = FirestoreService();
+  List<Map<String, dynamic>> _students = [];
+  int _pendingRequests = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (uid == null) { setState(() => _loading = false); return; }
+    try {
+      final students = await _firestore.getConnectedStudents(uid);
+      final pending = await _firestore.getPendingRequestsCount(uid);
+      if (mounted) {
+        setState(() {
+          _students = students;
+          _pendingRequests = pending;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  String _lastActiveLabel(Map<String, dynamic> student) {
+    final lastActive = student['lastActive'];
+    if (lastActive == null) return 'Unknown';
+    DateTime dt;
+    if (lastActive is Timestamp) {
+      dt = lastActive.toDate();
+    } else {
+      return 'Unknown';
+    }
+    final diff = DateTime.now().difference(dt);
+    if (diff.inMinutes < 5) return 'Active now';
+    if (diff.inMinutes < 60) return 'Active ${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return 'Active ${diff.inHours}h ago';
+    if (diff.inDays < 7) return 'Active ${diff.inDays}d ago';
+    return 'Inactive ${diff.inDays}d';
+  }
+
+  Color _activityColor(Map<String, dynamic> student) {
+    final lastActive = student['lastActive'];
+    if (lastActive == null) return Colors.grey;
+    DateTime dt;
+    if (lastActive is Timestamp) {
+      dt = lastActive.toDate();
+    } else {
+      return Colors.grey;
+    }
+    final diff = DateTime.now().difference(dt);
+    if (diff.inHours < 1) return Colors.green;
+    if (diff.inHours < 24) return Colors.orange;
+    return Colors.red;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       body: _buildBody(),
       bottomNavigationBar: AppBottomNavBar(
         currentIndex: _currentNavIndex,
@@ -43,31 +105,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
           }
         },
         items: const [
-          AppNavItem(
-            icon: Icons.grid_view_outlined,
-            activeIcon: Icons.grid_view_rounded,
-            label: 'Home',
-          ),
-          AppNavItem(
-            icon: Icons.people_outline_rounded,
-            activeIcon: Icons.people_rounded,
-            label: 'Students',
-          ),
-          AppNavItem(
-            icon: Icons.emoji_events_outlined,
-            activeIcon: Icons.emoji_events_rounded,
-            label: 'Arena',
-          ),
-          AppNavItem(
-            icon: Icons.chat_bubble_outline_rounded,
-            activeIcon: Icons.chat_bubble_rounded,
-            label: 'Messages',
-          ),
-          AppNavItem(
-            icon: Icons.person_outline_rounded,
-            activeIcon: Icons.person_rounded,
-            label: 'Profile',
-          ),
+          AppNavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: 'Home'),
+          AppNavItem(icon: Icons.people_outline_rounded, activeIcon: Icons.people_rounded, label: 'Students'),
+          AppNavItem(icon: Icons.emoji_events_outlined, activeIcon: Icons.emoji_events_rounded, label: 'Arena'),
+          AppNavItem(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'Messages'),
+          AppNavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
         ],
       ),
     );
@@ -75,22 +117,26 @@ class _MentorDashboardState extends State<MentorDashboard> {
 
   Widget _buildBody() {
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 24),
-            _buildQuickStats(),
-            const SizedBox(height: 24),
-            _buildStudentActivity(),
-            const SizedBox(height: 24),
-            _buildTodaySchedule(),
-            const SizedBox(height: 24),
-            _buildRecentAlerts(),
-            const SizedBox(height: 20),
-          ],
+      child: RefreshIndicator(
+        onRefresh: _loadData,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(),
+              const SizedBox(height: 24),
+              _buildQuickStats(),
+              const SizedBox(height: 24),
+              _buildStudentActivity(),
+              const SizedBox(height: 24),
+              _buildPendingRequests(),
+              const SizedBox(height: 24),
+              _buildQuickActions(),
+              const SizedBox(height: 20),
+            ],
+          ),
         ),
       ),
     );
@@ -116,32 +162,16 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       color: AppTheme.primaryNavy,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(
-                      Icons.school_rounded,
-                      size: 20,
-                      color: Colors.white,
-                    ),
+                    child: const Icon(Icons.school_rounded, size: 20, color: Colors.white),
                   ),
                   const SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'VidyaSetu',
-                        style: TextStyle(
-                          color: AppTheme.primaryNavy,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      Text('VidyaSetu', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 16, fontWeight: FontWeight.w700)),
                       Text(
                         DateFormat('EEEE, MMM d').format(now).toUpperCase(),
-                        style: TextStyle(
-                          color: AppTheme.textLight,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 1,
-                        ),
+                        style: TextStyle(color: AppTheme.textLight, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1),
                       ),
                     ],
                   ),
@@ -150,13 +180,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               const SizedBox(height: 20),
               Text(
                 'Welcome back,\n${user?.name ?? "Mentor"}!',
-                style: TextStyle(
-                  color: AppTheme.primaryNavy,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
-                  letterSpacing: -0.5,
-                ),
+                style: TextStyle(color: AppTheme.primaryNavy, fontSize: 28, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.5),
               ),
             ],
           ),
@@ -164,46 +188,61 @@ class _MentorDashboardState extends State<MentorDashboard> {
         Column(
           children: [
             GestureDetector(
-              onTap: () =>
-                  Navigator.pushNamed(context, AppRoutes.mentorProfileScreen),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.mentorProfileScreen),
               child: Container(
                 width: 52,
                 height: 52,
                 decoration: BoxDecoration(
                   color: AppTheme.accentPurple.withOpacity(0.1),
                   shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppTheme.successGreen,
-                    width: 2.5,
-                  ),
+                  border: Border.all(color: AppTheme.successGreen, width: 2.5),
                 ),
                 child: Center(
-                  child: Text(
-                    user?.name.isNotEmpty == true
-                        ? user!.name[0].toUpperCase()
-                        : 'M',
-                    style: TextStyle(
-                      color: AppTheme.accentPurple,
-                      fontSize: 22,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  child: user?.profileImageUrl != null
+                      ? ClipOval(child: Image.network(user!.profileImageUrl!, fit: BoxFit.cover, width: 52, height: 52))
+                      : Text(
+                          user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'M',
+                          style: TextStyle(color: AppTheme.accentPurple, fontSize: 22, fontWeight: FontWeight.w700),
+                        ),
                 ),
               ),
             ),
             const SizedBox(height: 12),
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                shape: BoxShape.circle,
-                boxShadow: AppTheme.cardBoxShadow,
-              ),
-              child: const Icon(
-                Icons.notifications_outlined,
-                color: AppTheme.textSecondary,
-                size: 22,
+            GestureDetector(
+              onTap: () => Navigator.pushNamed(context, AppRoutes.chatList),
+              child: StreamBuilder<int>(
+                stream: _firestore.totalUnreadCountStream(
+                    Provider.of<AuthProvider>(context, listen: false).userModel?.uid ?? ''),
+                builder: (context, snapshot) {
+                  final unread = snapshot.data ?? 0;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(color: AppTheme.surface, shape: BoxShape.circle, boxShadow: AppTheme.cardBoxShadow),
+                        child: const Center(child: Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.textSecondary, size: 22)),
+                      ),
+                      if (unread > 0)
+                        Positioned(
+                          right: -4,
+                          top: -4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: AppTheme.errorRed, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+                            child: Center(
+                              child: Text(
+                                unread > 99 ? '99+' : '$unread',
+                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
             ),
           ],
@@ -213,16 +252,14 @@ class _MentorDashboardState extends State<MentorDashboard> {
   }
 
   Widget _buildQuickStats() {
-    final user = Provider.of<AuthProvider>(context).userModel;
-
     return SizedBox(
       height: 160,
       child: Row(
         children: [
           Expanded(
             child: StatCard(
-              label: 'Total Students',
-              value: '${user?.studentCount ?? 0}',
+              label: 'Students',
+              value: '${_students.length}',
               icon: Icons.people_rounded,
               iconColor: AppTheme.accentBlue,
               iconBgColor: AppTheme.accentBlue.withOpacity(0.1),
@@ -232,7 +269,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
           Expanded(
             child: StatCard(
               label: 'Pending\nRequests',
-              value: '0',
+              value: '$_pendingRequests',
               icon: Icons.person_add_rounded,
               isDark: true,
             ),
@@ -249,54 +286,46 @@ class _MentorDashboardState extends State<MentorDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Student Activity',
-              style: TextStyle(
-                color: AppTheme.primaryNavy,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
+            Text('Student Activity', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
             TextButton(
-              onPressed: () =>
-                  Navigator.pushNamed(context, AppRoutes.myStudents),
-              child: Text(
-                'View All',
-                style: TextStyle(
-                  color: AppTheme.accentBlue,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.myStudents),
+              child: Text('View All', style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
         const SizedBox(height: 12),
-        _buildStudentActivityItem(
-          'Emma Taylor',
-          'Active now • Studying Physics',
-          Colors.green,
-        ),
-        const SizedBox(height: 10),
-        _buildStudentActivityItem(
-          'Rushabh Shah',
-          'Last active 2h ago',
-          Colors.orange,
-        ),
-        const SizedBox(height: 10),
-        _buildStudentActivityItem(
-          'Riya Malhotra',
-          'Inactive for 3 days',
-          Colors.red,
-        ),
+        if (_loading)
+          const Center(child: CircularProgressIndicator())
+        else if (_students.isEmpty)
+          AppCard(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Icon(Icons.people_outline_rounded, color: AppTheme.textLight, size: 28),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Text(
+                    'No connected students yet. Students can find and connect with you from the Mentors screen.',
+                    style: TextStyle(color: AppTheme.textLight, fontSize: 13),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...(_students.take(3).map((s) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: _buildStudentActivityItem(s),
+          ))),
       ],
     );
   }
 
-  Widget _buildStudentActivityItem(
-    String name,
-    String status,
-    Color statusColor,
-  ) {
+  Widget _buildStudentActivityItem(Map<String, dynamic> student) {
+    final name = student['name'] ?? 'Student';
+    final status = _lastActiveLabel(student);
+    final statusColor = _activityColor(student);
+
     return AppCard(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -308,51 +337,28 @@ class _MentorDashboardState extends State<MentorDashboard> {
               color: AppTheme.accentBlue.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
-            child: Center(
-              child: Text(
-                name[0],
-                style: TextStyle(
-                  color: AppTheme.accentBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
+            child: student['profileImageUrl'] != null
+                ? ClipOval(child: Image.network(student['profileImageUrl'], fit: BoxFit.cover, width: 46, height: 46))
+                : Center(
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                      style: TextStyle(color: AppTheme.accentBlue, fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                  ),
           ),
           const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: statusColor,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
+                    Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(
-                        status,
-                        style: TextStyle(
-                          color: AppTheme.textLight,
-                          fontSize: 12,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: Text(status, style: TextStyle(color: AppTheme.textLight, fontSize: 12), overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
@@ -360,161 +366,145 @@ class _MentorDashboardState extends State<MentorDashboard> {
             ),
           ),
           IconButton(
-            icon: Icon(
-              Icons.chat_bubble_outline_rounded,
-              color: AppTheme.primaryNavy,
-              size: 20,
-            ),
-            onPressed: () {},
+            icon: Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.primaryNavy, size: 20),
+            onPressed: () async {
+              final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+              if (uid == null) return;
+              final roomId = await _firestore.getOrCreateChatRoom(uid, student['uid']);
+              if (mounted) {
+                Navigator.pushNamed(context, AppRoutes.chatConversation, arguments: {
+                  'roomId': roomId,
+                  'otherUserName': name,
+                  'otherUserId': student['uid'],
+                });
+              }
+            },
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTodaySchedule() {
+  Widget _buildPendingRequests() {
+    final uid = Provider.of<AuthProvider>(context).userModel?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Today's Sessions",
-          style: TextStyle(
-            color: AppTheme.primaryNavy,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Text('Pending Requests', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
-        AppCard(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.videocam_rounded,
-                      color: AppTheme.accentBlue, size: 22),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+        StreamBuilder<QuerySnapshot>(
+          stream: _firestore.mentorRequestsStream(uid),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+              return AppCard(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_outline_rounded, color: AppTheme.successGreen, size: 28),
+                    const SizedBox(width: 14),
+                    Text('No pending requests', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                  ],
+                ),
+              );
+            }
+
+            return Column(
+              children: snapshot.data!.docs.map((doc) {
+                final data = doc.data() as Map<String, dynamic>;
+                final name = data['studentName'] ?? 'Student';
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
                       children: [
-                        Text(
-                          'Video Call with Emma Taylor',
-                          style: TextStyle(
-                            color: AppTheme.textPrimary,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                        Container(
+                          width: 42, height: 42,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentBlue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.person_add_rounded, color: AppTheme.accentBlue, size: 22),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                              Text('Wants to connect', style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
+                            ],
                           ),
                         ),
-                        Text(
-                          '3:00 PM - Physics Doubt Session',
-                          style: TextStyle(
-                            color: AppTheme.textLight,
-                            fontSize: 13,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.check_circle, color: AppTheme.successGreen),
+                              onPressed: () async {
+                                await _firestore.updateConnectionStatus(doc.id, 'approved');
+                                _loadData();
+                              },
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.cancel, color: AppTheme.errorRed),
+                              onPressed: () async {
+                                await _firestore.updateConnectionStatus(doc.id, 'rejected');
+                              },
+                            ),
+                          ],
                         ),
                       ],
                     ),
                   ),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentBlue,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      'Join',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
+                );
+              }).toList(),
+            );
+          },
         ),
       ],
     );
   }
 
-  Widget _buildRecentAlerts() {
+  Widget _buildQuickActions() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Alerts',
-          style: TextStyle(
-            color: AppTheme.primaryNavy,
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        Text('Quick Actions', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
-        _buildAlertItem(
-          'Student missed 3 sessions',
-          'Riya Malhotra needs attention',
-          Icons.warning_rounded,
-          AppTheme.errorRed,
-        ),
-        const SizedBox(height: 10),
-        _buildAlertItem(
-          'New connection request',
-          'Arjun wants to connect',
-          Icons.person_add_rounded,
-          AppTheme.accentBlue,
+        Row(
+          children: [
+            _actionCard('Students', Icons.people_rounded, AppTheme.accentBlue, () => Navigator.pushNamed(context, AppRoutes.myStudents)),
+            const SizedBox(width: 12),
+            _actionCard('Feedback', Icons.feedback_rounded, AppTheme.accentPurple, () => Navigator.pushNamed(context, AppRoutes.feedbackHistory)),
+            const SizedBox(width: 12),
+            _actionCard('Chat', Icons.chat_rounded, AppTheme.successGreen, () => Navigator.pushNamed(context, AppRoutes.chatList)),
+          ],
         ),
       ],
     );
   }
 
-  Widget _buildAlertItem(
-    String title,
-    String subtitle,
-    IconData icon,
-    Color color,
-  ) {
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 22),
+  Widget _actionCard(String label, IconData icon, Color color, VoidCallback onTap) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: AppCard(
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+          child: Column(
+            children: [
+              Container(
+                width: 50, height: 50,
+                decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
+                child: Icon(icon, color: color, size: 26),
+              ),
+              const SizedBox(height: 10),
+              Text(label, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: AppTheme.textPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: AppTheme.textLight,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(Icons.chevron_right_rounded, color: AppTheme.textLight),
-        ],
+        ),
       ),
     );
   }

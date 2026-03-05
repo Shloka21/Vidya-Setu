@@ -1,15 +1,14 @@
 import '../models/timetable_model.dart';
 
 class TimetableGeneratorService {
-  /// Generates a complete StudyPlan with exam-aware scheduling.
+  /// Generates a complete StudyPlan with exam-aware, round-robin scheduling.
   ///
   /// Key rules:
-  /// - College days: study ONLY in evenings (after last college slot → 22:00)
-  /// - Holidays/weekends: no travel time, full day study (9:00 → 22:00)
-  /// - College hours are always blocked (never schedule study during them)
-  /// - Portion divided by PT exam dates (before PT1 = first chunk, etc.)
-  /// - After last PT → before finals = revision of all topics
-  /// - During revision period: no college hours (treated as holiday)
+  /// - College days: study ONLY in evenings after college, realistic 3-4 hrs
+  /// - Holidays/weekends: 1.5x college-day study hours, ~5-6 hrs
+  /// - 2-3 subjects per day in round-robin rotation
+  /// - Equal weekly coverage across all subjects
+  /// - Exam-based topic division (PT portions + revision)
   static StudyPlan generateStudyPlan({
     required List<SubjectInfo> subjects,
     required List<CollegeSlot> collegeSlots,
@@ -28,12 +27,13 @@ class TimetableGeneratorService {
           startDate, endDate);
     }
 
-    // Flatten all topics
-    final allTopics = <_TopicEntry>[];
+    // Build per-subject topic queues
+    final subjectQueues = <_SubjectQueue>[];
     for (var subject in selectedSubjects) {
+      final topics = <_TopicEntry>[];
       for (var module in subject.modules) {
         for (var topic in module.topics) {
-          allTopics.add(_TopicEntry(
+          topics.add(_TopicEntry(
             subject: subject.name,
             moduleName: module.name,
             topic: topic,
@@ -42,9 +42,16 @@ class TimetableGeneratorService {
           ));
         }
       }
+      if (topics.isNotEmpty) {
+        subjectQueues.add(_SubjectQueue(
+          subjectName: subject.name,
+          topics: topics,
+          color: _getColorForSubject(subject.name),
+        ));
+      }
     }
 
-    if (allTopics.isEmpty) {
+    if (subjectQueues.isEmpty) {
       return _emptyPlan(selectedSubjects, constraints, collegeSlots,
           startDate, endDate);
     }
@@ -55,55 +62,89 @@ class TimetableGeneratorService {
 
     if (examSchedule != null && examSchedule.ptDates.isNotEmpty) {
       // Divide topics into chunks by PT exam count
-      final chunks = _divideTopicsByExams(allTopics, examSchedule);
-      DateTime chunkStart = startDate;
+      final ptCount = examSchedule.ptDates.length;
+      
+      // Create per-PT topic queues (divide each subject's topics equally)
+      final chunkQueues = <List<_SubjectQueue>>[];
+      for (int i = 0; i < ptCount; i++) {
+        final chunk = <_SubjectQueue>[];
+        for (var sq in subjectQueues) {
+          final topicsPerChunk = (sq.topics.length / ptCount).ceil();
+          final start = i * topicsPerChunk;
+          final end = (start + topicsPerChunk).clamp(0, sq.topics.length);
+          if (start < sq.topics.length) {
+            chunk.add(_SubjectQueue(
+              subjectName: sq.subjectName,
+              topics: sq.topics.sublist(start, end),
+              color: sq.color,
+            ));
+          }
+        }
+        chunkQueues.add(chunk);
+      }
 
-      for (int i = 0; i < chunks.length; i++) {
-        final chunk = chunks[i];
+      // Add revision chunk
+      if (examSchedule.finalExamDate != null) {
+        final revisionChunk = <_SubjectQueue>[];
+        for (var sq in subjectQueues) {
+          revisionChunk.add(_SubjectQueue(
+            subjectName: sq.subjectName,
+            topics: sq.topics.map((t) => _TopicEntry(
+              subject: t.subject,
+              moduleName: t.moduleName,
+              topic: '📝 Revise: ${t.topic}',
+              estimatedMinutes: (t.estimatedMinutes * 0.5).round(),
+              color: t.color,
+            )).toList(),
+            color: sq.color,
+          ));
+        }
+        chunkQueues.add(revisionChunk);
+      }
+
+      DateTime chunkStart = startDate;
+      for (int i = 0; i < chunkQueues.length; i++) {
         DateTime chunkEnd;
+        bool isRevision = i >= ptCount;
 
         if (i < examSchedule.ptDates.length) {
-          // Before PT: end 1 day before exam
           chunkEnd = examSchedule.ptDates[i].startDate
               .subtract(const Duration(days: 1));
         } else if (examSchedule.finalExamDate != null) {
-          // Revision period: after last PT → before finals
           chunkEnd = examSchedule.finalExamDate!.startDate
               .subtract(const Duration(days: 1));
         } else {
           chunkEnd = startDate.add(Duration(days: planDurationDays));
         }
 
-        final isRevisionPeriod = i >= examSchedule.ptDates.length;
-        final chunkSessions = _scheduleSessions(
-          topics: chunk,
+        final chunkSessions = _scheduleRoundRobin(
+          subjectQueues: chunkQueues[i],
           startDate: chunkStart,
           endDate: chunkEnd,
           collegeSlots: collegeSlots,
           constraints: constraints,
           holidays: holidays,
-          isRevisionPeriod: isRevisionPeriod,
+          isRevisionPeriod: isRevision,
         );
         sessions.addAll(chunkSessions);
 
-        // Next chunk starts after exam (skip exam day)
         if (i < examSchedule.ptDates.length) {
           chunkStart = examSchedule.ptDates[i].endDate
               .add(const Duration(days: 1));
         }
       }
 
-      // Calculate weekly hours from first week
-      for (int d = 0; d < 7 && d < sessions.length; d++) {
+      // Calculate weekly hours
+      for (int d = 0; d < 7; d++) {
         final date = startDate.add(Duration(days: d));
         final dayInfo = _getDayInfo(date, collegeSlots, constraints,
             holidays, false);
         totalWeeklyHours += dayInfo.availableMinutes / 60;
       }
     } else {
-      // No exam schedule: simple sequential scheduling
-      final scheduled = _scheduleSessions(
-        topics: allTopics,
+      // No exam schedule: round-robin across full duration
+      final scheduled = _scheduleRoundRobin(
+        subjectQueues: subjectQueues,
         startDate: startDate,
         endDate: endDate,
         collegeSlots: collegeSlots,
@@ -134,41 +175,11 @@ class TimetableGeneratorService {
     );
   }
 
-  /// Divide topics into chunks for each exam period + revision.
-  static List<List<_TopicEntry>> _divideTopicsByExams(
-      List<_TopicEntry> allTopics, ExamSchedule examSchedule) {
-    final ptCount = examSchedule.ptDates.length;
-    final chunks = <List<_TopicEntry>>[];
-
-    // Each PT gets an equal portion of new topics
-    final topicsPerChunk = (allTopics.length / ptCount).ceil();
-
-    for (int i = 0; i < ptCount; i++) {
-      final start = i * topicsPerChunk;
-      final end = (start + topicsPerChunk).clamp(0, allTopics.length);
-      if (start < allTopics.length) {
-        chunks.add(allTopics.sublist(start, end));
-      }
-    }
-
-    // Revision chunk: ALL topics again (for revision after last PT)
-    if (examSchedule.finalExamDate != null) {
-      final revisionTopics = allTopics.map((t) => _TopicEntry(
-            subject: t.subject,
-            moduleName: t.moduleName,
-            topic: '📝 Revise: ${t.topic}',
-            estimatedMinutes: (t.estimatedMinutes * 0.5).round(), // Faster
-            color: t.color,
-          )).toList();
-      chunks.add(revisionTopics);
-    }
-
-    return chunks;
-  }
-
-  /// Schedule study sessions between startDate and endDate.
-  static List<TimetableSession> _scheduleSessions({
-    required List<_TopicEntry> topics,
+  // ─── Round-Robin Scheduler ────────────────────────────────────────────────
+  /// Schedules study sessions using round-robin across subjects.
+  /// Ensures 2-3 subjects per day and equal weekly coverage.
+  static List<TimetableSession> _scheduleRoundRobin({
+    required List<_SubjectQueue> subjectQueues,
     required DateTime startDate,
     required DateTime endDate,
     required List<CollegeSlot> collegeSlots,
@@ -177,10 +188,61 @@ class TimetableGeneratorService {
     required bool isRevisionPeriod,
   }) {
     final sessions = <TimetableSession>[];
-    int topicIndex = 0;
     final totalDays = endDate.difference(startDate).inDays;
 
-    for (int day = 0; day <= totalDays && topicIndex < topics.length; day++) {
+    // Pre-calculate total available slots
+    int totalSlots = 0;
+    for (int day = 0; day <= totalDays; day++) {
+      final currentDate = startDate.add(Duration(days: day));
+      final dayInfo = _getDayInfo(
+          currentDate, collegeSlots, constraints, holidays, isRevisionPeriod);
+      if (dayInfo.availableMinutes >= 30) {
+        final slots = _generateStudySlots(currentDate, dayInfo, collegeSlots);
+        totalSlots += slots.length;
+      }
+    }
+
+    int totalTopics = 0;
+    for (var q in subjectQueues) {
+      totalTopics += q.topics.length;
+    }
+
+    // Expand topics by splitting them if we have more slots than topics (to stretch across all days)
+    final expandedQueues = <_SubjectQueue>[];
+    if (totalSlots > totalTopics && totalTopics > 0) {
+      final partsPerTopic = (totalSlots / totalTopics).ceil();
+      for (var q in subjectQueues) {
+        final newTopics = <_TopicEntry>[];
+        for (var t in q.topics) {
+          if (partsPerTopic == 1) {
+            newTopics.add(t);
+          } else {
+            for (int i = 1; i <= partsPerTopic; i++) {
+              newTopics.add(_TopicEntry(
+                subject: t.subject,
+                moduleName: t.moduleName,
+                topic: '${t.topic} (Part $i of $partsPerTopic)',
+                estimatedMinutes: (t.estimatedMinutes / partsPerTopic).round(),
+                color: t.color,
+              ));
+            }
+          }
+        }
+        expandedQueues.add(_SubjectQueue(
+          subjectName: q.subjectName,
+          topics: newTopics,
+          color: q.color,
+        ));
+      }
+    } else {
+      expandedQueues.addAll(subjectQueues);
+    }
+
+    // Track current position in each subject's topic queue
+    final positions = List<int>.filled(expandedQueues.length, 0);
+    int subjectRotation = 0; // Which subject to start with each day
+
+    for (int day = 0; day <= totalDays; day++) {
       final currentDate = startDate.add(Duration(days: day));
       final dayInfo = _getDayInfo(
           currentDate, collegeSlots, constraints, holidays, isRevisionPeriod);
@@ -188,12 +250,51 @@ class TimetableGeneratorService {
       if (dayInfo.availableMinutes < 30) continue;
 
       final slots = _generateStudySlots(currentDate, dayInfo, collegeSlots);
+      if (slots.isEmpty) continue;
 
-      for (var slot in slots) {
-        if (topicIndex >= topics.length) break;
-        final topic = topics[topicIndex];
+      // Determine how many subjects today (2-3)
+      final activeQueues = <int>[];
+      for (int i = 0; i < expandedQueues.length; i++) {
+        if (positions[i] < expandedQueues[i].topics.length) {
+          activeQueues.add(i);
+        }
+      }
+      if (activeQueues.isEmpty) break;
+
+      // Pick 2-3 subjects for today in round-robin order
+      final subjectsPerDay = dayInfo.isFreeDay
+          ? (activeQueues.length >= 3 ? 3 : activeQueues.length)
+          : (activeQueues.length >= 2 ? 2 : activeQueues.length);
+
+      final todaysSubjects = <int>[];
+      for (int i = 0; i < subjectsPerDay; i++) {
+        final idx = (subjectRotation + i) % activeQueues.length;
+        todaysSubjects.add(activeQueues[idx]);
+      }
+
+      // Distribute slots across today's subjects
+      int slotIndex = 0;
+      int subjectCycleIdx = 0;
+
+      while (slotIndex < slots.length) {
+        final queueIdx = todaysSubjects[subjectCycleIdx % todaysSubjects.length];
+        final queue = expandedQueues[queueIdx];
+
+        if (positions[queueIdx] >= queue.topics.length) {
+          // This subject is done, skip it
+          subjectCycleIdx++;
+          // Check if all today's subjects are done
+          bool allDone = todaysSubjects.every(
+              (idx) => positions[idx] >= expandedQueues[idx].topics.length);
+          if (allDone) break;
+          continue;
+        }
+
+        final topic = queue.topics[positions[queueIdx]];
+        final slot = slots[slotIndex];
+
         sessions.add(TimetableSession(
-          id: '${currentDate.millisecondsSinceEpoch}_$topicIndex',
+          id: '${currentDate.millisecondsSinceEpoch}_${slotIndex}',
           subject: topic.subject,
           topic: topic.topic,
           moduleName: topic.moduleName,
@@ -204,19 +305,25 @@ class TimetableGeneratorService {
           isCompleted: false,
           isHolidaySession: dayInfo.isHoliday || dayInfo.isWeekend,
         ));
-        topicIndex++;
+
+        positions[queueIdx]++;
+        slotIndex++;
+        subjectCycleIdx++;
       }
+
+      // Rotate starting subject for next day
+      subjectRotation = (subjectRotation + 1) % activeQueues.length;
     }
 
     return sessions;
   }
 
+  // ─── Day Info Calculator ──────────────────────────────────────────────────
   /// Calculate available study info for a specific day.
   ///
-  /// Key rules:
-  /// - College days: only evening hours (after college → 22:00)
-  /// - Holidays/weekends: no travel time, full day (9:00 → 22:00)
-  /// - Revision period: treated like holiday (no college)
+  /// College days: 24 - sleep - travel - personal - break - college = study time
+  /// Capped at 3-4 hrs realistically on college days.
+  /// Free days: 1.5x of college-day study time, capped at 5-6 hrs.
   static _DayInfo _getDayInfo(
     DateTime date,
     List<CollegeSlot> collegeSlots,
@@ -229,37 +336,67 @@ class TimetableGeneratorService {
     final isHoliday = HolidayService.isHoliday(date, holidays);
     final isFreeDay = isWeekend || isHoliday || isRevisionPeriod;
 
-    // Calculate unavailable hours
-    double unavailableHrs = constraints.sleepHours +
-        (constraints.personalMinutes / 60) +
-        (constraints.breakMinutes / 60);
+    if (isFreeDay) {
+      // Free day: no college, no travel
+      // Calculate base college-day study time first
+      double collegeDayUnavailable = constraints.sleepHours +
+          (constraints.travelMinutes / 60) +
+          (constraints.personalMinutes / 60) +
+          (constraints.breakMinutes / 60);
 
-    // Travel time ONLY on college days (not holidays/weekends/revision)
-    if (!isFreeDay) {
-      unavailableHrs += (constraints.travelMinutes / 60);
-    }
+      // Estimate average college hours (use 6 as typical)
+      final avgCollegeHrs = _averageCollegeHours(collegeSlots);
+      double collegeDayStudy = (24 - collegeDayUnavailable - avgCollegeHrs)
+          .clamp(1.0, 4.0);
 
-    double totalAvailable = 24 - unavailableHrs;
+      // Free day = 1.5x college day study, capped at 6 hrs
+      double freeDayStudy = (collegeDayStudy * 1.5).clamp(2.0, 6.0);
 
-    if (!isFreeDay) {
-      // College day: subtract college hours
+      return _DayInfo(
+        availableMinutes: (freeDayStudy * 60).round(),
+        isWeekend: isWeekend,
+        isHoliday: isHoliday || isRevisionPeriod,
+        holidayName: isHoliday ? _getHolidayName(date, holidays) : null,
+        isFreeDay: true,
+      );
+    } else {
+      // College day
+      double unavailableHrs = constraints.sleepHours +
+          (constraints.travelMinutes / 60) +
+          (constraints.personalMinutes / 60) +
+          (constraints.breakMinutes / 60);
+
+      // Subtract college hours for this specific day
       final daySlots = collegeSlots.where((s) => s.weekday == weekday);
+      double collegeHrs = 0;
       for (var slot in daySlots) {
-        totalAvailable -= (slot.endHour - slot.startHour);
+        collegeHrs += (slot.endHour - slot.startHour);
       }
+
+      double totalAvailable = 24 - unavailableHrs - collegeHrs;
+      // Realistic cap: students won't study more than 3-4 hrs after college
+      double effectiveHours = totalAvailable.clamp(0.5, 4.0);
+
+      return _DayInfo(
+        availableMinutes: (effectiveHours * 60).round(),
+        isWeekend: false,
+        isHoliday: false,
+        holidayName: null,
+        isFreeDay: false,
+      );
     }
+  }
 
-    // Cap: no more than 10hrs on free days, 5hrs on college days
-    double maxStudy = isFreeDay ? 10.0 : 5.0;
-    double effectiveHours = totalAvailable.clamp(0, maxStudy);
-
-    return _DayInfo(
-      availableMinutes: (effectiveHours * 60).round(),
-      isWeekend: isWeekend,
-      isHoliday: isHoliday || isRevisionPeriod,
-      holidayName: isHoliday ? _getHolidayName(date, holidays) : null,
-      isFreeDay: isFreeDay,
-    );
+  /// Calculate average daily college hours across weekdays
+  static double _averageCollegeHours(List<CollegeSlot> collegeSlots) {
+    if (collegeSlots.isEmpty) return 6.0; // Default assumption
+    double total = 0;
+    final days = <int>{};
+    for (var slot in collegeSlots) {
+      total += (slot.endHour - slot.startHour);
+      days.add(slot.weekday);
+    }
+    return days.isNotEmpty ? total / days.length : 6.0;
   }
 
   static String? _getHolidayName(DateTime date, List<HolidayInfo> holidays) {
@@ -273,6 +410,7 @@ class TimetableGeneratorService {
     }
   }
 
+  // ─── Study Slot Generator ────────────────────────────────────────────────
   /// Generate study slots for a day.
   ///
   /// College days: schedule ONLY in evenings (after last college slot)
@@ -299,8 +437,6 @@ class TimetableGeneratorService {
         startHour = daySlots
             .map((s) => s.endHour)
             .reduce((a, b) => a > b ? a : b);
-        // Add 30min buffer after college
-        startHour = startHour; // Start right after college ends
       } else {
         startHour = 17; // Default evening
       }
@@ -318,7 +454,7 @@ class TimetableGeneratorService {
         continue;
       }
 
-      // Skip college hours on college days (shouldn't happen but safety)
+      // Skip college hours on college days (safety check)
       if (!dayInfo.isFreeDay) {
         bool inCollege = collegeSlots.any((s) =>
             s.weekday == date.weekday &&
@@ -440,6 +576,17 @@ class HolidayService {
         h.date.month == date.month &&
         h.date.day == date.day);
   }
+}
+
+class _SubjectQueue {
+  final String subjectName;
+  final List<_TopicEntry> topics;
+  final String color;
+  _SubjectQueue({
+    required this.subjectName,
+    required this.topics,
+    required this.color,
+  });
 }
 
 class _TopicEntry {

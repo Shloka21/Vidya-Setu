@@ -39,7 +39,7 @@ class MentorRemindersScreen extends StatelessWidget {
     ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(
         title: const Text('Student Reminders'),
         actions: [

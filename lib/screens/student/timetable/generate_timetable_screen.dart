@@ -25,10 +25,11 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   static const _totalSteps = 9;
 
   // Step 1: Upload
-  PlatformFile? _pickedFile;
+  List<PlatformFile> _pickedFiles = [];
 
   // Step 2: Processing (auto)
   bool _isProcessing = false;
+  String _processingStatus = 'Extracting text from PDF...';
 
   // Step 3: Subjects
   List<SubjectInfo> _extractedSubjects = [];
@@ -62,7 +63,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(
         title: Text('Smart Timetable',
             style: Theme.of(context).textTheme.headlineSmall),
@@ -181,76 +182,224 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.auto_stories, size: 48, color: AppTheme.accentBlue),
-          const SizedBox(height: 16),
-          Text('Upload Syllabus',
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 8),
-          Text(
-            'Upload your university syllabus PDF',
-            textAlign: TextAlign.center,
-            style: Theme.of(context)
-                .textTheme
-                .bodyLarge
-                ?.copyWith(color: AppTheme.textSecondary),
+          Center(
+            child: Column(
+              children: [
+                const Icon(Icons.auto_stories,
+                    size: 48, color: AppTheme.accentBlue),
+                const SizedBox(height: 16),
+                Text('Upload Syllabus',
+                    style: Theme.of(context).textTheme.headlineMedium),
+                const SizedBox(height: 8),
+                Text(
+                  'Upload one or more university syllabus PDFs',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context)
+                      .textTheme
+                      .bodyLarge
+                      ?.copyWith(color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 40),
-          GestureDetector(
-            onTap: _pickFile,
-            child: Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: _pickedFile != null
-                    ? Border.all(color: AppTheme.successGreen, width: 2)
-                    : null,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+          const SizedBox(height: 32),
+
+          // Upload Box (if empty) or "Add More" Button
+          if (_pickedFiles.isEmpty)
+            _buildUploadBox()
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Uploaded Files (${_pickedFiles.length})',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 16)),
+                    TextButton.icon(
+                      onPressed: _pickFile,
+                      icon: const Icon(Icons.add_rounded, size: 20),
+                      label: const Text('Add More'),
+                      style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.accentBlue),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                ..._pickedFiles.map((file) => _buildFileCard(file)),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUploadBox() {
+    return GestureDetector(
+      onTap: _pickFile,
+      child: Container(
+        height: 180,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: AppTheme.accentBlue.withValues(alpha: 0.3),
+              width: 2,
+              style: BorderStyle.none), // Border logic handled by AppCard or manual
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.cloud_upload_outlined,
+              size: 56,
+              color: AppTheme.accentBlue,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Tap to Upload PDF(s)',
+              style: TextStyle(
+                color: AppTheme.accentBlue,
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
               ),
+            ),
+            Text(
+              'Select multiple files if needed',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFileCard(PlatformFile file) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: AppCard(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.picture_as_pdf_rounded,
+                  color: AppTheme.accentBlue, size: 24),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(
-                    _pickedFile != null
-                        ? Icons.check_circle
-                        : Icons.cloud_upload_outlined,
-                    size: 56,
-                    color: _pickedFile != null
-                        ? AppTheme.successGreen
-                        : AppTheme.accentBlue,
-                  ),
-                  const SizedBox(height: 12),
                   Text(
-                    _pickedFile?.name ?? 'Tap to Upload PDF',
-                    style: TextStyle(
-                      color: _pickedFile != null
-                          ? AppTheme.successGreen
-                          : AppTheme.accentBlue,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    file.name,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (_pickedFile != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4),
-                      child: Text(
-                        '${(_pickedFile!.size / 1024).toStringAsFixed(1)} KB',
-                        style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12),
-                      ),
-                    ),
+                  Text(
+                    '${(file.size / 1024).toStringAsFixed(1)} KB',
+                    style:
+                        TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  ),
                 ],
               ),
             ),
+            IconButton(
+              icon: const Icon(Icons.visibility_outlined,
+                  color: AppTheme.textSecondary),
+              onPressed: () => _viewFile(file),
+              tooltip: 'View PDF',
+            ),
+            IconButton(
+              icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+              onPressed: () {
+                setState(() => _pickedFiles.remove(file));
+              },
+              tooltip: 'Remove',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _viewFile(PlatformFile file) {
+    // Show a dialog with file info and an option to extract/preview text
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(file.name),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Size: ${(file.size / 1024).toStringAsFixed(1)} KB'),
+              const SizedBox(height: 16),
+              const Text(
+                'Extracted Text Preview:',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 200,
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.divider),
+                ),
+                child: FutureBuilder<String>(
+                  future: PdfService.extractText(file.bytes!),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.hasError) {
+                      return Text('Error extracting text: ${snapshot.error}',
+                          style: const TextStyle(fontSize: 11, color: Colors.red));
+                    }
+                    final text = snapshot.data ?? 'No text found';
+                    return SingleChildScrollView(
+                      child: Text(
+                        text.length > 2000 ? '${text.substring(0, 2000)}...' : text,
+                        style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'This preview shows the raw text that will be used for AI analysis.',
+                style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Back'),
           ),
         ],
       ),
@@ -262,9 +411,17 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
       type: FileType.custom,
       allowedExtensions: ['pdf'],
       withData: true,
+      allowMultiple: true,
     );
     if (result != null) {
-      setState(() => _pickedFile = result.files.single);
+      setState(() {
+        // Only add files that aren't already picked (by name)
+        for (var newFile in result.files) {
+          if (!_pickedFiles.any((f) => f.name == newFile.name)) {
+            _pickedFiles.add(newFile);
+          }
+        }
+      });
     }
   }
 
@@ -272,39 +429,78 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   // STEP 2: Processing PDF (auto-advance)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildProcessingStep() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 64, height: 64,
-            child: CircularProgressIndicator(
-                strokeWidth: 6, color: AppTheme.accentBlue),
-          ),
-          const SizedBox(height: 32),
-          Text('Analyzing Syllabus...',
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 12),
-          Text('Extracting subjects, modules & topics',
-              style: TextStyle(color: AppTheme.textSecondary)),
-        ],
-      ),
+    return _AnimatedLoadingScreen(
+      title: 'Analyzing Your Syllabus',
+      statusText: _processingStatus,
+      icon: Icons.auto_stories,
+      color: AppTheme.accentBlue,
+      stages: const [
+        _LoadingStage('📄', 'Reading PDF'),
+        _LoadingStage('🔍', 'Finding subjects'),
+        _LoadingStage('📚', 'Extracting topics'),
+        _LoadingStage('✅', 'Almost done'),
+      ],
+      tips: const [
+        '💡 Spaced repetition improves retention by 200%',
+        '🧠 Active recall is the most effective study method',
+        '📊 Students who plan study 40% more efficiently',
+        '⏰ The Pomodoro technique boosts focus by 25%',
+        '🎯 Setting specific goals doubles completion rates',
+        '📖 Teaching others helps you remember 90% more',
+        '📝 Writing notes by hand improves understanding and memory',
+        '🔁 Reviewing within 24 hours prevents major forgetting',
+        '📚 Studying in short sessions beats long cramming sessions',
+        '🎧 Instrumental music can improve concentration for some learners',
+        '🌙 Proper sleep strengthens memory consolidation',
+        '🚶 Short breaks increase long-term productivity',
+        '❓ Practice testing is more effective than rereading',
+        '🧩 Mixing subjects (interleaving) improves problem-solving skills',
+        '📵 Keeping phone away reduces distraction significantly',
+        '🗂️ Organizing study material reduces cognitive overload',
+        '🥤 Staying hydrated helps maintain focus and energy',
+        '🧘 Deep breathing for 2 minutes resets mental fatigue',
+        '📅 Studying at the same time daily builds strong habits',
+        '🔍 Explaining concepts in simple words improves clarity',
+        '🎯 Studying with clear objectives increases motivation',
+      ],
     );
   }
 
   Future<void> _processPdf() async {
-    if (_pickedFile == null || _pickedFile!.bytes == null) return;
-    setState(() => _isProcessing = true);
+    if (_pickedFiles.isEmpty) return;
+    setState(() {
+      _isProcessing = true;
+      _processingStatus = '📄 Extracting text from ${_pickedFiles.length} file(s)...';
+    });
 
     try {
+      String combinedText = '';
+      
+      // Step 1: Extract text from all files
+      for (int i = 0; i < _pickedFiles.length; i++) {
+        final file = _pickedFiles[i];
+        if (file.bytes == null) continue;
+        
+        setState(() => _processingStatus = '📄 Reading ${file.name} (${i + 1}/${_pickedFiles.length})...');
+        final text = await PdfService.extractText(file.bytes!);
+        combinedText += "\n\n--- FILE: ${file.name} ---\n\n$text";
+      }
+
+      if (mounted) {
+        setState(() => _processingStatus = '🔍 Scanning for subjects & modules...');
+      }
+
+      // Step 2: AI parsing (with minimum delay for UX)
       final results = await Future.wait([
-        Future(() async {
-          final text = await PdfService.extractText(_pickedFile!.bytes!);
-          return PdfService.parseUniversitySyllabus(text);
-        }),
-        Future.delayed(const Duration(milliseconds: 2000)),
+        PdfService.parseUniversitySyllabus(combinedText),
+        Future.delayed(const Duration(milliseconds: 1500)),
       ]);
       final subjects = results[0] as List<SubjectInfo>;
+
+      if (mounted) {
+        setState(() => _processingStatus = '✅ Found ${subjects.length} subjects!');
+        await Future.delayed(const Duration(milliseconds: 800));
+      }
 
       if (mounted) {
         setState(() {
@@ -344,13 +540,22 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
       );
     }
 
+    // Group subjects by semester
+    final grouped = <int?, List<SubjectInfo>>{};
+    for (var s in _extractedSubjects) {
+      grouped.putIfAbsent(s.semester, () => []).add(s);
+    }
+    // Sort by semester (null last)
+    final sortedKeys = grouped.keys.toList()
+      ..sort((a, b) => (a ?? 99).compareTo(b ?? 99));
+
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
         Text('Select Subjects',
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
-        Text('Choose subjects for your study plan',
+        Text('${_extractedSubjects.length} subjects found across ${sortedKeys.length} semester(s)',
             style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
         const SizedBox(height: 16),
 
@@ -361,8 +566,8 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             activeColor: AppTheme.accentBlue,
             title: const Text('Select All',
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            subtitle:
-                Text('${_extractedSubjects.length} subjects found'),
+            subtitle: Text(
+                '${_extractedSubjects.where((s) => s.isSelected).length} of ${_extractedSubjects.length} selected'),
             onChanged: (val) {
               setState(() {
                 _selectAll = val ?? true;
@@ -373,46 +578,88 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             },
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
 
-        // Subject list - simple cards (not expansion tiles for speed)
-        ..._extractedSubjects.map((subject) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: AppCard(
-                child: ListTile(
-                  leading: Checkbox(
-                    value: subject.isSelected,
-                    activeColor: AppTheme.accentBlue,
-                    onChanged: (val) {
-                      setState(() {
-                        subject.isSelected = val ?? true;
-                        _selectAll = _extractedSubjects
-                            .every((s) => s.isSelected);
-                      });
-                    },
+        // Subjects grouped by semester
+        ...sortedKeys.expand((semester) {
+          final subjects = grouped[semester]!;
+          return [
+            // Semester header
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8, top: 4),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      semester != null
+                          ? 'Semester $semester'
+                          : 'Other',
+                      style: const TextStyle(
+                        color: AppTheme.accentBlue,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
                   ),
-                  title: Text(
-                    subject.name,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, fontSize: 14),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text('${subjects.length} subjects',
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12)),
                   ),
-                  subtitle: Text(
-                    '${subject.moduleCount} modules • ${subject.topicCount} topics • ~${subject.estimatedStudyHours.toStringAsFixed(0)} hrs',
-                    style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12),
-                  ),
-                  trailing: subject.modules.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.info_outline, size: 20),
-                          onPressed: () => _showSubjectDetails(subject),
-                        )
-                      : null,
-                ),
+                ],
               ),
-            )),
+            ),
+            // Subject cards
+            ...subjects.map((subject) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: AppCard(
+                    child: ListTile(
+                      leading: Checkbox(
+                        value: subject.isSelected,
+                        activeColor: AppTheme.accentBlue,
+                        onChanged: (val) {
+                          setState(() {
+                            subject.isSelected = val ?? true;
+                            _selectAll = _extractedSubjects
+                                .every((s) => s.isSelected);
+                          });
+                        },
+                      ),
+                      title: Text(
+                        subject.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 14),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(
+                        '${subject.moduleCount} modules • ${subject.topicCount} topics • ~${subject.estimatedStudyHours.toStringAsFixed(0)} hrs',
+                        style: TextStyle(
+                            color: AppTheme.textSecondary, fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: subject.modules.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.info_outline, size: 20),
+                              onPressed: () => _showSubjectDetails(subject),
+                            )
+                          : null,
+                    ),
+                  ),
+                )),
+          ];
+        }),
       ],
     );
   }
+
 
   void _showSubjectDetails(SubjectInfo subject) {
     showModalBottomSheet(
@@ -549,8 +796,12 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Unavailable (college days)',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    Flexible(
+                      child: Text('Unavailable (college days)',
+                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
                       '${_constraints.totalUnavailableHours.toStringAsFixed(1)} hrs',
                       style: const TextStyle(
@@ -563,10 +814,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Unavailable (holidays/weekends)',
-                        style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    Flexible(
+                      child: Text('Unavailable (holidays/weekends)',
+                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: 8),
                     Text(
-                      '${(_constraints.totalUnavailableHours - _constraints.travelMinutes / 60).toStringAsFixed(1)} hrs (no travel)',
+                      '${(_constraints.totalUnavailableHours - _constraints.travelMinutes / 60).toStringAsFixed(1)} hrs',
                       style: TextStyle(
                           color: AppTheme.textSecondary, fontSize: 12),
                     ),
@@ -1006,10 +1261,13 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                         children: [
                           Text('PT ${i + 1}',
                               style: const TextStyle(fontWeight: FontWeight.w600)),
-                          Text(sd != null && ed != null
-                              ? '${DateFormat('dd MMM').format(sd)} – ${DateFormat('dd MMM').format(ed)}'
-                              : 'Not set',
-                              style: TextStyle(color: AppTheme.textSecondary)),
+                          Flexible(
+                            child: Text(sd != null && ed != null
+                                ? '${DateFormat('dd MMM').format(sd)} – ${DateFormat('dd MMM').format(ed)}'
+                                : 'Not set',
+                                style: TextStyle(color: AppTheme.textSecondary),
+                                overflow: TextOverflow.ellipsis),
+                          ),
                         ],
                       ),
                     );
@@ -1022,9 +1280,12 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                             style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: Colors.red)),
-                        Text(
-                          '${DateFormat('dd MMM').format(_finalExamStartDate!)}${_finalExamEndDate != null ? ' – ${DateFormat('dd MMM').format(_finalExamEndDate!)}' : ''}',
-                            style: const TextStyle(color: Colors.red)),
+                        Flexible(
+                          child: Text(
+                            '${DateFormat('dd MMM').format(_finalExamStartDate!)}${_finalExamEndDate != null ? ' – ${DateFormat('dd MMM').format(_finalExamEndDate!)}' : ''}',
+                              style: const TextStyle(color: Colors.red),
+                              overflow: TextOverflow.ellipsis),
+                        ),
                       ],
                     ),
                 ],
@@ -1075,27 +1336,24 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   // STEP 8: Generating (auto)
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildGeneratingStep() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 80, height: 80,
-            child: CircularProgressIndicator(
-                strokeWidth: 6, color: AppTheme.accentBlue),
-          ),
-          const SizedBox(height: 32),
-          Text('Generating Your Plan',
-              style: Theme.of(context).textTheme.headlineMedium),
-          const SizedBox(height: 12),
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 300),
-            child: Text(_generatingStatus,
-                key: ValueKey(_generatingStatus),
-                style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-        ],
-      ),
+    return _AnimatedLoadingScreen(
+      title: 'Crafting Your Plan',
+      statusText: _generatingStatus,
+      icon: Icons.calendar_month,
+      color: const Color(0xFF8B5CF6),
+      stages: const [
+        _LoadingStage('📅', 'Checking calendar'),
+        _LoadingStage('📊', 'Scheduling sessions'),
+        _LoadingStage('🔄', 'Balancing subjects'),
+        _LoadingStage('✨', 'Finishing up'),
+      ],
+      tips: const [
+        '📅 Your plan adapts to your college schedule',
+        '🔄 Subjects are rotated daily for variety',
+        '🏖️ Holidays get 1.5× more study time',
+        '📝 Each session includes quiz & resources',
+        '🎯 Equal coverage ensures no subject falls behind',
+      ],
     );
   }
 
@@ -1363,9 +1621,9 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   Future<void> _onNextPressed() async {
     switch (_currentStep) {
       case 0: // Upload → Processing
-        if (_pickedFile == null) {
+        if (_pickedFiles.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please upload a PDF first')));
+              const SnackBar(content: Text('Please upload at least one PDF syllabus')));
           return;
         }
         setState(() => _currentStep = 1);
@@ -1459,7 +1717,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
       }
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
-            context, '/student-dashboard', (route) => false);
+            context, '/student/dashboard', (route) => false);
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('🎉 Smart Timetable Created!'),
           backgroundColor: AppTheme.successGreen,
@@ -1468,10 +1726,239 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     } catch (e) {
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
-            context, '/student-dashboard', (route) => false);
+            context, '/student/dashboard', (route) => false);
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Timetable created (save pending)')));
       }
     }
+  }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Animated Loading Screen (used for PDF processing & plan generation)
+// ═════════════════════════════════════════════════════════════════════════════
+class _LoadingStage {
+  final String emoji;
+  final String label;
+  const _LoadingStage(this.emoji, this.label);
+}
+
+class _AnimatedLoadingScreen extends StatefulWidget {
+  final String title;
+  final String statusText;
+  final IconData icon;
+  final Color color;
+  final List<_LoadingStage> stages;
+  final List<String> tips;
+
+  const _AnimatedLoadingScreen({
+    required this.title,
+    required this.statusText,
+    required this.icon,
+    required this.color,
+    required this.stages,
+    required this.tips,
+  });
+
+  @override
+  State<_AnimatedLoadingScreen> createState() => _AnimatedLoadingScreenState();
+}
+
+class _AnimatedLoadingScreenState extends State<_AnimatedLoadingScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late AnimationController _rotateController;
+  int _currentTipIndex = 0;
+  int _currentStageIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat(reverse: true);
+
+    _rotateController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 12),
+    )..repeat();
+
+    // Cycle tips every 3 seconds
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(seconds: 3));
+      if (!mounted) return false;
+      setState(() {
+        _currentTipIndex = (_currentTipIndex + 1) % widget.tips.length;
+      });
+      return true;
+    });
+
+    // Advance stages every 2.5 seconds
+    Future.doWhile(() async {
+      await Future.delayed(const Duration(milliseconds: 2500));
+      if (!mounted) return false;
+      if (_currentStageIndex < widget.stages.length - 1) {
+        setState(() => _currentStageIndex++);
+      }
+      return true;
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    _rotateController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Pulsing icon with gradient ring
+          AnimatedBuilder(
+            animation: _pulseController,
+            builder: (_, child) {
+              final scale = 1.0 + (_pulseController.value * 0.08);
+              return Transform.scale(
+                scale: scale,
+                child: Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [
+                        widget.color.withValues(alpha: 0.15),
+                        widget.color.withValues(alpha: 0.05),
+                      ],
+                    ),
+                    border: Border.all(
+                      color: widget.color.withValues(alpha: 0.25),
+                      width: 3,
+                    ),
+                  ),
+                  child: Icon(widget.icon, size: 42, color: widget.color),
+                ),
+              );
+            },
+          ),
+          const SizedBox(height: 28),
+
+          // Title
+          Text(widget.title,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+              textAlign: TextAlign.center),
+          const SizedBox(height: 20),
+
+          // Stage progress dots
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(widget.stages.length, (i) {
+              final isActive = i <= _currentStageIndex;
+              final isCurrent = i == _currentStageIndex;
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Column(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 400),
+                      width: isCurrent ? 40 : 28,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(3),
+                        color: isActive
+                            ? widget.color
+                            : widget.color.withValues(alpha: 0.15),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      widget.stages[i].emoji,
+                      style: TextStyle(
+                        fontSize: isActive ? 16 : 12,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 12),
+
+          // Current stage label
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 400),
+            child: Text(
+              widget.stages[_currentStageIndex].label,
+              key: ValueKey(_currentStageIndex),
+              style: TextStyle(
+                color: widget.color,
+                fontWeight: FontWeight.w600,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Status text
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: Text(
+              widget.statusText,
+              key: ValueKey(widget.statusText),
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Study tip card (rotating)
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 500),
+            transitionBuilder: (child, animation) => FadeTransition(
+              opacity: animation,
+              child: SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(0, 0.15),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              ),
+            ),
+            child: Container(
+              key: ValueKey(_currentTipIndex),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: widget.color.withValues(alpha: 0.06),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: widget.color.withValues(alpha: 0.12),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      widget.tips[_currentTipIndex],
+                      style: const TextStyle(fontSize: 13, height: 1.4),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

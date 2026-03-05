@@ -21,6 +21,7 @@ class UserModel {
   final double rating; // mentor only
   final int studentCount; // mentor only
   final int maxStudents; // mentor only
+  final int sessionsCompleted; // mentor only
   final bool isTimetableCreated; // student only
   final DateTime createdAt;
   final DateTime lastActive;
@@ -46,6 +47,7 @@ class UserModel {
     this.rating = 0,
     this.studentCount = 0,
     this.maxStudents = 20,
+    this.sessionsCompleted = 0,
     this.isTimetableCreated = false,
     DateTime? createdAt,
     DateTime? lastActive,
@@ -76,6 +78,7 @@ class UserModel {
       rating: (map['rating'] ?? 0).toDouble(),
       studentCount: map['studentCount'] ?? 0,
       maxStudents: map['maxStudents'] ?? 20,
+      sessionsCompleted: map['sessionsCompleted'] ?? 0,
       isTimetableCreated: map['isTimetableCreated'] ?? false,
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
@@ -108,6 +111,7 @@ class UserModel {
       'rating': rating,
       'studentCount': studentCount,
       'maxStudents': maxStudents,
+      'sessionsCompleted': sessionsCompleted,
       'isTimetableCreated': isTimetableCreated,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastActive': Timestamp.fromDate(lastActive),
@@ -135,6 +139,7 @@ class UserModel {
     double? rating,
     int? studentCount,
     int? maxStudents,
+    int? sessionsCompleted,
     bool? isTimetableCreated,
     DateTime? createdAt,
     DateTime? lastActive,
@@ -160,6 +165,7 @@ class UserModel {
       rating: rating ?? this.rating,
       studentCount: studentCount ?? this.studentCount,
       maxStudents: maxStudents ?? this.maxStudents,
+      sessionsCompleted: sessionsCompleted ?? this.sessionsCompleted,
       isTimetableCreated: isTimetableCreated ?? this.isTimetableCreated,
       createdAt: createdAt ?? this.createdAt,
       lastActive: lastActive ?? this.lastActive,

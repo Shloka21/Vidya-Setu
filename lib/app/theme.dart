@@ -281,4 +281,92 @@ class AppTheme {
       ),
     );
   }
+
+  // ─── Dark Theme ─────────────────────────────────────────────
+  static const Color darkBackground = Color(0xFF0F1923);
+  static const Color darkSurface = Color(0xFF1B2838);
+  static const Color darkCard = Color(0xFF243447);
+  static const Color darkDivider = Color(0xFF2D3F54);
+  static const Color darkTextPrimary = Color(0xFFE8ECF0);
+  static const Color darkTextSecondary = Color(0xFF9CA3AF);
+  static const Color darkTextLight = Color(0xFF6B7280);
+
+  static ThemeData get darkTheme {
+    final textTheme = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: darkBackground,
+      primaryColor: accentBlue,
+      colorScheme: const ColorScheme.dark(
+        primary: accentBlue,
+        secondary: accentPurple,
+        tertiary: accentPurple,
+        surface: darkSurface,
+        error: errorRed,
+        onPrimary: Colors.white,
+        onSecondary: Colors.white,
+        onSurface: darkTextPrimary,
+        onError: Colors.white,
+      ),
+      textTheme: textTheme.copyWith(
+        displayLarge: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 57, fontWeight: FontWeight.w800),
+        displayMedium: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 45, fontWeight: FontWeight.w700),
+        headlineSmall: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 24, fontWeight: FontWeight.w600),
+        titleLarge: GoogleFonts.inter(color: darkTextPrimary, fontSize: 22, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.inter(color: darkTextPrimary, fontSize: 16),
+        bodyMedium: GoogleFonts.inter(color: darkTextSecondary, fontSize: 14),
+        bodySmall: GoogleFonts.inter(color: darkTextLight, fontSize: 12),
+        labelLarge: GoogleFonts.inter(color: darkTextPrimary, fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: darkBackground,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        titleTextStyle: GoogleFonts.inter(color: darkTextPrimary, fontSize: 20, fontWeight: FontWeight.w600),
+        iconTheme: const IconThemeData(color: darkTextPrimary),
+      ),
+      cardTheme: CardThemeData(
+        color: darkSurface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusLarge)),
+        margin: EdgeInsets.zero,
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accentBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMedium)),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: darkCard,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusMedium), borderSide: BorderSide.none),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusMedium), borderSide: BorderSide.none),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(radiusMedium), borderSide: const BorderSide(color: accentBlue, width: 2)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        hintStyle: GoogleFonts.inter(color: darkTextLight, fontSize: 15),
+      ),
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: darkSurface,
+        selectedItemColor: accentBlue,
+        unselectedItemColor: darkTextLight,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: darkCard,
+        selectedColor: accentBlue,
+        labelStyle: GoogleFonts.inter(fontSize: 13, fontWeight: FontWeight.w500),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusSmall)),
+        side: BorderSide.none,
+      ),
+      dividerTheme: const DividerThemeData(color: darkDivider, thickness: 1, space: 1),
+    );
+  }
 }

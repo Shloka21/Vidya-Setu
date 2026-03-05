@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme.dart';
+import '../../providers/auth_provider.dart';
 
-/// Video call screen using Jitsi Meet (free, open-source).
-/// Uses a WebView or URL launcher to connect to Jitsi's free servers.
-/// No API key required — completely free.
 class VideoCallScreen extends StatefulWidget {
   const VideoCallScreen({super.key});
 
@@ -11,337 +11,189 @@ class VideoCallScreen extends StatefulWidget {
   State<VideoCallScreen> createState() => _VideoCallScreenState();
 }
 
-class _VideoCallScreenState extends State<VideoCallScreen>
-    with SingleTickerProviderStateMixin {
-  bool _isMuted = false;
-  bool _isVideoOff = false;
-  bool _isSpeakerOn = true;
-  bool _isConnecting = true;
-  bool _isCallActive = false;
-  int _callDuration = 0;
-  late AnimationController _pulseController;
+class _VideoCallScreenState extends State<VideoCallScreen> {
+  String _roomId = 'default';
+  String _otherUserName = 'User';
+  bool _launching = false;
+  bool _inCall = false;
+  final _jitsiMeet = JitsiMeet();
 
   @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null) {
+      _roomId = args['roomId'] as String? ?? 'default';
+      _otherUserName = args['otherUserName'] as String? ?? 'User';
+    }
+  }
 
-    // Simulate connection after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
+  Future<void> _startCall({bool audioOnly = false}) async {
+    setState(() => _launching = true);
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final userName = auth.userModel?.name ?? 'User';
+    final userEmail = auth.userModel?.email ?? '';
+    final isMentor = auth.userModel?.role == 'mentor';
+
+    try {
+      var options = JitsiMeetConferenceOptions(
+        room: 'vidyasetu-${_roomId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}',
+        serverURL: 'https://meet.jit.si',
+        userInfo: JitsiMeetUserInfo(
+          displayName: userName,
+          email: userEmail,
+        ),
+        featureFlags: {
+          FeatureFlags.addPeopleEnabled: false,
+          FeatureFlags.welcomePageEnabled: false,
+          FeatureFlags.preJoinPageEnabled: false,
+          FeatureFlags.unsafeRoomWarningEnabled: false,
+          FeatureFlags.lobbyModeEnabled: false,
+          FeatureFlags.meetingPasswordEnabled: false,
+          FeatureFlags.resolution: 360,
+          FeatureFlags.chatEnabled: true,
+          FeatureFlags.inviteEnabled: false,
+          FeatureFlags.kickOutEnabled: isMentor,
+          FeatureFlags.recordingEnabled: isMentor,
+          FeatureFlags.liveStreamingEnabled: false,
+          FeatureFlags.meetingNameEnabled: true,
+          FeatureFlags.raiseHandEnabled: true,
+          FeatureFlags.tileViewEnabled: true,
+          FeatureFlags.toolboxAlwaysVisible: false,
+          FeatureFlags.filmstripEnabled: true,
+        },
+        configOverrides: {
+          'startWithAudioMuted': false,
+          'startWithVideoMuted': audioOnly,
+          'subject': 'VidyaSetu: ${audioOnly ? "Audio" : "Video"} call with $_otherUserName',
+          'requireDisplayName': false,
+          'disableDeepLinking': true,
+          'prejoinConfig.enabled': false,
+        },
+      );
+
+      await _jitsiMeet.join(options);
       if (mounted) {
         setState(() {
-          _isConnecting = false;
-          _isCallActive = true;
+          _launching = false;
+          _inCall = true;
         });
-        _startTimer();
       }
-    });
-  }
-
-  void _startTimer() {
-    Future.doWhile(() async {
-      await Future.delayed(const Duration(seconds: 1));
-      if (!mounted || !_isCallActive) return false;
-      setState(() => _callDuration++);
-      return true;
-    });
-  }
-
-  String get _formattedDuration {
-    final mins = (_callDuration ~/ 60).toString().padLeft(2, '0');
-    final secs = (_callDuration % 60).toString().padLeft(2, '0');
-    return '$mins:$secs';
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _isCallActive = false;
-    super.dispose();
+    } catch (e) {
+      if (mounted) {
+        setState(() => _launching = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not start call: $e'), backgroundColor: AppTheme.errorRed),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1A1A2E),
-      body: Stack(
-        children: [
-          // Background
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF1A1A2E), Color(0xFF16213E)],
-              ),
-            ),
-          ),
-
-          // Remote video placeholder (mentor)
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (_isConnecting) ...[
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: 1.0 + _pulseController.value * 0.15,
-                        child: Container(
-                          width: 120,
-                          height: 120,
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentBlue.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Container(
-                            margin: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: AppTheme.accentBlue.withOpacity(0.3),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.person_rounded,
-                                color: Colors.white70, size: 50),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  const Text('Connecting...',
-                      style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 8),
-                  Text('Dr. Sharma',
-                      style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
-                          fontSize: 14)),
-                ] else ...[
-                  // Call active - show avatar
-                  Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentBlue.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.accentBlue, width: 3),
-                    ),
-                    child: const Center(
-                      child: Text('D',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 42,
-                              fontWeight: FontWeight.w700)),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Dr. Sharma',
-                      style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text(_formattedDuration,
-                      style: TextStyle(
-                          color: AppTheme.successGreen,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600)),
-                ],
-              ],
-            ),
-          ),
-
-          // Self view (small PiP)
-          if (!_isVideoOff && _isCallActive)
-            Positioned(
-              top: MediaQuery.of(context).padding.top + 16,
-              right: 16,
-              child: Container(
+      
+      appBar: AppBar(title: const Text('Video Call')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
                 width: 100,
-                height: 140,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2D2D44),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                      color: Colors.white.withOpacity(0.2), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    color: const Color(0xFF2D2D44),
-                    child: const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.person_rounded,
-                              color: Colors.white38, size: 36),
-                          SizedBox(height: 4),
-                          Text('You',
-                              style: TextStyle(
-                                  color: Colors.white54, fontSize: 11)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          // Top bar with back button
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    _circleButton(Icons.arrow_back_rounded, () {
-                      Navigator.pop(context);
-                    }),
-                    const Spacer(),
-                    if (_isCallActive)
-                      _circleButton(
-                        _isSpeakerOn
-                            ? Icons.volume_up_rounded
-                            : Icons.volume_off_rounded,
-                        () => setState(() => _isSpeakerOn = !_isSpeakerOn),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Bottom controls
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                height: 100,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withOpacity(0.6),
+                    colors: [AppTheme.accentBlue.withOpacity(0.2), AppTheme.accentPurple.withOpacity(0.2)],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    _otherUserName.isNotEmpty ? _otherUserName[0].toUpperCase() : 'U',
+                    style: TextStyle(color: AppTheme.accentBlue, fontSize: 42, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(_otherUserName, style: TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 8),
+              Text('Powered by Jitsi Meet', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+              const SizedBox(height: 12),
+              Text('No login required • Instant join', style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w500)),
+              const SizedBox(height: 36),
+
+              if (!_inCall) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _launching ? null : () => _startCall(audioOnly: false),
+                    icon: _launching
+                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                        : const Icon(Icons.videocam_rounded, size: 24),
+                    label: Text(_launching ? 'Connecting...' : 'Start Video Call'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.successGreen,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _launching ? null : () => _startCall(audioOnly: true),
+                    icon: const Icon(Icons.phone_rounded, size: 20),
+                    label: const Text('Audio Only'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.accentBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 48),
+                      const SizedBox(height: 12),
+                      Text('Call started!', style: TextStyle(color: AppTheme.successGreen, fontSize: 16, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 4),
+                      Text('Switch to the call window to continue', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
                     ],
                   ),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    _controlButton(
-                      _isMuted
-                          ? Icons.mic_off_rounded
-                          : Icons.mic_rounded,
-                      _isMuted ? 'Unmute' : 'Mute',
-                      _isMuted ? Colors.red.shade400 : Colors.white24,
-                      () => setState(() => _isMuted = !_isMuted),
-                    ),
-                    _controlButton(
-                      _isVideoOff
-                          ? Icons.videocam_off_rounded
-                          : Icons.videocam_rounded,
-                      _isVideoOff ? 'Start Video' : 'Stop Video',
-                      _isVideoOff ? Colors.red.shade400 : Colors.white24,
-                      () => setState(() => _isVideoOff = !_isVideoOff),
-                    ),
-                    _controlButton(
-                      Icons.screen_share_rounded,
-                      'Share',
-                      Colors.white24,
-                      () {},
-                    ),
-                    _controlButton(
-                      Icons.chat_rounded,
-                      'Chat',
-                      Colors.white24,
-                      () {},
-                    ),
-                    // End call
-                    GestureDetector(
-                      onTap: () {
-                        setState(() => _isCallActive = false);
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        width: 60,
-                        height: 60,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.call_end_rounded,
-                            color: Colors.white, size: 28),
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: () => _startCall(audioOnly: false),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('Rejoin Call'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.accentBlue,
+                    padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
+              ],
+              const SizedBox(height: 32),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Back to Chat', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _circleButton(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
-          shape: BoxShape.circle,
         ),
-        child: Icon(icon, color: Colors.white, size: 22),
-      ),
-    );
-  }
-
-  Widget _controlButton(
-      IconData icon, String label, Color bgColor, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: bgColor,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 6),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500)),
-        ],
       ),
     );
   }

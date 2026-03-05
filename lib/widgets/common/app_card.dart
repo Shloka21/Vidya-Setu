@@ -25,19 +25,22 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = color ?? Theme.of(context).colorScheme.surface;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         margin: margin ?? EdgeInsets.zero,
         padding: padding ?? const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: gradient == null ? (color ?? AppTheme.surface) : null,
+          color: gradient == null ? surfaceColor : null,
           gradient: gradient,
           borderRadius: BorderRadius.circular(
             borderRadius ?? AppTheme.radiusLarge,
           ),
-          boxShadow: AppTheme.cardBoxShadow,
-          border: border,
+          boxShadow: isDark ? [] : AppTheme.cardBoxShadow,
+          border: border ?? (isDark ? Border.all(color: AppTheme.darkDivider) : null),
         ),
         child: child,
       ),

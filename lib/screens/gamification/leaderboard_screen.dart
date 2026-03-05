@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/firestore_service.dart';
 import '../../widgets/common/app_card.dart';
 
 class LeaderboardScreen extends StatefulWidget {
@@ -12,24 +15,33 @@ class LeaderboardScreen extends StatefulWidget {
 class _LeaderboardScreenState extends State<LeaderboardScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-
-  final _weeklyData = [
-    {'rank': 1, 'name': 'Priya Singh', 'xp': 520, 'level': 8, 'streak': 14},
-    {'rank': 2, 'name': 'Ananya Kumar', 'xp': 480, 'level': 7, 'streak': 12},
-    {'rank': 3, 'name': 'Vikram Sharma', 'xp': 420, 'level': 7, 'streak': 9},
-    {'rank': 4, 'name': 'Raj Patel', 'xp': 380, 'level': 6, 'streak': 7},
-    {'rank': 5, 'name': 'Neha Gupta', 'xp': 350, 'level': 6, 'streak': 11},
-    {'rank': 6, 'name': 'Aditya Joshi', 'xp': 310, 'level': 5, 'streak': 5},
-    {'rank': 7, 'name': 'Meera Iyer', 'xp': 290, 'level': 5, 'streak': 8},
-    {'rank': 8, 'name': 'Rohit Das', 'xp': 260, 'level': 4, 'streak': 3},
-    {'rank': 9, 'name': 'Kavya Reddy', 'xp': 240, 'level': 4, 'streak': 6},
-    {'rank': 10, 'name': 'Arjun Nair', 'xp': 220, 'level': 4, 'streak': 4},
-  ];
+  final FirestoreService _firestore = FirestoreService();
+  List<Map<String, dynamic>> _leaderboardData = [];
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) _loadLeaderboard();
+    });
+    _loadLeaderboard();
+  }
+
+  Future<void> _loadLeaderboard() async {
+    setState(() => _loading = true);
+    try {
+      final snapshot = await _firestore.getLeaderboard(limit: 20);
+      final data = snapshot.docs.asMap().entries.map((e) {
+        final d = e.value.data() as Map<String, dynamic>;
+        d['rank'] = e.key + 1;
+        return d;
+      }).toList();
+      if (mounted) setState(() { _leaderboardData = data; _loading = false; });
+    } catch (_) {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   @override
@@ -41,7 +53,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      
       appBar: AppBar(
         title: const Text('Leaderboard'),
         bottom: TabBar(
@@ -56,53 +68,82 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _leaderboardData.isEmpty
+              ? _buildEmpty()
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildLeaderboard(),
+                    _buildLeaderboard(),
+                    _buildLeaderboard(),
+                  ],
+                ),
+    );
+  }
+
+  Widget _buildEmpty() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          _buildLeaderboard(),
-          _buildLeaderboard(),
-          _buildLeaderboard(),
+          Icon(Icons.emoji_events_outlined, size: 64, color: AppTheme.textLight),
+          const SizedBox(height: 16),
+          Text('No leaderboard data yet', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+          const SizedBox(height: 8),
+          Text('Start studying to earn points!', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
         ],
       ),
     );
   }
 
   Widget _buildLeaderboard() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          // Top 3 podium
-          SizedBox(
-            height: 200,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                _podiumItem(_weeklyData[1], 2, 140),
-                _podiumItem(_weeklyData[0], 1, 180),
-                _podiumItem(_weeklyData[2], 3, 110),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
+    final currentUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
 
-          // Rest of the list
-          ...List.generate(
-            _weeklyData.length - 3,
-            (i) => _rankItem(_weeklyData[i + 3]),
-          ),
-        ],
+    return RefreshIndicator(
+      onRefresh: _loadLeaderboard,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Top 3 podium
+            if (_leaderboardData.length >= 3)
+              SizedBox(
+                height: 200,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _podiumItem(_leaderboardData[1], 2, 140, currentUid),
+                    _podiumItem(_leaderboardData[0], 1, 180, currentUid),
+                    _podiumItem(_leaderboardData[2], 3, 110, currentUid),
+                  ],
+                ),
+              ),
+            const SizedBox(height: 24),
+
+            // Rest of the list
+            ...List.generate(
+              (_leaderboardData.length - 3).clamp(0, 17),
+              (i) => _rankItem(_leaderboardData[i + 3], currentUid),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _podiumItem(Map<String, dynamic> user, int position, double height) {
+  Widget _podiumItem(Map<String, dynamic> user, int position, double height, String? currentUid) {
     final colors = {
       1: const Color(0xFFFFD700),
       2: const Color(0xFFC0C0C0),
       3: const Color(0xFFCD7F32),
     };
     final medals = {1: '🥇', 2: '🥈', 3: '🥉'};
+    final name = (user['name'] as String?) ?? 'User';
+    final points = user['points'] ?? 0;
+    final isCurrentUser = user['uid'] == currentUid;
 
     return Expanded(
       child: Column(
@@ -116,55 +157,45 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             decoration: BoxDecoration(
               color: colors[position]!.withOpacity(0.2),
               shape: BoxShape.circle,
-              border: Border.all(color: colors[position]!, width: 3),
+              border: Border.all(
+                color: isCurrentUser ? AppTheme.accentBlue : colors[position]!,
+                width: isCurrentUser ? 4 : 3,
+              ),
             ),
             child: Center(
               child: Text(
-                (user['name'] as String)[0],
-                style: TextStyle(
-                    color: colors[position],
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700),
+                name.isNotEmpty ? name[0].toUpperCase() : '?',
+                style: TextStyle(color: colors[position], fontSize: 22, fontWeight: FontWeight.w700),
               ),
             ),
           ),
           const SizedBox(height: 6),
           Text(
-            (user['name'] as String).split(' ')[0],
+            name.split(' ')[0],
             style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w700),
+              color: isCurrentUser ? AppTheme.accentBlue : AppTheme.textPrimary,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
             textAlign: TextAlign.center,
+            overflow: TextOverflow.ellipsis,
           ),
-          Text('${user['xp']} XP',
-              style: TextStyle(
-                  color: AppTheme.accentBlue,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
+          Text('$points XP', style: TextStyle(color: AppTheme.accentBlue, fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Container(
             width: double.infinity,
-            height: height - 100,
+            height: (height - 100).clamp(10, 100),
             margin: const EdgeInsets.symmetric(horizontal: 8),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                colors: [
-                  colors[position]!.withOpacity(0.3),
-                  colors[position]!.withOpacity(0.1),
-                ],
+                colors: [colors[position]!.withOpacity(0.3), colors[position]!.withOpacity(0.1)],
               ),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
             ),
             child: Center(
-              child: Text('#$position',
-                  style: TextStyle(
-                      color: colors[position],
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700)),
+              child: Text('#$position', style: TextStyle(color: colors[position], fontSize: 20, fontWeight: FontWeight.w700)),
             ),
           ),
         ],
@@ -172,69 +203,71 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     );
   }
 
-  Widget _rankItem(Map<String, dynamic> user) {
+  Widget _rankItem(Map<String, dynamic> user, String? currentUid) {
+    final name = (user['name'] as String?) ?? 'User';
+    final points = user['points'] ?? 0;
+    final level = user['level'] ?? 1;
+    final streak = user['streak'] ?? 0;
+    final rank = user['rank'] ?? 0;
+    final isCurrentUser = user['uid'] == currentUid;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
-        child: Row(
-          children: [
-            SizedBox(
-              width: 32,
-              child: Text(
-                '#${user['rank']}',
-                style: TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700),
+        child: Container(
+          decoration: isCurrentUser
+              ? BoxDecoration(
+                  border: Border.all(color: AppTheme.accentBlue.withOpacity(0.3), width: 2),
+                  borderRadius: BorderRadius.circular(16),
+                )
+              : null,
+          child: Row(
+            children: [
+              SizedBox(
+                width: 32,
+                child: Text('#$rank', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w700)),
               ),
-            ),
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: AppTheme.accentBlue.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: Text(
-                  (user['name'] as String)[0],
-                  style: TextStyle(
-                      color: AppTheme.accentBlue,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: isCurrentUser ? AppTheme.accentBlue.withOpacity(0.2) : AppTheme.accentBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    name.isNotEmpty ? name[0].toUpperCase() : '?',
+                    style: TextStyle(color: AppTheme.accentBlue, fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(user['name'] as String,
-                      style: TextStyle(
-                          color: AppTheme.textPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600)),
-                  Text('Level ${user['level']} • 🔥 ${user['streak']}d streak',
-                      style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12)),
-                ],
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isCurrentUser ? '$name (You)' : name,
+                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Level $level • 🔥 ${streak}d streak',
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppTheme.accentPurple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentPurple.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text('$points XP', style: TextStyle(color: AppTheme.accentPurple, fontSize: 13, fontWeight: FontWeight.w700)),
               ),
-              child: Text('${user['xp']} XP',
-                  style: TextStyle(
-                      color: AppTheme.accentPurple,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700)),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
