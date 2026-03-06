@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:jitsi_meet_flutter_sdk/jitsi_meet_flutter_sdk.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 
@@ -37,9 +38,16 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     final isMentor = auth.userModel?.role == 'mentor';
 
     try {
+      // Request hardware permissions explicitly to avoid Jitsi's internal Android clash
+      await [
+        Permission.camera,
+        Permission.microphone,
+        Permission.bluetoothConnect,
+      ].request();
+
       var options = JitsiMeetConferenceOptions(
         room: 'vidyasetu-${_roomId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}',
-        serverURL: 'https://meet.jit.si',
+        serverURL: 'https://jitsi.riot.im/',
         userInfo: JitsiMeetUserInfo(
           displayName: userName,
           email: userEmail,
@@ -96,8 +104,8 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
       
       appBar: AppBar(title: const Text('Video Call')),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -118,9 +126,9 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-              Text(_otherUserName, style: TextStyle(color: AppTheme.textPrimary, fontSize: 24, fontWeight: FontWeight.w700)),
+              Text(_otherUserName, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 24, fontWeight: FontWeight.w700)),
               const SizedBox(height: 8),
-              Text('Powered by Jitsi Meet', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+              Text('Powered by Jitsi Meet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
               const SizedBox(height: 12),
               Text('No login required • Instant join', style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w500)),
               const SizedBox(height: 36),
@@ -170,7 +178,7 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       const SizedBox(height: 12),
                       Text('Call started!', style: TextStyle(color: AppTheme.successGreen, fontSize: 16, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 4),
-                      Text('Switch to the call window to continue', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                      Text('Switch to the call window to continue', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                     ],
                   ),
                 ),
@@ -187,14 +195,15 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                 ),
               ],
               const SizedBox(height: 32),
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Back to Chat', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
-              ),
-            ],
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Back to Chat', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15)),
+                ),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
   }
 }
+

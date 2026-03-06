@@ -161,7 +161,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
           maxLines: maxLines,
           decoration: InputDecoration(
             hintText: hint,
-            prefixIcon: maxLines == 1 ? Icon(icon, color: AppTheme.textLight) : null,
+            prefixIcon: maxLines == 1 ? Icon(icon, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)) : null,
             fillColor: AppTheme.surface,
             alignLabelWithHint: maxLines > 1,
           ),
@@ -196,7 +196,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
                   },
                   selectedColor: AppTheme.primaryNavy,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textPrimary,
+                    color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   ),
                 ),
@@ -240,7 +240,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
             ),
             child: Row(
               children: [
-                Icon(Icons.access_time, color: AppTheme.textLight, size: 20),
+                Icon(Icons.access_time, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 20),
                 const SizedBox(width: 8),
                 Text(
                   time.format(context),
@@ -328,3 +328,4 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     );
   }
 }
+

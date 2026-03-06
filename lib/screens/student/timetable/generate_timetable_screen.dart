@@ -199,7 +199,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   style: Theme.of(context)
                       .textTheme
                       .bodyLarge
-                      ?.copyWith(color: AppTheme.textSecondary),
+                      ?.copyWith(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                 ),
               ],
             ),
@@ -277,7 +277,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             ),
             Text(
               'Select multiple files if needed',
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
             ),
           ],
         ),
@@ -317,14 +317,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   Text(
                     '${(file.size / 1024).toStringAsFixed(1)} KB',
                     style:
-                        TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                        TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                   ),
                 ],
               ),
             ),
             IconButton(
-              icon: const Icon(Icons.visibility_outlined,
-                  color: AppTheme.textSecondary),
+              icon: Icon(Icons.visibility_outlined,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               onPressed: () => _viewFile(file),
               tooltip: 'View PDF',
             ),
@@ -534,7 +534,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text('Try uploading a different PDF',
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ],
         ),
       );
@@ -556,7 +556,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
         Text('${_extractedSubjects.length} subjects found across ${sortedKeys.length} semester(s)',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 16),
 
         // Select All
@@ -611,7 +611,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   Expanded(
                     child: Text('${subjects.length} subjects',
                         style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12)),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
                   ),
                 ],
               ),
@@ -642,7 +642,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                       subtitle: Text(
                         '${subject.moduleCount} modules • ${subject.topicCount} topics • ~${subject.estimatedStudyHours.toStringAsFixed(0)} hrs',
                         style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                         overflow: TextOverflow.ellipsis,
                       ),
                       trailing: subject.modules.isNotEmpty
@@ -682,7 +682,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                       fontWeight: FontWeight.bold, fontSize: 16)),
               Text('${subject.code} • ${subject.credits} credits',
                   style: TextStyle(
-                      color: AppTheme.textSecondary, fontSize: 12)),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
               const Divider(height: 24),
               ...subject.modules.map((module) => Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -694,7 +694,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                       ),
                       Text('${module.hours} hrs • ${module.topics.length} topics',
                           style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 11)),
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 11)),
                       const SizedBox(height: 6),
                       ...module.topics.map((t) => Padding(
                             padding: const EdgeInsets.only(left: 12, bottom: 4),
@@ -731,7 +731,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
         Text('Tap time slots where you have college lectures',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 20),
         AppCard(
           child: Padding(
@@ -752,7 +752,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             subtitle: Text(
               'On college days, sessions are scheduled only in the evening after your last lecture',
               style:
-                  TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                  TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
             ),
           ),
         ),
@@ -771,7 +771,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
         Text('Tell us about your schedule so we plan around it',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 24),
         _buildSliderCard(Icons.bedtime, Colors.indigo, 'Sleep Duration',
             _constraints.sleepHours, 'hrs', 5, 10, 10,
@@ -816,14 +816,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   children: [
                     Flexible(
                       child: Text('Unavailable (holidays/weekends)',
-                          style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                           overflow: TextOverflow.ellipsis),
                     ),
                     const SizedBox(width: 8),
                     Text(
                       '${(_constraints.totalUnavailableHours - _constraints.travelMinutes / 60).toStringAsFixed(1)} hrs',
                       style: TextStyle(
-                          color: AppTheme.textSecondary, fontSize: 12),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                     ),
                   ],
                 ),
@@ -895,7 +895,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         const SizedBox(height: 4),
         Text(
           'Set your periodic test and final exam dates. Syllabus will be divided accordingly.',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
         ),
         const SizedBox(height: 24),
 
@@ -937,7 +937,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                               style: TextStyle(
                                 color: isSelected
                                     ? Colors.white
-                                    : AppTheme.textPrimary,
+                                    : Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -1027,7 +1027,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
           Expanded(
             child: Text(desc,
                 style: TextStyle(
-                    fontSize: 12, color: AppTheme.textSecondary)),
+                    fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ),
         ],
       ),
@@ -1087,7 +1087,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                             Text('From',
                                 style: TextStyle(
                                     fontSize: 11,
-                                    color: AppTheme.textSecondary)),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                             const SizedBox(height: 2),
                             Text(
                               startDate != null
@@ -1098,7 +1098,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                                 fontSize: 13,
                                 color: startDate != null
                                     ? AppTheme.accentBlue
-                                    : AppTheme.textSecondary,
+                                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               ),
                             ),
                           ],
@@ -1133,7 +1133,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                             Text('To',
                                 style: TextStyle(
                                     fontSize: 11,
-                                    color: AppTheme.textSecondary)),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                             const SizedBox(height: 2),
                             Text(
                               endDate != null
@@ -1144,7 +1144,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                                 fontSize: 13,
                                 color: endDate != null
                                     ? AppTheme.accentBlue
-                                    : AppTheme.textSecondary,
+                                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               ),
                             ),
                           ],
@@ -1208,7 +1208,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 4),
         Text('Review before generating',
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 24),
 
         Row(children: [
@@ -1265,7 +1265,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                             child: Text(sd != null && ed != null
                                 ? '${DateFormat('dd MMM').format(sd)} – ${DateFormat('dd MMM').format(ed)}'
                                 : 'Not set',
-                                style: TextStyle(color: AppTheme.textSecondary),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                                 overflow: TextOverflow.ellipsis),
                           ),
                         ],
@@ -1307,7 +1307,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                 title: Text(h.name, style: const TextStyle(fontSize: 13)),
                 trailing: Text(DateFormat('dd MMM').format(h.date),
                     style: TextStyle(
-                        color: AppTheme.textSecondary, fontSize: 12)),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
               )),
         ],
       ],
@@ -1326,7 +1326,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   fontSize: 22, fontWeight: FontWeight.bold, color: color)),
           const SizedBox(height: 2),
           Text(label,
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
         ]),
       ),
     );
@@ -1443,7 +1443,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                 style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 8),
             Text('Try adjusting your constraints',
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ],
         ),
       );
@@ -1469,7 +1469,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             const SizedBox(height: 4),
             Text(
               '${_studyPlan!.sessions.length} sessions across ${grouped.length} days',
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
             ),
           ]),
         ),
@@ -1510,7 +1510,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                       const Spacer(),
                       Text('${daySessions.length} sessions',
                           style: TextStyle(
-                              color: AppTheme.textSecondary, fontSize: 12)),
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
                     ]),
                   ),
                   ...daySessions.map((session) {
@@ -1539,7 +1539,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                             '${session.subject} • ${session.moduleName ?? ""}',
                             style: TextStyle(
                                 fontSize: 11,
-                                color: AppTheme.textSecondary),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                             maxLines: 1, overflow: TextOverflow.ellipsis),
                         trailing: Text(
                           '${session.startTime.hour}:${session.startTime.minute.toString().padLeft(2, '0')}',
@@ -1913,7 +1913,7 @@ class _AnimatedLoadingScreenState extends State<_AnimatedLoadingScreen>
             child: Text(
               widget.statusText,
               key: ValueKey(widget.statusText),
-              style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
               textAlign: TextAlign.center,
             ),
           ),
@@ -1962,3 +1962,5 @@ class _AnimatedLoadingScreenState extends State<_AnimatedLoadingScreen>
     );
   }
 }
+
+

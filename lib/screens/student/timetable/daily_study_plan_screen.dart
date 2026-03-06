@@ -120,8 +120,8 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                   children: [
                     Text(
                       DateFormat('EEEE').format(_selectedDate),
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontSize: 15,
                         fontWeight: FontWeight.w600,
                       ),
@@ -258,7 +258,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 4),
             Text('Enjoy your free time! 🎉',
-                style: TextStyle(color: AppTheme.textSecondary)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ],
         ),
       );
@@ -305,7 +305,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                                         .textTheme
                                         .labelMedium
                                         ?.copyWith(
-                                            color: AppTheme.textSecondary),
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
@@ -336,7 +336,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                               Text(
                                 session.moduleName!,
                                 style: TextStyle(
-                                    color: AppTheme.textSecondary,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                     fontSize: 11),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -346,7 +346,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                             Row(
                               children: [
                                 Icon(Icons.touch_app,
-                                    size: 14, color: AppTheme.textSecondary),
+                                    size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                                 const SizedBox(width: 4),
                                 Text('Tap for resources & quiz',
                                     style: TextStyle(
@@ -535,7 +535,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                     const SizedBox(height: 4),
                     Text(session.moduleName!,
                         style: TextStyle(
-                            color: AppTheme.textSecondary, fontSize: 12)),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
                   ],
                   const SizedBox(height: 8),
                   Row(
@@ -559,15 +559,15 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
 
             // ─── Resources Section ──────────────────────────────────
             if (_isLoadingResources)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Center(
                   child: Column(
                     children: [
-                      CircularProgressIndicator(strokeWidth: 3),
-                      SizedBox(height: 12),
+                      const CircularProgressIndicator(strokeWidth: 3),
+                      const SizedBox(height: 12),
                       Text('Loading resources & quiz...',
-                          style: TextStyle(color: AppTheme.textSecondary)),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                     ],
                   ),
                 ),
@@ -637,7 +637,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text('Check your internet connection',
-                style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
             const SizedBox(height: 12),
             OutlinedButton(
               onPressed: _loadResources,
@@ -678,7 +678,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                   overflow: TextOverflow.ellipsis),
               subtitle: Text(source,
                   style: TextStyle(
-                      fontSize: 11, color: AppTheme.textSecondary)),
+                      fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
               trailing: const Icon(Icons.open_in_new, size: 16),
               onTap: () => _launchUrl(url),
             ),
@@ -718,7 +718,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                   overflow: TextOverflow.ellipsis),
               subtitle: Text(channel,
                   style: TextStyle(
-                      fontSize: 11, color: AppTheme.textSecondary)),
+                      fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
               trailing: const Icon(Icons.open_in_new, size: 16),
               onTap: () =>
                   _launchUrl('https://www.youtube.com/watch?v=$videoId'),
@@ -770,7 +770,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Text(text,
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
     );
   }
 
@@ -829,7 +829,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
             const SizedBox(height: 8),
             Text(
               '$percentage% correct',
-              style: TextStyle(color: AppTheme.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
             ),
             const SizedBox(height: 8),
             Text(
@@ -1108,3 +1108,4 @@ class _QuizDialogState extends State<_QuizDialog> {
     }
   }
 }
+

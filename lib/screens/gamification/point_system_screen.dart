@@ -114,7 +114,7 @@ class PointSystemScreen extends StatelessWidget {
             // How to earn XP
             Text('How to Earn XP',
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 17,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -137,7 +137,7 @@ class PointSystemScreen extends StatelessWidget {
                         Expanded(
                           child: Text(a['label'] as String,
                               style: TextStyle(
-                                  color: AppTheme.textPrimary,
+                                  color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600)),
                         ),
@@ -163,7 +163,7 @@ class PointSystemScreen extends StatelessWidget {
             // Level chart
             Text('Level Progression',
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 17,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
@@ -191,7 +191,7 @@ class PointSystemScreen extends StatelessWidget {
                               style: TextStyle(
                                   color: isCurrent
                                       ? AppTheme.accentBlue
-                                      : AppTheme.textSecondary,
+                                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700)),
                         ),
@@ -200,7 +200,7 @@ class PointSystemScreen extends StatelessWidget {
                               style: TextStyle(
                                   color: isCurrent
                                       ? AppTheme.accentBlue
-                                      : AppTheme.textPrimary,
+                                      : Theme.of(context).colorScheme.onSurface,
                                   fontSize: 14,
                                   fontWeight: isCurrent
                                       ? FontWeight.w700
@@ -208,7 +208,7 @@ class PointSystemScreen extends StatelessWidget {
                         ),
                         Text('${l['xp']} XP',
                             style: TextStyle(
-                                color: AppTheme.textLight, fontSize: 13)),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
                         if (isCurrent) ...[
                           const SizedBox(width: 8),
                           Container(
@@ -238,3 +238,4 @@ class PointSystemScreen extends StatelessWidget {
     );
   }
 }
+

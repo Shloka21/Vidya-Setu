@@ -151,11 +151,11 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
             child: TextField(
               controller: _searchController,
               onChanged: _filterMentors,
-              style: TextStyle(color: AppTheme.textPrimary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
                 hintText: 'Search by name or subject...',
-                hintStyle: TextStyle(color: AppTheme.textLight),
-                prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+                hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                prefixIcon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                 filled: true,
                 fillColor: AppTheme.surface,
                 border: OutlineInputBorder(
@@ -173,13 +173,13 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.person_search_rounded, color: AppTheme.textLight, size: 64),
+                            Icon(Icons.person_search_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 64),
                             const SizedBox(height: 16),
                             Text('No mentors found',
-                                style: TextStyle(color: AppTheme.textSecondary, fontSize: 18, fontWeight: FontWeight.w600)),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 18, fontWeight: FontWeight.w600)),
                             const SizedBox(height: 8),
                             Text('Try a different search term',
-                                style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                           ],
                         ),
                       )
@@ -236,10 +236,10 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 17, fontWeight: FontWeight.w700)),
+                      Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 17, fontWeight: FontWeight.w700)),
                       if (subjects.isNotEmpty)
                         Text(subjects.join(', '),
-                            style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis),
                     ],
@@ -252,10 +252,10 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                       children: [
                         const Icon(Icons.star_rounded, color: AppTheme.warningAmber, size: 18),
                         Text(' ${rating.toStringAsFixed(1)}',
-                            style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w700)),
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700)),
                       ],
                     ),
-                    Text('$yearsExp yrs', style: TextStyle(color: AppTheme.textLight, fontSize: 11)),
+                    Text('$yearsExp yrs', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
                   ],
                 ),
               ],
@@ -263,7 +263,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
             if (bio.isNotEmpty) ...[
               const SizedBox(height: 10),
               Text(bio,
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, height: 1.4),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13, height: 1.4),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ],
@@ -374,3 +374,4 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
     );
   }
 }
+

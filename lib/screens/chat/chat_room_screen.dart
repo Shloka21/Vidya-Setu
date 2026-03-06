@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -22,6 +26,8 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String? _roomId;
   String? _otherUserName;
   String? _otherUserId;
+  Stream<QuerySnapshot>? _messagesStream;
+  bool _isUploading = false;
 
   @override
   void didChangeDependencies() {
@@ -38,6 +44,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
       if (_roomId != null && currentUid != null) {
         _firestoreService.markMessagesRead(_roomId!, currentUid);
+        _messagesStream ??= _firestoreService.messagesStream(_roomId!);
       }
     }
   }
@@ -54,8 +61,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUid = authProvider.userModel?.uid ?? '';
 
-    final msgId =
-        FirebaseFirestore.instance.collection('_').doc().id; // Generate ID
+    final msgId = FirebaseFirestore.instance.collection('_').doc().id;
     _firestoreService.sendMessage(_roomId!, {
       'id': msgId,
       'content': _messageController.text.trim(),
@@ -65,6 +71,45 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       'type': 'text',
     });
     _messageController.clear();
+  }
+
+  Future<void> _uploadFile() async {
+    if (_roomId == null) return;
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.media, // Allows picking images & videos
+    );
+    if (result == null || result.files.single.path == null) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final currentUid = authProvider.userModel?.uid ?? '';
+    final msgId = FirebaseFirestore.instance.collection('_').doc().id;
+    
+    setState(() => _isUploading = true);
+    try {
+      final File file = File(result.files.single.path!);
+      final fileName = result.files.single.name;
+      
+      final url = await _firestoreService.uploadChatFile(_roomId!, msgId, file);
+
+      final isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].any((ext) => fileName.toLowerCase().endsWith(ext));
+      final type = isImage ? 'image' : 'file'; // Treating video as a downloadable file for simplicity here
+
+      _firestoreService.sendMessage(_roomId!, {
+        'id': msgId,
+        'content': url,
+        'fileName': fileName,
+        'senderId': currentUid,
+        'receiverId': _otherUserId ?? '',
+        'timestamp': Timestamp.now(),
+        'type': type,
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload file')));
+      }
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
   }
 
   void _showScheduleMeetingDialog() {
@@ -120,7 +165,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
             ElevatedButton(
               onPressed: () async {
                 final auth = Provider.of<AuthProvider>(ctx, listen: false);
@@ -144,7 +189,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                   'senderId': uid,
                   'receiverId': _otherUserId ?? '',
                   'timestamp': Timestamp.now(),
-                  'type': 'system',
+                  'type': 'meeting',
+                  'scheduledAt': Timestamp.fromDate(scheduledAt),
+                  'meetingTitle': titleController.text.trim(),
                 });
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
@@ -208,27 +255,28 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
               children: [
                 Text(displayName,
                     style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w600)),
                 Text('Tap for info',
                     style:
-                        TextStyle(color: AppTheme.textLight, fontSize: 12)),
+                        TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
               ],
             ),
           ],
         ),
         actions: [
-          IconButton(
-            icon:
-                const Icon(Icons.videocam_rounded, color: AppTheme.accentBlue),
-            onPressed: () {
-              Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
-                'roomId': _roomId ?? 'default',
-                'otherUserName': _otherUserName ?? 'User',
-              });
-            },
-          ),
+          if ((Provider.of<AuthProvider>(context, listen: false).userModel?.role ?? 'student') == 'mentor')
+            IconButton(
+              icon:
+                  const Icon(Icons.videocam_rounded, color: AppTheme.accentBlue),
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
+                  'roomId': _roomId ?? 'default',
+                  'otherUserName': _otherUserName ?? 'User',
+                });
+              },
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert_rounded),
             onSelected: (value) {
@@ -250,10 +298,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         children: [
           // Messages from Firestore
           Expanded(
-            child: _roomId == null
+            child: _roomId == null || _messagesStream == null
                 ? const Center(child: Text('No chat room selected'))
                 : StreamBuilder<QuerySnapshot>(
-                    stream: _firestoreService.messagesStream(_roomId!),
+                    stream: _messagesStream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(
@@ -268,16 +316,16 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.chat_bubble_outline_rounded,
-                                  color: AppTheme.textLight, size: 48),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48),
                               const SizedBox(height: 12),
                               Text('No messages yet',
                                   style: TextStyle(
-                                      color: AppTheme.textSecondary,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                       fontSize: 16)),
                               const SizedBox(height: 4),
                               Text('Say hello! 👋',
                                   style: TextStyle(
-                                      color: AppTheme.textLight,
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       fontSize: 14)),
                             ],
                           ),
@@ -308,7 +356,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                               ? '${time.toDate().hour}:${time.toDate().minute.toString().padLeft(2, '0')}'
                               : '';
                           return _buildMessageBubble(
-                            msg['content'] as String? ?? '',
+                            msg,
                             isMe,
                             timeStr,
                           );
@@ -341,11 +389,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       color: AppTheme.accentBlue.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: IconButton(
-                      icon: Icon(Icons.attach_file_rounded,
-                          color: AppTheme.accentBlue, size: 20),
-                      onPressed: () {},
-                    ),
+                    child: _isUploading 
+                        ? const Padding(padding: EdgeInsets.all(12.0), child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton(
+                            icon: Icon(Icons.attach_file_rounded,
+                                color: AppTheme.accentBlue, size: 20),
+                            onPressed: _uploadFile,
+                          ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -353,7 +403,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       controller: _messageController,
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
-                        hintStyle: TextStyle(color: AppTheme.textLight),
+                        hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                         filled: true,
                         fillColor: AppTheme.background,
                         border: OutlineInputBorder(
@@ -389,7 +439,79 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 
-  Widget _buildMessageBubble(String text, bool isMe, String time) {
+  Widget _buildMessageBubble(Map<String, dynamic> msg, bool isMe, String time) {
+    final type = msg['type'] as String? ?? 'text';
+    final content = msg['content'] as String? ?? '';
+    final fileName = msg['fileName'] as String?;
+
+    Widget messageContent;
+
+    if (type == 'image') {
+      messageContent = ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: CachedNetworkImage(
+          imageUrl: content,
+          width: 200,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => const SizedBox(width: 50, height: 50, child: Center(child: CircularProgressIndicator())),
+          errorWidget: (context, url, error) => const Icon(Icons.error),
+        ),
+      );
+    } else if (type == 'file') {
+      messageContent = InkWell(
+        onTap: () => launchUrl(Uri.parse(content), mode: LaunchMode.externalApplication),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.insert_drive_file, color: isMe ? Colors.white : AppTheme.primaryNavy),
+            const SizedBox(width: 8),
+            Flexible(child: Text(fileName ?? 'File', style: TextStyle(color: isMe ? Colors.white : AppTheme.primaryNavy, decoration: TextDecoration.underline))),
+          ],
+        ),
+      );
+    } else if (type == 'meeting' || type == 'system') {
+      final scheduledAt = (msg['scheduledAt'] as Timestamp?)?.toDate();
+      final isNow = scheduledAt != null && DateTime.now().isAfter(scheduledAt);
+      
+      messageContent = Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(content, style: TextStyle(color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+          if (scheduledAt != null) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: isNow ? () {
+                  Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
+                    'roomId': _roomId ?? 'default',
+                    'otherUserName': _otherUserName ?? 'User',
+                  });
+                } : null,
+                icon: const Icon(Icons.videocam_rounded, size: 20),
+                label: Text(isNow ? 'Join Meeting' : 'Scheduled', style: const TextStyle(fontWeight: FontWeight.w600)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.successGreen,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.withOpacity(0.5),
+                  disabledForegroundColor: Colors.white70,
+                ),
+              ),
+            ),
+          ],
+        ],
+      );
+    } else {
+      messageContent = Text(
+        content,
+        style: TextStyle(
+          color: isMe ? Colors.white : Theme.of(context).colorScheme.onSurface,
+          fontSize: 15,
+          height: 1.4,
+        ),
+      );
+    }
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -412,20 +534,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: isMe ? Colors.white : AppTheme.textPrimary,
-                fontSize: 15,
-                height: 1.4,
-              ),
-            ),
+            messageContent,
             const SizedBox(height: 4),
             Text(
               time,
               style: TextStyle(
                 color:
-                    isMe ? Colors.white.withOpacity(0.6) : AppTheme.textLight,
+                    isMe ? Colors.white.withOpacity(0.6) : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 fontSize: 11,
               ),
             ),
@@ -435,3 +550,4 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     );
   }
 }
+

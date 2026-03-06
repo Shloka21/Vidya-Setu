@@ -113,7 +113,7 @@ class _SplashScreenState extends State<SplashScreen>
                           .displayMedium
                           ?.copyWith(
                             fontWeight: FontWeight.w800,
-                            color: AppTheme.primaryNavy,
+                            color: Theme.of(context).colorScheme.onSurface,
                             letterSpacing: -1,
                           ),
                     ),
@@ -121,7 +121,7 @@ class _SplashScreenState extends State<SplashScreen>
                     Text(
                       'SMART LEARNING COMPANION',
                       style: TextStyle(
-                        color: AppTheme.textLight,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 2.5,
@@ -149,3 +149,4 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
+

@@ -22,7 +22,6 @@ class AppRoutes {
   static const String mentorProfile = '/student/mentor/profile';
   static const String studentProfile = '/student/profile';
   static const String editStudentProfile = '/student/profile/edit';
-  static const String studentSettings = '/student/settings';
 
   // Mentor
   static const String mentorDashboard = '/mentor/dashboard';
@@ -35,6 +34,7 @@ class AppRoutes {
   static const String mentorRemindersList = '/mentor/reminders';
   static const String mentorProfileScreen = '/mentor/profile';
   static const String mentorSettings = '/mentor/settings';
+  static const String browseStudents = '/mentor/students/browse';
 
   // Chat
   static const String chatList = '/chat';

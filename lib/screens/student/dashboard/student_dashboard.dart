@@ -144,8 +144,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
                       ),
                       Text(
                         DateFormat('EEEE, MMM d').format(now).toUpperCase(),
-                        style: const TextStyle(
-                          color: AppTheme.textLight,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                           letterSpacing: 1,
@@ -173,7 +173,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           children: [
             // Profile avatar
             GestureDetector(
-              onTap: () => Navigator.pushNamed(context, AppRoutes.studentSettings),
+              onTap: () => Navigator.pushNamed(context, AppRoutes.studentProfile),
               child: Container(
                 width: 52,
                 height: 52,
@@ -222,11 +222,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
                         width: 40,
                         height: 40,
                         decoration: BoxDecoration(
-                          color: AppTheme.surface,
+                          color: Theme.of(context).colorScheme.surface,
                           shape: BoxShape.circle,
                           boxShadow: AppTheme.cardBoxShadow,
                         ),
-                        child: const Icon(Icons.chat_bubble_outline_rounded, size: 20, color: AppTheme.textSecondary),
+                        child: Icon(Icons.chat_bubble_outline_rounded, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                       ),
                       if (unread > 0)
                         Positioned(
@@ -266,8 +266,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     final todayDone = _completedToday();
     final todayTotal = _todaySessions().length;
 
-    return SizedBox(
-      height: 160,
+    return IntrinsicHeight(
       child: Row(
         children: [
           Expanded(
@@ -303,7 +302,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, AppRoutes.progressDashboard),
       child: AppCard(
-        padding: const EdgeInsets.all(18),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         child: Row(
           children: [
             Container(
@@ -319,24 +318,29 @@ class _StudentDashboardState extends State<StudentDashboard> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min, // Added to prevent column from expanding unnecessarily
                 children: [
-                  const Text(
+                  Text(
                     'Analytics Snapshot',
                     style: TextStyle(
-                      color: AppTheme.primaryNavy,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 2), // Slightly reduced to give breathing room
                   Text(
                     '${hours.toStringAsFixed(1)}h studied • ${(rate * 100).toInt()}% complete',
-                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), 
+                      fontSize: 13,
+                      height: 1.2, // Added line height to constrain text bounds predictably
+                    ),
                   ),
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right_rounded, color: AppTheme.textLight),
+            Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           ],
         ),
       ),
@@ -355,10 +359,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               "Today's Study Plan",
               style: TextStyle(
-                color: AppTheme.primaryNavy,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -405,19 +409,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
         children: [
           Icon(Icons.auto_awesome_rounded, size: 48, color: AppTheme.accentPurple.withValues(alpha: 0.5)),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'No Study Plan Yet',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 17,
               fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
+          Text(
             'Upload your syllabus PDF to generate a personalized study timetable.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textLight, fontSize: 13),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
           ),
           const SizedBox(height: 16),
           SizedBox(
@@ -446,18 +450,18 @@ class _StudentDashboardState extends State<StudentDashboard> {
         children: [
           const Text('😌', style: TextStyle(fontSize: 40)),
           const SizedBox(height: 10),
-          const Text(
+          Text(
             'No sessions today',
             style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Take a break or review previous topics!',
-            style: TextStyle(color: AppTheme.textLight, fontSize: 13),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
           ),
         ],
       ),
@@ -477,7 +481,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           child: Text(
             timeStr,
             style: TextStyle(
-              color: isCurrent ? AppTheme.accentBlue : AppTheme.textLight,
+              color: isCurrent ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
@@ -515,7 +519,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 Text(
                   session.subject,
                   style: TextStyle(
-                    color: isCurrent ? AppTheme.accentBlue : AppTheme.textPrimary,
+                    color: isCurrent ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface,
                     fontSize: 15,
                     fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
                   ),
@@ -523,8 +527,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 ),
                 Text(
                   session.topic,
-                  style: const TextStyle(
-                    color: AppTheme.textLight,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 12,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -552,10 +556,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Upcoming Reminders',
               style: TextStyle(
-                color: AppTheme.primaryNavy,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
               ),
@@ -587,12 +591,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    Icon(Icons.event_available_rounded, color: AppTheme.textLight, size: 28),
+                    Icon(Icons.event_available_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
                     const SizedBox(width: 14),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'No upcoming reminders. Tap + to add one!',
-                        style: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
                       ),
                     ),
                   ],
@@ -673,8 +677,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: AppTheme.textPrimary,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                   ),
@@ -683,8 +687,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 const SizedBox(height: 2),
                 Text(
                   time,
-                  style: const TextStyle(
-                    color: AppTheme.textLight,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 13,
                   ),
                 ),
@@ -703,10 +707,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Quick Actions',
           style: TextStyle(
-            color: AppTheme.primaryNavy,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 20,
             fontWeight: FontWeight.w700,
           ),
@@ -774,8 +778,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
             const SizedBox(height: 10),
             Text(
               label,
-              style: const TextStyle(
-                color: AppTheme.textPrimary,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
               ),
@@ -787,3 +791,5 @@ class _StudentDashboardState extends State<StudentDashboard> {
     );
   }
 }
+
+

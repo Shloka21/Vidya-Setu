@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/theme_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
 
@@ -18,38 +20,56 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
   bool _newRequests = true;
   bool _messageNotif = true;
   bool _studentUpdates = true;
-  bool _darkMode = false;
   bool _availableForNew = true;
   final _firestore = FirestoreService();
 
   @override
   void initState() {
     super.initState();
-    _loadAvailability();
+    _loadPreferences();
   }
 
-  void _loadAvailability() async {
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
     final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-    if (uid == null) return;
-    final userData = await _firestore.getUser(uid);
-    if (userData != null && mounted) {
+    if (uid != null) {
+      final userData = await _firestore.getUser(uid);
+      if (userData != null && mounted) {
+        setState(() {
+          _availableForNew = userData['availableForNew'] ?? true;
+        });
+      }
+    }
+    if (mounted) {
       setState(() {
-        _availableForNew = userData['availableForNew'] ?? true;
+        _newRequests = prefs.getBool('mentor_notif_requests') ?? true;
+        _messageNotif = prefs.getBool('mentor_notif_messages') ?? true;
+        _studentUpdates = prefs.getBool('mentor_notif_updates') ?? true;
       });
     }
   }
 
+  Future<void> _savePref(String key, dynamic value) async {
+    final prefs = await SharedPreferences.getInstance();
+    if (value is bool) prefs.setBool(key, value);
+    if (value is int) prefs.setInt(key, value);
+    if (value is String) prefs.setString(key, value);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
     return Scaffold(
-      
       appBar: AppBar(title: const Text('Settings')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _sectionTitle('Account'),
+            // ── Account ──
+            _sectionTitle('ACCOUNT'),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -58,72 +78,100 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                     Navigator.pushNamed(context, AppRoutes.mentorProfileScreen);
                   }),
                   const Divider(height: 1),
-                  _navItem(Icons.lock_rounded, 'Change Password', () {
-                    _showChangePasswordDialog();
-                  }),
+                  _navItem(Icons.lock_rounded, 'Change Password', _showChangePasswordDialog),
                   const Divider(height: 1),
-                  _navItem(Icons.shield_rounded, 'Verification Status', () {
-                    _showVerificationDialog();
+                  _navItem(Icons.verified_rounded, 'Verification Status', _showVerificationDialog),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Availability ──
+            _sectionTitle('AVAILABILITY'),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: SwitchListTile(
+                title: Text('Available for New Students',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+                subtitle: Text('Allow students to send connection requests',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
+                value: _availableForNew,
+                activeColor: AppTheme.accentBlue,
+                onChanged: (v) async {
+                  setState(() => _availableForNew = v);
+                  final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+                  if (uid != null) {
+                    await _firestore.updateUser(uid, {'availableForNew': v});
+                  }
+                },
+                contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Notifications ──
+            _sectionTitle('NOTIFICATIONS'),
+            AppCard(
+              padding: const EdgeInsets.symmetric(vertical: 4),
+              child: Column(
+                children: [
+                  _toggle('New Student Requests', _newRequests, (v) {
+                    setState(() => _newRequests = v);
+                    _savePref('mentor_notif_requests', v);
+                  }),
+                  _toggle('Messages', _messageNotif, (v) {
+                    setState(() => _messageNotif = v);
+                    _savePref('mentor_notif_messages', v);
+                  }),
+                  _toggle('Student Progress Updates', _studentUpdates, (v) {
+                    setState(() => _studentUpdates = v);
+                    _savePref('mentor_notif_updates', v);
                   }),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            _sectionTitle('Availability'),
-            AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(
-                children: [
-                  SwitchListTile(
-                    title: Text('Available for New Students',
-                        style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
-                    subtitle: Text('Allow students to send connection requests',
-                        style: TextStyle(color: AppTheme.textLight, fontSize: 12)),
-                    value: _availableForNew,
-                    activeColor: AppTheme.accentBlue,
-                    onChanged: (v) async {
-                      setState(() => _availableForNew = v);
-                      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-                      if (uid != null) {
-                        await _firestore.updateUser(uid, {'availableForNew': v});
-                      }
-                    },
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 20),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            _sectionTitle('Notifications'),
-            AppCard(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Column(
-                children: [
-                  _toggle('New Student Requests', _newRequests,
-                      (v) => setState(() => _newRequests = v)),
-                  _toggle('Messages', _messageNotif,
-                      (v) => setState(() => _messageNotif = v)),
-                  _toggle('Student Progress Updates', _studentUpdates,
-                      (v) => setState(() => _studentUpdates = v)),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            _sectionTitle('App'),
+            // ── Appearance ──
+            _sectionTitle('APPEARANCE'),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  SwitchListTile(
-                    title: Text('Dark Mode',
-                        style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
-                    secondary: Icon(Icons.dark_mode_rounded, color: AppTheme.textSecondary, size: 22),
-                    value: _darkMode,
-                    activeColor: AppTheme.accentBlue,
-                    onChanged: (v) => setState(() => _darkMode = v),
+                  // Animated Dark Mode Toggle
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    child: Row(
+                      children: [
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 350),
+                          transitionBuilder: (child, anim) =>
+                              RotationTransition(turns: Tween(begin: 0.75, end: 1.0).animate(anim), child: FadeTransition(opacity: anim, child: child)),
+                          child: Icon(
+                            isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+                            key: ValueKey(isDark),
+                            color: isDark ? AppTheme.warningAmber : AppTheme.accentBlue,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('App Theme', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
+                              Text(isDark ? 'Currently using dark theme' : 'Currently using light theme',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Switch(
+                          value: isDark,
+                          activeColor: AppTheme.accentBlue,
+                          onChanged: (v) => themeProvider.toggleTheme(),
+                        ),
+                      ],
+                    ),
                   ),
                   const Divider(height: 1),
                   _navItem(Icons.language_rounded, 'Language', () {
@@ -131,71 +179,59 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                       const SnackBar(content: Text('English is currently the only available language')),
                     );
                   }),
-                  const Divider(height: 1),
-                  _navItem(Icons.help_outline_rounded, 'Help & FAQ', () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        title: const Text('Help & FAQ'),
-                        content: const Text(
-                          '• How do I connect with students?\n'
-                          '  Students send you requests from the Find Mentor screen.\n\n'
-                          '• How do I schedule meetings?\n'
-                          '  Open a chat → tap the ⋮ menu → Schedule Meeting.\n\n'
-                          '• How do I provide feedback?\n'
-                          '  Go to My Students → tap a student → Send Feedback.\n\n'
-                          'Email: support@vidyasetu.app',
-                        ),
-                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-                      ),
-                    );
-                  }),
-                  const Divider(height: 1),
-                  _navItem(Icons.policy_rounded, 'Privacy Policy', () {
-                    showDialog(
-                      context: context,
-                      builder: (_) => AlertDialog(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        title: const Text('Privacy Policy'),
-                        content: const Text(
-                          'VidyaSetu respects your privacy.\n\n'
-                          '• Your data is stored securely in Firebase.\n'
-                          '• We do not share your information with third parties.\n'
-                          '• You can delete your account at any time.\n\n'
-                          'For full policy: vidyasetu.app/privacy',
-                        ),
-                        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-                      ),
-                    );
-                  }),
-                  const Divider(height: 1),
-                  _navItem(Icons.info_outline_rounded, 'About', () {
-                    showAboutDialog(
-                      context: context,
-                      applicationName: 'VidyaSetu',
-                      applicationVersion: '1.0.0',
-                      applicationLegalese: '© 2026 VidyaSetu. All rights reserved.',
-                    );
-                  }),
                 ],
               ),
             ),
             const SizedBox(height: 24),
 
-            // Logout
+            // ── Support ──
+            _sectionTitle('SUPPORT'),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _navItem(Icons.help_outline_rounded, 'Help & FAQ', _showHelpDialog),
+                  const Divider(height: 1),
+                  _navItem(Icons.headset_mic_rounded, 'Contact Support', _showContactSupportDialog),
+                  const Divider(height: 1),
+                  _navItem(Icons.delete_sweep_rounded, 'Clear Cache', _showClearCacheDialog),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Legal ──
+            _sectionTitle('LEGAL'),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: Column(
+                children: [
+                  _navItem(Icons.policy_rounded, 'Privacy Policy', _showPrivacyPolicyDialog),
+                  const Divider(height: 1),
+                  _navItem(Icons.description_rounded, 'Terms of Service', _showTermsDialog),
+                  const Divider(height: 1),
+                  _navItem(Icons.info_outline_rounded, 'About VidyaSetu', _showAboutAppDialog),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // ── Logout ──
             AppCard(
               padding: EdgeInsets.zero,
               child: ListTile(
                 leading: Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 22),
-                title: Text('Logout', style: TextStyle(color: AppTheme.errorRed, fontSize: 15)),
-                onTap: () async {
-                  final auth = Provider.of<AuthProvider>(context, listen: false);
-                  await auth.signOut();
-                  if (context.mounted) {
-                    Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
-                  }
-                },
+                title: Text('Logout', style: TextStyle(color: AppTheme.errorRed, fontSize: 15, fontWeight: FontWeight.w600)),
+                onTap: _showLogoutDialog,
+              ),
+            ),
+            const SizedBox(height: 8),
+            AppCard(
+              padding: EdgeInsets.zero,
+              child: ListTile(
+                leading: Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed.withOpacity(0.7), size: 22),
+                title: Text('Delete Account', style: TextStyle(color: AppTheme.errorRed.withOpacity(0.7), fontSize: 15)),
+                onTap: _showDeleteAccountDialog,
               ),
             ),
             const SizedBox(height: 30),
@@ -205,10 +241,43 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
     );
   }
 
+  // ── Helpers ──
+  Widget _sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(title,
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2)),
+    );
+  }
+
+  Widget _navItem(IconData icon, String label, VoidCallback onTap) {
+    return ListTile(
+      leading: Icon(icon, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 22),
+      title: Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+      trailing: Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), size: 22),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+    );
+  }
+
+  Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return SwitchListTile(
+      title: Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
+      value: value,
+      activeColor: AppTheme.accentBlue,
+      onChanged: onChanged,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+    );
+  }
+
+  // ── Dialogs ──
   void _showChangePasswordDialog() {
     final currentPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
-
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -222,7 +291,8 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'Current Password',
-                filled: true, fillColor: AppTheme.background,
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
@@ -232,14 +302,15 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
               obscureText: true,
               decoration: InputDecoration(
                 labelText: 'New Password',
-                filled: true, fillColor: AppTheme.background,
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
           ElevatedButton(
             onPressed: () async {
               try {
@@ -278,51 +349,246 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.verified_rounded, color: AppTheme.successGreen, size: 24),
-            const SizedBox(width: 8),
-            const Text('Verification Status'),
-          ],
-        ),
+        title: Row(children: [
+          Icon(Icons.verified_rounded, color: AppTheme.successGreen, size: 24),
+          const SizedBox(width: 8),
+          const Text('Verification Status'),
+        ]),
         content: const Text(
-          'Your mentor account is verified.\n\n'
-          'Verified mentors appear with a badge and are prioritized in student searches.',
+          'Your mentor account is verified.\n\nVerified mentors appear with a badge and are prioritized in student searches.',
         ),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
       ),
     );
   }
 
-  Widget _sectionTitle(String title) {
+  void _showHelpDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Help & FAQ'),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _faqItem('How do I connect with students?', 'Go to Browse Students (from Quick Actions) and tap Connect on their profile.'),
+              _faqItem('How do I schedule meetings?', 'Open a chat → tap the ⋮ menu → Schedule Meeting.'),
+              _faqItem('How do I provide feedback?', 'Go to My Students → tap a student → Send Feedback.'),
+              _faqItem('How do I send reminders?', 'Go to Reminders from Quick Actions → Create Reminder.'),
+            ],
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  Widget _faqItem(String q, String a) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(title,
-          style: TextStyle(
-              color: AppTheme.textSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1)),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Q: $q', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
+          const SizedBox(height: 4),
+          Text(a, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13)),
+        ],
+      ),
     );
   }
 
-  Widget _navItem(IconData icon, String label, VoidCallback onTap) {
-    return ListTile(
-      leading: Icon(icon, color: AppTheme.textSecondary, size: 22),
-      title: Text(label, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
-      trailing: Icon(Icons.chevron_right_rounded, color: AppTheme.textLight, size: 22),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 2),
+  void _showContactSupportDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Contact Support'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _contactItem(Icons.email_rounded, 'Email', 'support@vidyasetu.app'),
+            _contactItem(Icons.language_rounded, 'Website', 'vidyasetu.app/help'),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ),
     );
   }
 
-  Widget _toggle(String label, bool value, ValueChanged<bool> onChanged) {
-    return SwitchListTile(
-      title: Text(label, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
-      value: value,
-      activeColor: AppTheme.accentBlue,
-      onChanged: onChanged,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+  Widget _contactItem(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Icon(icon, size: 20, color: AppTheme.accentBlue),
+        const SizedBox(width: 12),
+        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
+          Text(value, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w500)),
+        ]),
+      ]),
+    );
+  }
+
+  void _showClearCacheDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Clear Cache'),
+        content: const Text('This will clear locally cached images and data. Your account data will not be affected.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: const Text('Cache cleared!'), backgroundColor: AppTheme.successGreen,
+                    behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPrivacyPolicyDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Privacy Policy'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'VidyaSetu respects your privacy.\n\n'
+            '• Your data is stored securely in Firebase.\n'
+            '• We do not share your information with third parties.\n'
+            '• Student data you mentor is kept confidential.\n'
+            '• You can delete your account at any time.\n\n'
+            'For full policy: vidyasetu.app/privacy',
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Terms of Service'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'By using VidyaSetu as a mentor, you agree to:\n\n'
+            '• Provide accurate guidance and feedback.\n'
+            '• Respect student privacy and confidentiality.\n'
+            '• Not share student data outside the platform.\n'
+            '• Maintain professional conduct in all interactions.\n\n'
+            'Full terms: vidyasetu.app/terms',
+          ),
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  void _showAboutAppDialog() {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('About VidyaSetu'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _aboutRow(Icons.apps_rounded, 'Version', '1.0.0'),
+            _aboutRow(Icons.build_rounded, 'Build', '2026.03.07'),
+            _aboutRow(Icons.code_rounded, 'Framework', 'Flutter'),
+            _aboutRow(Icons.cloud_rounded, 'Backend', 'Firebase'),
+          ],
+        ),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+      ),
+    );
+  }
+
+  Widget _aboutRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(children: [
+        Icon(icon, size: 18, color: AppTheme.accentBlue),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
+        const Spacer(),
+        Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
+      ]),
+    );
+  }
+
+  void _showLogoutDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              await auth.signOut();
+              if (context.mounted) {
+                Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Delete Account', style: TextStyle(color: AppTheme.errorRed)),
+        content: const Text(
+          'This action is irreversible. All your data including students, feedback, and messages will be permanently deleted.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              try {
+                await FirebaseAuth.instance.currentUser?.delete();
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error: $e. Please re-authenticate first.'), backgroundColor: AppTheme.errorRed),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
+            child: const Text('Delete Forever'),
+          ),
+        ],
+      ),
     );
   }
 }

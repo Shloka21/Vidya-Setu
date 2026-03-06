@@ -47,7 +47,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       children: [
                         Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 48),
                         const SizedBox(height: 12),
-                        Text('Error loading chats', style: TextStyle(color: AppTheme.textSecondary)),
+                        Text('Error loading chats', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                       ],
                     ),
                   );
@@ -122,7 +122,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                             child: Text(
                                               userName,
                                               style: TextStyle(
-                                                color: AppTheme.textPrimary,
+                                                color: Theme.of(context).colorScheme.onSurface,
                                                 fontSize: 16,
                                                 fontWeight: unreadCount > 0
                                                     ? FontWeight.w700
@@ -136,7 +136,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                             style: TextStyle(
                                               color: unreadCount > 0
                                                   ? AppTheme.accentBlue
-                                                  : AppTheme.textLight,
+                                                  : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                               fontSize: 12,
                                               fontWeight: unreadCount > 0
                                                   ? FontWeight.w600
@@ -151,7 +151,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                                           Expanded(
                                             child: Text(
                                               lastMessage,
-                                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+                                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                             ),
@@ -233,7 +233,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
                         ? 'Connect with a mentor to start chatting!'
                         : 'Accept student requests to start chatting!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
                   ),
                   if (userRole == 'student') ...[
                     const SizedBox(height: 20),
@@ -265,9 +265,9 @@ class _ChatListScreenState extends State<ChatListScreen> {
               Center(
                 child: Column(
                   children: [
-                    Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.textLight, size: 48),
+                    Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48),
                     const SizedBox(height: 12),
-                    Text('No messages yet', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+                    Text('No messages yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
                   ],
                 ),
               ),
@@ -275,7 +275,7 @@ class _ChatListScreenState extends State<ChatListScreen> {
               Text(
                 'SUGGESTED CONVERSATIONS',
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1,
@@ -323,12 +323,12 @@ class _ChatListScreenState extends State<ChatListScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                              Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600)),
                               Text(
                                 role == 'mentor'
                                     ? (subjects.isNotEmpty ? subjects.join(', ') : 'Mentor')
                                     : 'Student',
-                                style: TextStyle(color: AppTheme.textLight, fontSize: 12),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -367,3 +367,4 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return '${dateTime.day}/${dateTime.month}';
   }
 }
+

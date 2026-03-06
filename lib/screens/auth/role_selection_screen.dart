@@ -61,7 +61,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               Text(
                 'Select how you want to use VidyaSetu',
                 style: TextStyle(
-                  color: AppTheme.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   fontSize: 16,
                 ),
               ),
@@ -156,7 +156,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     title,
                     style: TextStyle(
                       color:
-                          isSelected ? Colors.white : AppTheme.textPrimary,
+                          isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
                     ),
@@ -167,7 +167,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                     style: TextStyle(
                       color: isSelected
                           ? Colors.white.withOpacity(0.7)
-                          : AppTheme.textSecondary,
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontSize: 13,
                       height: 1.4,
                     ),
@@ -195,3 +195,4 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
   }
 }
+

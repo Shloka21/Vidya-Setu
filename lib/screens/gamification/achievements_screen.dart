@@ -76,19 +76,19 @@ class AchievementsScreen extends StatelessWidget {
 
             Text('Unlocked', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
-            ...achievements.where((a) => a['unlocked'] == true).map((a) => _buildAchievementCard(a, true)),
+            ...achievements.where((a) => a['unlocked'] == true).map((a) => _buildAchievementCard(context, a, true)),
 
             const SizedBox(height: 24),
             Text('Locked', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
             const SizedBox(height: 12),
-            ...achievements.where((a) => a['unlocked'] == false).map((a) => _buildAchievementCard(a, false)),
+            ...achievements.where((a) => a['unlocked'] == false).map((a) => _buildAchievementCard(context, a, false)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildAchievementCard(Map<String, dynamic> data, bool unlocked) {
+  Widget _buildAchievementCard(BuildContext context, Map<String, dynamic> data, bool unlocked) {
     final color = data['color'] as Color;
 
     return Padding(
@@ -116,7 +116,7 @@ class AchievementsScreen extends StatelessWidget {
                     Text(
                       data['title'] as String,
                       style: TextStyle(
-                        color: AppTheme.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -124,7 +124,7 @@ class AchievementsScreen extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       data['desc'] as String,
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
                     ),
                   ],
                 ),
@@ -138,7 +138,7 @@ class AchievementsScreen extends StatelessWidget {
                 child: Text(
                   '+${data['xp']} XP',
                   style: TextStyle(
-                    color: unlocked ? AppTheme.successGreen : AppTheme.textLight,
+                    color: unlocked ? AppTheme.successGreen : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                   ),
@@ -155,3 +155,4 @@ class AchievementsScreen extends StatelessWidget {
     );
   }
 }
+

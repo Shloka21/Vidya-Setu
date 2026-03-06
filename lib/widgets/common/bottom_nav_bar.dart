@@ -32,14 +32,14 @@ class AppBottomNavBar extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: List.generate(
             items.length,
-            (index) => _buildNavItem(index, items[index]),
+            (index) => _buildNavItem(context, index, items[index]),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildNavItem(int index, AppNavItem item) {
+  Widget _buildNavItem(BuildContext context, int index, AppNavItem item) {
     final isSelected = currentIndex == index;
 
     return GestureDetector(
@@ -62,7 +62,7 @@ class AppBottomNavBar extends StatelessWidget {
             Icon(
               isSelected ? item.activeIcon : item.icon,
               size: 22,
-              color: isSelected ? Colors.white : AppTheme.textLight,
+              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
             if (isSelected) ...[
               const SizedBox(width: 8),
@@ -94,3 +94,4 @@ class AppNavItem {
     required this.label,
   });
 }
+

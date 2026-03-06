@@ -153,7 +153,7 @@ class _SignupScreenState extends State<SignupScreen> {
                 Text(
                   'Start your learning journey today',
                   style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 16,
                   ),
                 ),
@@ -211,7 +211,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppTheme.textLight,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -273,7 +273,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         _obscureConfirm
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppTheme.textLight,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       ),
                       onPressed: () {
                         setState(() => _obscureConfirm = !_obscureConfirm);
@@ -334,7 +334,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: RichText(
                         text: TextSpan(
                           style: TextStyle(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 13,
                           ),
                           children: [
@@ -410,7 +410,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: AppTheme.textLight,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -443,7 +443,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       Text(
                         'Already have an account? ',
                         style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 14,
                         ),
                       ),
@@ -481,7 +481,7 @@ class _SignupScreenState extends State<SignupScreen> {
       child: Text(
         text,
         style: TextStyle(
-          color: AppTheme.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -511,13 +511,13 @@ class _SignupScreenState extends State<SignupScreen> {
             Icon(
               icon,
               size: 20,
-              color: isSelected ? Colors.white : AppTheme.textSecondary,
+              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? Colors.white : AppTheme.textPrimary,
+                color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w600,
                 fontSize: 15,
               ),
@@ -528,3 +528,4 @@ class _SignupScreenState extends State<SignupScreen> {
     );
   }
 }
+

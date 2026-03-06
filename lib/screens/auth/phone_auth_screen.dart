@@ -169,7 +169,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         const SizedBox(height: 8),
         Text(
           'We\'ll send you an OTP to verify your phone number',
-          style: TextStyle(color: AppTheme.textSecondary, fontSize: 16),
+          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16),
         ),
         const SizedBox(height: 36),
 
@@ -177,7 +177,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         Text(
           'Phone Number',
           style: TextStyle(
-            color: AppTheme.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -205,7 +205,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
                   ],
                   onChanged: (v) => setState(() => _countryCode = v ?? '+91'),
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                   ),
@@ -313,7 +313,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
         const SizedBox(height: 8),
         RichText(
           text: TextSpan(
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15),
             children: [
               const TextSpan(text: 'We sent a 6-digit code to '),
               TextSpan(
@@ -444,7 +444,7 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
               ? Text(
                   'Resend OTP in ${_resendSeconds}s',
                   style: TextStyle(
-                    color: AppTheme.textLight,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -470,3 +470,4 @@ class _PhoneAuthScreenState extends State<PhoneAuthScreen> {
     );
   }
 }
+

@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
+import '../../../app/routes.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
 
 class FeedbackHistoryScreen extends StatelessWidget {
@@ -7,180 +13,282 @@ class FeedbackHistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final feedbackList = [
-      {
-        'student': 'Ananya Kumar',
-        'title': 'Great Algebra Progress',
-        'type': 'Progress Update',
-        'rating': 5,
-        'date': 'Feb 15, 2026',
-        'message':
-            'Ananya has shown excellent improvement in solving quadratic equations. Keep up the great work!',
-      },
-      {
-        'student': 'Raj Patel',
-        'title': 'Statistics Practice Needed',
-        'type': 'Area of Improvement',
-        'rating': 3,
-        'date': 'Feb 14, 2026',
-        'message':
-            'Raj needs to focus more on probability distributions. I recommend extra practice sets.',
-      },
-      {
-        'student': 'Priya Singh',
-        'title': 'Outstanding Performance',
-        'type': 'Achievement Recognition',
-        'rating': 5,
-        'date': 'Feb 12, 2026',
-        'message':
-            'Priya scored highest in the recent calculus test. She has been consistent throughout.',
-      },
-      {
-        'student': 'Vikram Sharma',
-        'title': 'Study Schedule Suggestion',
-        'type': 'Study Suggestion',
-        'rating': 4,
-        'date': 'Feb 10, 2026',
-        'message':
-            'I suggest Vikram allocate 30 more minutes to trigonometry daily to build confidence.',
-      },
-    ];
+    final uid = Provider.of<AuthProvider>(context).userModel?.uid;
+    final isMentor = Provider.of<AuthProvider>(context).userModel?.role == 'mentor';
 
-    return Scaffold(
-      
-      appBar: AppBar(
-        title: const Text('Feedback History'),
-        actions: [
-          IconButton(
-              icon: const Icon(Icons.filter_list_rounded), onPressed: () {}),
-        ],
+    if (uid == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Feedback & Reminders')),
+        body: const Center(child: Text('Not logged in')),
+      );
+    }
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Feedback & Reminders'),
+          bottom: TabBar(
+            indicatorColor: AppTheme.accentBlue,
+            labelColor: AppTheme.accentBlue,
+            unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            tabs: const [
+              Tab(icon: Icon(Icons.feedback_rounded, size: 20), text: 'Feedback'),
+              Tab(icon: Icon(Icons.notification_add_rounded, size: 20), text: 'Reminders'),
+            ],
+          ),
+        ),
+        floatingActionButton: Builder(
+          builder: (BuildContext innerContext) {
+            return FloatingActionButton.extended(
+              onPressed: () {
+                final tabIndex = DefaultTabController.of(innerContext).index;
+                if (tabIndex == 0) {
+                  Navigator.pushNamed(innerContext, AppRoutes.sendFeedback);
+                } else {
+                  Navigator.pushNamed(innerContext, AppRoutes.createReminder);
+                }
+              },
+              backgroundColor: AppTheme.accentBlue,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+            );
+          }
+        ),
+        body: TabBarView(
+          children: [
+            _FeedbackTab(uid: uid, isMentor: isMentor),
+            _RemindersTab(uid: uid),
+          ],
+        ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(20),
-        itemCount: feedbackList.length,
-        itemBuilder: (context, index) {
-          final fb = feedbackList[index];
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: AppCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: _typeColor(fb['type'] as String)
-                              .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Center(
-                          child: Icon(_typeIcon(fb['type'] as String),
-                              color: _typeColor(fb['type'] as String),
-                              size: 22),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(fb['title'] as String,
-                                style: TextStyle(
-                                    color: AppTheme.textPrimary,
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700)),
-                            const SizedBox(height: 2),
-                            Text('To: ${fb['student']}',
-                                style: TextStyle(
-                                    color: AppTheme.textSecondary,
-                                    fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: List.generate(
-                              5,
-                              (i) => Icon(
-                                i < (fb['rating'] as int)
-                                    ? Icons.star_rounded
-                                    : Icons.star_outline_rounded,
-                                color: AppTheme.warningAmber,
-                                size: 14,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(fb['date'] as String,
-                              style: TextStyle(
-                                  color: AppTheme.textLight, fontSize: 11)),
-                        ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color:
-                          _typeColor(fb['type'] as String).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(fb['type'] as String,
-                        style: TextStyle(
-                            color: _typeColor(fb['type'] as String),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(fb['message'] as String,
-                      style: TextStyle(
-                          color: AppTheme.textSecondary,
-                          fontSize: 13,
-                          height: 1.5)),
-                ],
-              ),
+    );
+  }
+}
+
+// ═══ FEEDBACK TAB ═══
+class _FeedbackTab extends StatelessWidget {
+  final String uid;
+  final bool isMentor;
+  const _FeedbackTab({required this.uid, required this.isMentor});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirestoreService().getFeedbackStream(uid, isMentor: isMentor),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        if (docs.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.feedback_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+                const SizedBox(height: 16),
+                Text('No feedback yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Tap + to send feedback to a student', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13)),
+              ],
             ),
           );
-        },
-      ),
+        }
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
+          itemCount: docs.length,
+          itemBuilder: (context, index) {
+            final fb = docs[index].data() as Map<String, dynamic>;
+            final dateStr = fb['createdAt'] != null
+                ? DateFormat('MMM d, yyyy').format((fb['createdAt'] as Timestamp).toDate())
+                : 'Unknown Date';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 42, height: 42,
+                          decoration: BoxDecoration(
+                            color: _typeColor(fb['type'] as String? ?? '').withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Icon(_typeIcon(fb['type'] as String? ?? ''), color: _typeColor(fb['type'] as String? ?? ''), size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(fb['title'] as String? ?? 'Feedback',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 2),
+                              Text(isMentor ? 'To: ${fb['studentName']}' : 'From Mentor',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: List.generate(5, (i) => Icon(
+                                i < (fb['rating'] as int? ?? 0) ? Icons.star_rounded : Icons.star_outline_rounded,
+                                color: AppTheme.warningAmber, size: 14,
+                              )),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(dateStr, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: _typeColor(fb['type'] as String? ?? '').withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(fb['type'] as String? ?? 'Feedback',
+                          style: TextStyle(color: _typeColor(fb['type'] as String? ?? ''), fontSize: 11, fontWeight: FontWeight.w600)),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(fb['message'] as String? ?? '',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13, height: 1.5)),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
   }
 
   Color _typeColor(String type) {
     switch (type) {
-      case 'Progress Update':
-        return AppTheme.accentBlue;
-      case 'Achievement Recognition':
-        return AppTheme.successGreen;
-      case 'Area of Improvement':
-        return AppTheme.warningAmber;
-      case 'Study Suggestion':
-        return AppTheme.accentPurple;
-      default:
-        return AppTheme.accentBlue;
+      case 'Progress Update': return AppTheme.accentBlue;
+      case 'Achievement Recognition': return AppTheme.successGreen;
+      case 'Area of Improvement': return AppTheme.warningAmber;
+      case 'Study Suggestion': return AppTheme.accentPurple;
+      default: return AppTheme.accentBlue;
     }
   }
 
   IconData _typeIcon(String type) {
     switch (type) {
-      case 'Progress Update':
-        return Icons.trending_up_rounded;
-      case 'Achievement Recognition':
-        return Icons.emoji_events_rounded;
-      case 'Area of Improvement':
-        return Icons.flag_rounded;
-      case 'Study Suggestion':
-        return Icons.lightbulb_rounded;
-      default:
-        return Icons.feedback_rounded;
+      case 'Progress Update': return Icons.trending_up_rounded;
+      case 'Achievement Recognition': return Icons.emoji_events_rounded;
+      case 'Area of Improvement': return Icons.flag_rounded;
+      case 'Study Suggestion': return Icons.lightbulb_rounded;
+      default: return Icons.feedback_rounded;
     }
+  }
+}
+
+// ═══ REMINDERS TAB ═══
+class _RemindersTab extends StatelessWidget {
+  final String uid;
+  const _RemindersTab({required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirestoreService().mentorRemindersStream(uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final docs = snapshot.data?.docs ?? [];
+        final reminders = docs.map((d) => d.data() as Map<String, dynamic>).toList();
+        reminders.sort((a, b) {
+          final aTime = (a['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+          final bTime = (b['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+          return bTime.compareTo(aTime);
+        });
+
+        if (reminders.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.notifications_active_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
+                const SizedBox(height: 16),
+                Text('No reminders sent yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Tap + to create a reminder for a student', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13)),
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
+          itemCount: reminders.length,
+          itemBuilder: (context, index) {
+            final r = reminders[index];
+            final isRead = r['isCompleted'] == true;
+            final dateStr = r['dateTime'] != null
+                ? DateFormat('MMM d, yyyy').format((r['dateTime'] as Timestamp).toDate())
+                : 'Unknown';
+            final studentName = r['studentName'] as String? ?? 'Student';
+            final initial = studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S';
+
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: AppCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 42, height: 42,
+                          decoration: BoxDecoration(color: AppTheme.accentBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                          child: Center(child: Text(initial, style: TextStyle(color: AppTheme.accentBlue, fontSize: 18, fontWeight: FontWeight.w700))),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(r['title'] as String? ?? 'Reminder',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
+                              Text('To: $studentName',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: isRead ? AppTheme.successGreen.withOpacity(0.1) : AppTheme.warningAmber.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(isRead ? 'Done' : 'Sent',
+                              style: TextStyle(color: isRead ? AppTheme.successGreen : AppTheme.warningAmber, fontSize: 11, fontWeight: FontWeight.w600)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Text(r['description'] as String? ?? '',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13, height: 1.4)),
+                    const SizedBox(height: 8),
+                    Text(dateStr, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 }

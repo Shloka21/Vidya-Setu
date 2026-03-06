@@ -177,7 +177,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         readOnly: readOnly,
         keyboardType: keyboardType,
         maxLines: maxLines,
-        style: TextStyle(color: AppTheme.textPrimary),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
         decoration: InputDecoration(
           labelText: label,
           prefixIcon: Icon(icon, color: AppTheme.accentBlue, size: 22),
@@ -204,3 +204,4 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 }
+

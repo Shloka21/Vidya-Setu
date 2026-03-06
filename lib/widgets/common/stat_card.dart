@@ -23,15 +23,18 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool currentThemeDark = Theme.of(context).brightness == Brightness.dark;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: isDark ? AppTheme.primaryNavy : AppTheme.surface,
-          gradient: isDark ? AppTheme.navyGradient : null,
+          color: currentThemeDark ? AppTheme.primaryNavy : Theme.of(context).colorScheme.surface,
+          gradient: currentThemeDark ? AppTheme.navyGradient : null,
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          boxShadow: AppTheme.cardBoxShadow,
+          boxShadow: currentThemeDark ? [] : AppTheme.cardBoxShadow,
+          border: currentThemeDark ? Border.all(color: Colors.white12) : null,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,14 +43,14 @@ class StatCard extends StatelessWidget {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isDark
+                color: currentThemeDark
                     ? Colors.white.withOpacity(0.15)
                     : (iconBgColor ?? AppTheme.accentBlue.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
               ),
               child: Icon(
                 icon,
-                color: isDark
+                color: currentThemeDark
                     ? Colors.white
                     : (iconColor ?? AppTheme.accentBlue),
                 size: 24,
@@ -57,9 +60,7 @@ class StatCard extends StatelessWidget {
             Text(
               label.toUpperCase(),
               style: TextStyle(
-                color: isDark
-                    ? Colors.white.withOpacity(0.7)
-                    : AppTheme.textLight,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.0,
@@ -69,7 +70,7 @@ class StatCard extends StatelessWidget {
             Text(
               value,
               style: TextStyle(
-                color: isDark ? Colors.white : AppTheme.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 26,
                 fontWeight: FontWeight.w700,
               ),
@@ -80,3 +81,4 @@ class StatCard extends StatelessWidget {
     );
   }
 }
+

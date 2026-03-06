@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../app/theme.dart';
+import '../../../app/routes.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/app_button.dart';
 
@@ -79,29 +80,29 @@ class StudentProfileMentorView extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Progress overview
-                  _section('Study Progress'),
+                  _section(context, 'Study Progress'),
                   AppCard(
                     child: Column(
                       children: [
-                        _progressRow('Mathematics', 0.75, AppTheme.accentBlue),
+                        _progressRow(context, 'Mathematics', 0.75, AppTheme.accentBlue),
                         const SizedBox(height: 12),
-                        _progressRow('Physics', 0.60, AppTheme.accentPurple),
+                        _progressRow(context, 'Physics', 0.60, AppTheme.accentPurple),
                         const SizedBox(height: 12),
-                        _progressRow('Chemistry', 0.45, AppTheme.warningAmber),
+                        _progressRow(context, 'Chemistry', 0.45, AppTheme.warningAmber),
                         const SizedBox(height: 12),
-                        _progressRow('English', 0.85, AppTheme.successGreen),
+                        _progressRow(context, 'English', 0.85, AppTheme.successGreen),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Recent activity
-                  _section('Recent Activity'),
-                  _activityItem(Icons.timer_rounded, 'Completed 2h Math session',
+                  _section(context, 'Recent Activity'),
+                  _activityItem(context, Icons.timer_rounded, 'Completed 2h Math session',
                       '2 hours ago', AppTheme.accentBlue),
-                  _activityItem(Icons.emoji_events_rounded, 'Earned "Math Wizard" badge',
+                  _activityItem(context, Icons.emoji_events_rounded, 'Earned "Math Wizard" badge',
                       'Yesterday', AppTheme.warningAmber),
-                  _activityItem(Icons.check_circle_rounded, 'Finished Algebra chapter',
+                  _activityItem(context, Icons.check_circle_rounded, 'Finished Algebra chapter',
                       '2 days ago', AppTheme.successGreen),
                   const SizedBox(height: 24),
 
@@ -111,7 +112,9 @@ class StudentProfileMentorView extends StatelessWidget {
                       Expanded(
                         child: AppButton(
                           text: 'Send Feedback',
-                          onPressed: () {},
+                          onPressed: () {
+                            Navigator.pushNamed(context, AppRoutes.sendFeedback);
+                          },
                           icon: Icons.feedback_rounded,
                         ),
                       ),
@@ -119,7 +122,11 @@ class StudentProfileMentorView extends StatelessWidget {
                       Expanded(
                         child: AppButton(
                           text: 'Message',
-                          onPressed: () {},
+                          onPressed: () async {
+                             // Will need arguments like roomId, we usually launch chat from MyStudentsScreen which has the student ID readily. 
+                             // We'll leave this empty or route back to chat list for now.
+                             Navigator.pushNamed(context, AppRoutes.chatList);
+                          },
                           icon: Icons.chat_rounded,
                           isOutlined: true,
                         ),
@@ -161,25 +168,25 @@ class StudentProfileMentorView extends StatelessWidget {
     );
   }
 
-  Widget _section(String title) {
+  Widget _section(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Text(title,
           style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 17,
               fontWeight: FontWeight.w700)),
     );
   }
 
-  Widget _progressRow(String label, double value, Color color) {
+  Widget _progressRow(BuildContext context, String label, double value, Color color) {
     return Row(
       children: [
         SizedBox(
           width: 90,
           child: Text(label,
               style: TextStyle(
-                  color: AppTheme.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
         ),
@@ -203,7 +210,7 @@ class StudentProfileMentorView extends StatelessWidget {
   }
 
   Widget _activityItem(
-      IconData icon, String text, String time, Color color) {
+      BuildContext context, IconData icon, String text, String time, Color color) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
@@ -225,12 +232,12 @@ class StudentProfileMentorView extends StatelessWidget {
                 children: [
                   Text(text,
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14,
                           fontWeight: FontWeight.w600)),
                   Text(time,
                       style: TextStyle(
-                          color: AppTheme.textLight, fontSize: 12)),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                 ],
               ),
             ),
@@ -240,3 +247,4 @@ class StudentProfileMentorView extends StatelessWidget {
     );
   }
 }
+

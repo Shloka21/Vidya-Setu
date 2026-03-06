@@ -96,10 +96,10 @@ class MentorProfileViewScreen extends StatelessWidget {
                   // Stats row
                   Row(
                     children: [
-                      _buildStat('⭐', '${mentor['rating']}', 'Rating'),
-                      _buildStat('👨‍🎓', '${mentor['studentCount'] ?? 0}', 'Students'),
-                      _buildStat('📹', '${mentor['sessions'] ?? 0}', 'Sessions'),
-                      _buildStat('🎓', '${mentor['experienceYears'] ?? 0}y', 'Experience'),
+                      _buildStat(context, '⭐', '${mentor['rating']}', 'Rating'),
+                      _buildStat(context, '👨‍🎓', '${mentor['studentCount'] ?? 0}', 'Students'),
+                      _buildStat(context, '📹', '${mentor['sessions'] ?? 0}', 'Sessions'),
+                      _buildStat(context, '🎓', '${mentor['experienceYears'] ?? 0}y', 'Experience'),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -107,14 +107,14 @@ class MentorProfileViewScreen extends StatelessWidget {
                   // About
                   Text('About',
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 17,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
                   AppCard(
                     child: Text(bio,
                         style: TextStyle(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 14,
                             height: 1.6)),
                   ),
@@ -123,7 +123,7 @@ class MentorProfileViewScreen extends StatelessWidget {
                   // Details
                   Text('Details',
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 17,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
@@ -131,13 +131,13 @@ class MentorProfileViewScreen extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
-                        _detailItem(Icons.language_rounded, 'Languages',
+                        _detailItem(context, Icons.language_rounded, 'Languages',
                             mentor['languages']?.toString() ?? 'English'),
                         const Divider(height: 1),
-                        _detailItem(Icons.schedule_rounded, 'Availability',
+                        _detailItem(context, Icons.schedule_rounded, 'Availability',
                             mentor['availability']?.toString() ?? 'Flexible'),
                         const Divider(height: 1),
-                        _detailItem(Icons.star_rounded, 'Specialization',
+                        _detailItem(context, Icons.star_rounded, 'Specialization',
                             specialization),
                       ],
                     ),
@@ -147,15 +147,15 @@ class MentorProfileViewScreen extends StatelessWidget {
                   // Reviews
                   Text('Recent Reviews',
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 17,
                           fontWeight: FontWeight.w700)),
                   const SizedBox(height: 8),
-                  _buildReview('Ananya K.', 5,
+                  _buildReview(context, 'Ananya K.', 5,
                       'Amazing mentor! Explains concepts so clearly.'),
-                  _buildReview('Raj P.', 4,
+                  _buildReview(context, 'Raj P.', 4,
                       'Very helpful with calculus problems.'),
-                  _buildReview('Priya S.', 5,
+                  _buildReview(context, 'Priya S.', 5,
                       'Best statistics tutor I have ever had!'),
                   const SizedBox(height: 24),
 
@@ -196,7 +196,7 @@ class MentorProfileViewScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStat(String emoji, String value, String label) {
+  Widget _buildStat(BuildContext context, String emoji, String value, String label) {
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
@@ -212,12 +212,12 @@ class MentorProfileViewScreen extends StatelessWidget {
             const SizedBox(height: 4),
             Text(value,
                 style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w700)),
             Text(label,
                 style: TextStyle(
-                    color: AppTheme.textLight,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 10,
                     fontWeight: FontWeight.w600)),
           ],
@@ -226,23 +226,23 @@ class MentorProfileViewScreen extends StatelessWidget {
     );
   }
 
-  Widget _detailItem(IconData icon, String label, String value) {
+  Widget _detailItem(BuildContext context, IconData icon, String label, String value) {
     return ListTile(
       leading: Icon(icon, color: AppTheme.accentBlue, size: 22),
       title: Text(label,
           style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontSize: 12,
               fontWeight: FontWeight.w600)),
       subtitle: Text(value,
           style: TextStyle(
-              color: AppTheme.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontSize: 14,
               fontWeight: FontWeight.w500)),
     );
   }
 
-  Widget _buildReview(String name, int stars, String text) {
+  Widget _buildReview(BuildContext context, String name, int stars, String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: AppCard(
@@ -268,7 +268,7 @@ class MentorProfileViewScreen extends StatelessWidget {
                 Expanded(
                   child: Text(name,
                       style: TextStyle(
-                          color: AppTheme.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14,
                           fontWeight: FontWeight.w600)),
                 ),
@@ -288,10 +288,11 @@ class MentorProfileViewScreen extends StatelessWidget {
             const SizedBox(height: 8),
             Text(text,
                 style: TextStyle(
-                    color: AppTheme.textSecondary, fontSize: 13, height: 1.4)),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13, height: 1.4)),
           ],
         ),
       ),
     );
   }
 }
+

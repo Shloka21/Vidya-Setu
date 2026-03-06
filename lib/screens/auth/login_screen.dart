@@ -113,7 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Sign in to continue your learning journey',
                   style: TextStyle(
-                    color: AppTheme.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 16,
                   ),
                 ),
@@ -123,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Email',
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -152,7 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Text(
                   'Password',
                   style: TextStyle(
-                    color: AppTheme.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -169,7 +169,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         _obscurePassword
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppTheme.textLight,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       ),
                       onPressed: () {
                         setState(() => _obscurePassword = !_obscurePassword);
@@ -208,7 +208,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         Text(
                           'Remember me',
                           style: TextStyle(
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 13,
                           ),
                         ),
@@ -285,7 +285,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Text(
                         'OR',
                         style: TextStyle(
-                          color: AppTheme.textLight,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -329,7 +329,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       Text(
                         "Don't have an account? ",
                         style: TextStyle(
-                          color: AppTheme.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 14,
                         ),
                       ),
@@ -416,3 +416,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

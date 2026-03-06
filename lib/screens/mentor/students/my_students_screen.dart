@@ -19,7 +19,16 @@ class MyStudentsScreen extends StatelessWidget {
 
     return Scaffold(
       
-      appBar: AppBar(title: const Text('My Students')),
+      appBar: AppBar(
+        title: const Text('My Students'),
+        actions: [
+          TextButton.icon(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.browseStudents),
+            icon: Icon(Icons.person_search_rounded, size: 20, color: AppTheme.accentPurple),
+            label: Text('Find Students', style: TextStyle(color: AppTheme.accentPurple, fontWeight: FontWeight.w600, fontSize: 13)),
+          ),
+        ],
+      ),
       body: uid.isEmpty
           ? const Center(child: Text('Not logged in'))
           : StreamBuilder<QuerySnapshot>(
@@ -37,14 +46,14 @@ class MyStudentsScreen extends StatelessWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.people_outline_rounded, color: AppTheme.textLight, size: 64),
+                          Icon(Icons.people_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 64),
                           const SizedBox(height: 16),
                           Text('No students yet',
-                              style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
                           const SizedBox(height: 8),
                           Text('Students can send you connection requests from the Find Mentor screen.',
                               textAlign: TextAlign.center,
-                              style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                         ],
                       ),
                     ),
@@ -96,11 +105,11 @@ class MyStudentsScreen extends StatelessWidget {
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
                                         children: [
-                                          Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.w600)),
+                                          Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w600)),
                                           if (course.isNotEmpty)
-                                            Text(course, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                                            Text(course, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                                           if (institution.isNotEmpty)
-                                            Text(institution, style: TextStyle(color: AppTheme.textLight, fontSize: 12)),
+                                            Text(institution, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                                         ],
                                       ),
                                     ),
@@ -243,7 +252,7 @@ class MyStudentsScreen extends StatelessWidget {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: AppTheme.textSecondary))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
             ElevatedButton(
               onPressed: () async {
                 final scheduledAt = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
@@ -294,3 +303,4 @@ class MyStudentsScreen extends StatelessWidget {
     );
   }
 }
+

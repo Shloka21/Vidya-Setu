@@ -84,7 +84,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: Text(
                     'Skip',
                     style: TextStyle(
-                      color: AppTheme.textLight,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       fontSize: 15,
                       fontWeight: FontWeight.w500,
                     ),
@@ -122,7 +122,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     decoration: BoxDecoration(
                       color: _currentPage == index
                           ? AppTheme.primaryNavy
-                          : AppTheme.textLight.withOpacity(0.3),
+                          : Theme.of(context).colorScheme.onSurface.withOpacity(0.5).withOpacity(0.3),
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
@@ -212,7 +212,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             slide.description,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: AppTheme.textSecondary,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontSize: 16,
               height: 1.5,
             ),
@@ -238,3 +238,4 @@ class OnboardingSlide {
     required this.color,
   });
 }
+

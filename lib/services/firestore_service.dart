@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
 import '../models/timetable_model.dart';
 
 class FirestoreService {
@@ -41,6 +43,12 @@ class FirestoreService {
     return remindersCollection(userId)
         .orderBy('dateTime', descending: false)
         .snapshots();
+  }
+
+  Stream<QuerySnapshot> mentorRemindersStream(String mentorId) {
+    return _firestore.collectionGroup('reminders')
+        .where('mentorId', isEqualTo: mentorId)
+        .snapshots(); 
   }
 
   // ─── Timetables ───────────────────────────────────────────
@@ -133,6 +141,14 @@ class FirestoreService {
     });
   }
 
+  Future<String> uploadChatFile(String roomId, String messageId, File file) async {
+    final ext = file.path.split('.').last;
+    final path = 'chats/$roomId/$messageId.$ext';
+    final ref = FirebaseStorage.instance.ref().child(path);
+    await ref.putFile(file);
+    return await ref.getDownloadURL();
+  }
+
   // ─── Mentor Connections ───────────────────────────────────
   CollectionReference get connectionsCollection =>
       _firestore.collection('connections');
@@ -187,12 +203,43 @@ class FirestoreService {
         .snapshots();
   }
 
+  Future<void> saveFeedback(Map<String, dynamic> data) async {
+    await feedbackCollection.doc(data['id']).set(data);
+  }
+
+  Stream<QuerySnapshot> getFeedbackStream(String userId, {bool isMentor = false}) {
+    if (isMentor) {
+      return feedbackCollection
+          .where('mentorId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots();
+    } else {
+      return feedbackCollection
+          .where('studentId', isEqualTo: userId)
+          .orderBy('createdAt', descending: true)
+          .snapshots();
+    }
+  }
+
   // ─── Search Mentors ───────────────────────────────────────
   Future<QuerySnapshot> searchMentors({String? query}) async {
     Query mentorQuery = usersCollection
         .where('role', isEqualTo: 'mentor');
 
     return await mentorQuery.get();
+  }
+
+  // ─── Search Students ──────────────────────────────────────
+  Future<QuerySnapshot> searchStudents({String? query}) async {
+    Query studentQuery = usersCollection
+        .where('role', isEqualTo: 'student');
+    return await studentQuery.get();
+  }
+
+  Stream<QuerySnapshot> mentorSentConnectionsStream(String mentorId) {
+    return connectionsCollection
+        .where('mentorId', isEqualTo: mentorId)
+        .snapshots();
   }
 
   // ─── Leaderboard ──────────────────────────────────────────
@@ -379,3 +426,4 @@ class FirestoreService {
     });
   }
 }
+

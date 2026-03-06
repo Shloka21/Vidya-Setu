@@ -60,7 +60,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           controller: _tabController,
           indicatorColor: AppTheme.accentBlue,
           labelColor: AppTheme.accentBlue,
-          unselectedLabelColor: AppTheme.textSecondary,
+          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           tabs: const [
             Tab(text: 'Weekly'),
             Tab(text: 'Monthly'),
@@ -88,11 +88,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.emoji_events_outlined, size: 64, color: AppTheme.textLight),
+          Icon(Icons.emoji_events_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           const SizedBox(height: 16),
-          Text('No leaderboard data yet', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+          Text('No leaderboard data yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
           const SizedBox(height: 8),
-          Text('Start studying to earn points!', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+          Text('Start studying to earn points!', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
         ],
       ),
     );
@@ -173,7 +173,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           Text(
             name.split(' ')[0],
             style: TextStyle(
-              color: isCurrentUser ? AppTheme.accentBlue : AppTheme.textPrimary,
+              color: isCurrentUser ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface,
               fontSize: 13,
               fontWeight: FontWeight.w700,
             ),
@@ -225,7 +225,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             children: [
               SizedBox(
                 width: 32,
-                child: Text('#$rank', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15, fontWeight: FontWeight.w700)),
+                child: Text('#$rank', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15, fontWeight: FontWeight.w700)),
               ),
               Container(
                 width: 40,
@@ -248,12 +248,12 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                   children: [
                     Text(
                       isCurrentUser ? '$name (You)' : name,
-                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600),
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       'Level $level • 🔥 ${streak}d streak',
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                     ),
                   ],
                 ),
@@ -273,3 +273,4 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     );
   }
 }
+

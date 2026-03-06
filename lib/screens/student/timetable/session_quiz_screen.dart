@@ -127,9 +127,9 @@ Return ONLY the JSON array, no extra text or markdown.''';
         children: [
           const CircularProgressIndicator(),
           const SizedBox(height: 20),
-          Text('Generating quiz questions...', style: TextStyle(color: AppTheme.textSecondary, fontSize: 15)),
+          Text('Generating quiz questions...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15)),
           const SizedBox(height: 8),
-          Text('${_session?.topic}', style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
+          Text('${_session?.topic}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
         ],
       ),
     );
@@ -146,9 +146,9 @@ Return ONLY the JSON array, no extra text or markdown.''';
           child: Row(
             children: [
               Text('${_selectedAnswers.length}/${_questions.length} answered',
-                  style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text(_session?.topic ?? '', style: TextStyle(color: AppTheme.textLight, fontSize: 12), overflow: TextOverflow.ellipsis),
+              Text(_session?.topic ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12), overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
@@ -187,7 +187,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
                           child: Center(child: Text('${qIndex + 1}', style: TextStyle(color: AppTheme.accentBlue, fontSize: 14, fontWeight: FontWeight.w700))),
                         ),
                         const SizedBox(width: 12),
-                        Expanded(child: Text(q['question'] ?? '', style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600))),
+                        Expanded(child: Text(q['question'] ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600))),
                       ],
                     ),
                     const SizedBox(height: 14),
@@ -216,12 +216,12 @@ Return ONLY the JSON array, no extra text or markdown.''';
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   color: isSelected ? AppTheme.accentBlue : Colors.transparent,
-                                  border: Border.all(color: isSelected ? AppTheme.accentBlue : AppTheme.textLight, width: 2),
+                                  border: Border.all(color: isSelected ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface.withOpacity(0.5), width: 2),
                                 ),
                                 child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 14) : null,
                               ),
                               const SizedBox(width: 12),
-                              Expanded(child: Text(optText, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14))),
+                              Expanded(child: Text(optText, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14))),
                             ],
                           ),
                         ),
@@ -294,7 +294,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
                 ? 'You\'ve successfully completed this topic! Great job!'
                 : 'Don\'t worry, every attempt makes you stronger. Review the material and try again!',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textSecondary, fontSize: 15, height: 1.5),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15, height: 1.5),
           ),
           const SizedBox(height: 24),
 
@@ -320,7 +320,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
           const SizedBox(height: 24),
 
           // Review answers
-          Text('REVIEW ANSWERS', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
+          Text('REVIEW ANSWERS', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
           const SizedBox(height: 12),
           ..._questions.asMap().entries.map((entry) {
             final i = entry.key;
@@ -345,7 +345,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
                     children: [
                       Icon(isCorrect ? Icons.check_circle : Icons.cancel, color: isCorrect ? AppTheme.successGreen : AppTheme.errorRed, size: 20),
                       const SizedBox(width: 8),
-                      Expanded(child: Text(q['question'] ?? '', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600))),
+                      Expanded(child: Text(q['question'] ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600))),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -354,7 +354,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
                   Text('Correct: ${options[correct]}', style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w600)),
                   if (q['explanation'] != null) ...[
                     const SizedBox(height: 6),
-                    Text(q['explanation'], style: TextStyle(color: AppTheme.textLight, fontSize: 12, fontStyle: FontStyle.italic)),
+                    Text(q['explanation'], style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12, fontStyle: FontStyle.italic)),
                   ],
                 ],
               ),
@@ -424,8 +424,9 @@ Return ONLY the JSON array, no extra text or markdown.''';
       children: [
         Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w700)),
         const SizedBox(height: 4),
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
       ],
     );
   }
 }
+

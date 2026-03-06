@@ -112,7 +112,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                             onSelected: (_) => setState(() => _selectedPeriod = p),
                             selectedColor: AppTheme.primaryNavy,
                             labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : AppTheme.textSecondary,
+                              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -122,11 +122,10 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     const SizedBox(height: 20),
 
                     // Stats cards
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 140,
+                    IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Expanded(
                             child: StatCard(
                               label: 'Study Hours',
                               value: _totalStudyHours.toStringAsFixed(1),
@@ -134,11 +133,8 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                               iconColor: AppTheme.accentBlue,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 140,
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: StatCard(
                               label: 'Tasks Done',
                               value: '${_completedSessions.length}',
@@ -146,15 +142,14 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                               iconColor: AppTheme.successGreen,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 140,
+                    IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Expanded(
                             child: StatCard(
                               label: 'Streak',
                               value: '${user?.streak ?? 0}',
@@ -162,11 +157,8 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                               isDark: true,
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: SizedBox(
-                            height: 140,
+                          const SizedBox(width: 12),
+                          Expanded(
                             child: StatCard(
                               label: 'Score',
                               value: '${(_completionRate * 100).toInt()}%',
@@ -174,8 +166,8 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                               iconColor: AppTheme.warningAmber,
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
                     // Insights section
@@ -183,7 +175,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // Study time chart
-                    Text('Study Time', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+                    Text('Study Time', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     AppCard(
                       padding: const EdgeInsets.all(20),
@@ -210,7 +202,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                                   showTitles: true,
                                   getTitlesWidget: (value, _) {
                                     const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                                    return Text(days[value.toInt()], style: TextStyle(color: AppTheme.textLight, fontSize: 12));
+                                    return Text(days[value.toInt()], style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12));
                                   },
                                   reservedSize: 24,
                                 ),
@@ -219,7 +211,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                                 sideTitles: SideTitles(
                                   showTitles: true,
                                   getTitlesWidget: (value, _) {
-                                    return Text('${value.toInt()}h', style: TextStyle(color: AppTheme.textLight, fontSize: 11));
+                                    return Text('${value.toInt()}h', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11));
                                   },
                                   reservedSize: 28,
                                 ),
@@ -241,13 +233,13 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                     const SizedBox(height: 24),
 
                     // Subject distribution
-                    Text('Subject Distribution', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+                    Text('Subject Distribution', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     _buildSubjectDistribution(),
                     const SizedBox(height: 24),
 
                     // Task completion
-                    Text('Task Completion', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+                    Text('Task Completion', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     _buildTaskCompletion(),
                     const SizedBox(height: 20),
@@ -265,7 +257,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
         padding: const EdgeInsets.all(24),
         child: Center(
           child: Text('Complete study sessions to see your subject distribution.',
-              style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
         ),
       );
     }
@@ -348,7 +340,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                 ),
                 Text(
                   '${(_completionRate * 100).toInt()}%',
-                  style: TextStyle(color: AppTheme.textPrimary, fontSize: 22, fontWeight: FontWeight.w700),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w700),
                 ),
               ],
             ),
@@ -412,7 +404,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                   children: [
                     const Text('Weekly Progress', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     Text('You studied $trendValue% more than last week!', 
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                   ],
                 ),
               ),
@@ -436,7 +428,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                   children: [
                     const Text('Top Subject', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                     Text('Your most studied subject is $topSubject', 
-                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                   ],
                 ),
               ),
@@ -459,9 +451,9 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13), overflow: TextOverflow.ellipsis),
+            child: Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13), overflow: TextOverflow.ellipsis),
           ),
-          Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -476,10 +468,11 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Text(label, style: TextStyle(color: AppTheme.textSecondary, fontSize: 14)),
+        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14)),
         const Spacer(),
-        Text(value, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14, fontWeight: FontWeight.w600)),
+        Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
       ],
     );
   }
 }
+

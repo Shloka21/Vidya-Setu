@@ -125,7 +125,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                           child: Text(
                             filter,
                             style: TextStyle(
-                              color: isSelected ? Colors.white : AppTheme.textSecondary,
+                              color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
                               fontSize: 13,
                             ),
@@ -156,16 +156,16 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.notifications_off_rounded, size: 56, color: AppTheme.textLight.withValues(alpha: 0.4)),
+                            Icon(Icons.notifications_off_rounded, size: 56, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5).withValues(alpha: 0.4)),
                             const SizedBox(height: 12),
                             Text(
                               'No reminders in this view',
-                              style: TextStyle(color: AppTheme.textSecondary, fontSize: 16, fontWeight: FontWeight.w600),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16, fontWeight: FontWeight.w600),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               'Tap the + button to add a reminder.',
-                              style: TextStyle(color: AppTheme.textLight, fontSize: 13),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
                             ),
                           ],
                         ),
@@ -192,7 +192,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
       'Quizzes': AppTheme.accentPurple,
       'Study': AppTheme.successGreen,
     };
-    final color = colors[label] ?? AppTheme.textSecondary;
+    final color = colors[label] ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3),
@@ -283,7 +283,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                         Text(
                           reminder.title,
                           style: TextStyle(
-                            color: isDone ? AppTheme.textLight : AppTheme.textPrimary,
+                            color: isDone ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) : Theme.of(context).colorScheme.onSurface,
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
                             decoration: isDone ? TextDecoration.lineThrough : null,
@@ -308,11 +308,11 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Icon(Icons.access_time_rounded, size: 13, color: AppTheme.textLight),
+                            Icon(Icons.access_time_rounded, size: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                             const SizedBox(width: 4),
                             Text(
                               timeStr,
-                              style: const TextStyle(color: AppTheme.textLight, fontSize: 12),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
                             ),
                           ],
                         ),
@@ -334,7 +334,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                 const SizedBox(height: 10),
                 Text(
                   reminder.description!,
-                  style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -455,3 +455,4 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
     }
   }
 }
+

@@ -182,7 +182,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                   onSelected: (_) => setState(() => _selectedType = entry.key),
                   selectedColor: AppTheme.primaryNavy,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -216,11 +216,11 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.calendar_today, size: 18, color: AppTheme.textLight),
+                              Icon(Icons.calendar_today, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                               const SizedBox(width: 10),
                               Text(
                                 '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-                                style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
                               ),
                             ],
                           ),
@@ -251,11 +251,11 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                           ),
                           child: Row(
                             children: [
-                              Icon(Icons.access_time, size: 18, color: AppTheme.textLight),
+                              Icon(Icons.access_time, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                               const SizedBox(width: 10),
                               Text(
                                 _selectedTime.format(context),
-                                style: TextStyle(color: AppTheme.textPrimary, fontSize: 15),
+                                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
                               ),
                             ],
                           ),
@@ -293,7 +293,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                           child: Text(
                             label,
                             style: TextStyle(
-                              color: isSelected ? color : AppTheme.textSecondary,
+                              color: isSelected ? color : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
                               fontSize: 14,
                             ),
@@ -373,7 +373,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                   onSelected: (_) => setState(() => _repeatType = r),
                   selectedColor: AppTheme.primaryNavy,
                   labelStyle: TextStyle(
-                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                   ),
@@ -399,8 +399,8 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
       padding: const EdgeInsets.only(bottom: 8),
       child: Text(
         text,
-        style: const TextStyle(
-          color: AppTheme.textPrimary,
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 14,
           fontWeight: FontWeight.w600,
         ),
@@ -412,7 +412,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15)),
+        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
         Switch(
           value: value,
           onChanged: onChanged,
@@ -440,15 +440,16 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
       selectedColor: AppTheme.accentBlue.withOpacity(0.15),
       checkmarkColor: AppTheme.accentBlue,
       labelStyle: TextStyle(
-        color: isSelected ? AppTheme.accentBlue : AppTheme.textSecondary,
+        color: isSelected ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         fontWeight: FontWeight.w600,
         fontSize: 13,
       ),
       avatar: Icon(
         isSelected ? Icons.alarm_on_rounded : Icons.alarm_rounded,
         size: 16,
-        color: isSelected ? AppTheme.accentBlue : AppTheme.textLight,
+        color: isSelected ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
       ),
     );
   }
 }
+

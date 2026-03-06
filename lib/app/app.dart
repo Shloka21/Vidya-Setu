@@ -25,7 +25,6 @@ import '../screens/student/mentor/find_mentor_screen.dart';
 import '../screens/student/mentor/mentor_profile_view_screen.dart';
 import '../screens/student/profile/student_profile_screen.dart';
 import '../screens/student/profile/edit_profile_screen.dart';
-import '../screens/student/settings/student_settings_screen.dart';
 import '../screens/mentor/dashboard/mentor_dashboard.dart';
 import '../screens/mentor/students/my_students_screen.dart';
 import '../screens/mentor/students/student_profile_mentor_view.dart';
@@ -36,6 +35,7 @@ import '../screens/mentor/reminders/mentor_reminders_screen.dart';
 import '../screens/mentor/reminders/create_reminder_screen.dart';
 import '../screens/mentor/profile/mentor_profile_screen.dart';
 import '../screens/mentor/settings/mentor_settings_screen.dart';
+import '../screens/mentor/students/browse_students_screen.dart';
 import '../screens/chat/chat_list_screen.dart';
 import '../screens/chat/chat_room_screen.dart';
 import '../screens/chat/video_call_screen.dart';
@@ -88,7 +88,7 @@ class VidyaSetuApp extends StatelessWidget {
           AppRoutes.mentorProfile: (_) => const MentorProfileViewScreen(),
           AppRoutes.studentProfile: (_) => const StudentProfileScreen(),
           AppRoutes.editStudentProfile: (_) => const EditProfileScreen(),
-          AppRoutes.studentSettings: (_) => const StudentSettingsScreen(),
+
 
           // Mentor
           AppRoutes.mentorDashboard: (_) => const MentorDashboard(),
@@ -101,6 +101,7 @@ class VidyaSetuApp extends StatelessWidget {
           AppRoutes.createReminder: (_) => const CreateReminderScreen(),
           AppRoutes.mentorProfileScreen: (_) => const MentorProfileScreen(),
           AppRoutes.mentorSettings: (_) => const MentorSettingsScreen(),
+          AppRoutes.browseStudents: (_) => const BrowseStudentsScreen(),
 
           // Chat
           AppRoutes.chatList: (_) => ChatListScreen(),

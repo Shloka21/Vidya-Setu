@@ -202,12 +202,12 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.calendar_month_outlined, size: 80, color: AppTheme.textLight.withOpacity(0.4)),
+            Icon(Icons.calendar_month_outlined, size: 80, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5).withOpacity(0.4)),
             const SizedBox(height: 20),
-            Text('No Study Plan Yet', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 22, fontWeight: FontWeight.w700)),
+            Text('No Study Plan Yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text('Upload your syllabus PDF and generate a smart study timetable.',
-                textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.generateTimetable).then((_) => _loadPlan()),
@@ -238,7 +238,7 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('$done/${sessions.length} completed', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+              Text('$done/${sessions.length} completed', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.w600)),
               Text('${(pct * 100).toInt()}%', style: TextStyle(color: AppTheme.accentBlue, fontSize: 12, fontWeight: FontWeight.w700)),
             ],
           ),
@@ -264,15 +264,15 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              IconButton(onPressed: () => setState(() => _weekOffset--), icon: const Icon(Icons.chevron_left_rounded, color: AppTheme.textSecondary), splashRadius: 20),
+              IconButton(onPressed: () => setState(() => _weekOffset--), icon: Icon(Icons.chevron_left_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)), splashRadius: 20),
               GestureDetector(
                 onTap: () => setState(() { _weekOffset = 0; _selectedDate = DateTime.now(); }),
                 child: Column(children: [
-                  Text('${DateFormat('MMM d').format(startOfWeek)} – ${DateFormat('MMM d').format(endOfWeek)}', style: const TextStyle(color: AppTheme.primaryNavy, fontSize: 15, fontWeight: FontWeight.w700)),
-                  if (_weekOffset != 0) const Text('Tap to return to today', style: TextStyle(color: AppTheme.textLight, fontSize: 11)),
+                  Text('${DateFormat('MMM d').format(startOfWeek)} – ${DateFormat('MMM d').format(endOfWeek)}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
+                  if (_weekOffset != 0) Text('Tap to return to today', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
                 ]),
               ),
-              IconButton(onPressed: () => setState(() => _weekOffset++), icon: const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary), splashRadius: 20),
+              IconButton(onPressed: () => setState(() => _weekOffset++), icon: Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)), splashRadius: 20),
             ],
           ),
         ),
@@ -297,12 +297,12 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                     color: isSelected ? AppTheme.primaryNavy : AppTheme.surface,
                     borderRadius: BorderRadius.circular(16),
                     border: isToday && !isSelected ? Border.all(color: AppTheme.accentBlue, width: 2) : null,
-                    boxShadow: isSelected ? [BoxShadow(color: AppTheme.primaryNavy.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : AppTheme.cardBoxShadow,
+                    boxShadow: isSelected ? [BoxShadow(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))] : AppTheme.cardBoxShadow,
                   ),
                   child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                    Text(DateFormat('E').format(date).toUpperCase(), style: TextStyle(color: isSelected ? Colors.white70 : AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
+                    Text(DateFormat('E').format(date).toUpperCase(), style: TextStyle(color: isSelected ? Colors.white70 : Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.w600)),
                     const SizedBox(height: 4),
-                    Text(DateFormat('d').format(date), style: TextStyle(color: isSelected ? Colors.white : AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(DateFormat('d').format(date), style: TextStyle(color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.bold)),
                     if (hasSession) ...[const SizedBox(height: 4), Container(width: 6, height: 6, decoration: BoxDecoration(color: isSelected ? Colors.white : AppTheme.accentBlue, shape: BoxShape.circle))],
                   ]),
                 ),
@@ -320,9 +320,9 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
     if (sessions.isEmpty) {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.event_note_outlined, size: 64, color: AppTheme.textLight),
+          Icon(Icons.event_note_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           const SizedBox(height: 16),
-          Text('No sessions on this day', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
+          Text('No sessions on this day', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
         ]),
       );
     }
@@ -381,10 +381,10 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                                   if (session.quizCompleted) ...[const SizedBox(width: 4), Icon(Icons.quiz_rounded, color: AppTheme.accentBlue, size: 18)],
                                 ]),
                                 const SizedBox(height: 4),
-                                Text(session.topic, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+                                Text(session.topic, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
                                 if (session.moduleName != null) ...[
                                   const SizedBox(height: 2),
-                                  Text(session.moduleName!, style: TextStyle(color: AppTheme.textLight, fontSize: 12)),
+                                  Text(session.moduleName!, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                                 ],
                                 const SizedBox(height: 8),
                                 // Time range
@@ -399,7 +399,7 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                                     const SizedBox(width: 4),
                                     Text('$startStr – $endStr', style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600)),
                                     const SizedBox(width: 8),
-                                    Text('${session.durationMinutes} min', style: TextStyle(color: AppTheme.textLight, fontSize: 12)),
+                                    Text('${session.durationMinutes} min', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                                   ]),
                                 ),
                               ],
@@ -434,7 +434,7 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                             onTap: () => _rescheduleSession(session),
                           ),
                           const Spacer(),
-                          Icon(Icons.chevron_right_rounded, color: AppTheme.textLight, size: 22),
+                          Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 22),
                         ],
                       ),
                     ),
@@ -471,3 +471,5 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
     );
   }
 }
+
+

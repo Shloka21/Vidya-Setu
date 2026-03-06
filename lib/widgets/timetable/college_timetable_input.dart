@@ -105,7 +105,7 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textSecondary,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       );
@@ -171,7 +171,7 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
         Text(
           'Tap slots to mark college lectures. ${_selected.length} hours marked busy.',
           style: TextStyle(
-            color: AppTheme.textSecondary,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontSize: 12,
             fontStyle: FontStyle.italic,
           ),
@@ -198,3 +198,4 @@ class _CollegeTimetableInputState extends State<CollegeTimetableInput> {
     );
   }
 }
+

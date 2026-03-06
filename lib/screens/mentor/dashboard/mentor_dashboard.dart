@@ -8,7 +8,6 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/stat_card.dart';
-import '../../../widgets/common/bottom_nav_bar.dart';
 
 class MentorDashboard extends StatefulWidget {
   const MentorDashboard({super.key});
@@ -18,7 +17,6 @@ class MentorDashboard extends StatefulWidget {
 }
 
 class _MentorDashboardState extends State<MentorDashboard> {
-  int _currentNavIndex = 0;
   final FirestoreService _firestore = FirestoreService();
   List<Map<String, dynamic>> _students = [];
   int _pendingRequests = 0;
@@ -85,33 +83,6 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Scaffold(
       
       body: _buildBody(),
-      bottomNavigationBar: AppBottomNavBar(
-        currentIndex: _currentNavIndex,
-        onTap: (index) {
-          setState(() => _currentNavIndex = index);
-          switch (index) {
-            case 1:
-              Navigator.pushNamed(context, AppRoutes.myStudents);
-              break;
-            case 2:
-              Navigator.pushNamed(context, AppRoutes.achievements);
-              break;
-            case 3:
-              Navigator.pushNamed(context, AppRoutes.chatList);
-              break;
-            case 4:
-              Navigator.pushNamed(context, AppRoutes.mentorProfileScreen);
-              break;
-          }
-        },
-        items: const [
-          AppNavItem(icon: Icons.grid_view_outlined, activeIcon: Icons.grid_view_rounded, label: 'Home'),
-          AppNavItem(icon: Icons.people_outline_rounded, activeIcon: Icons.people_rounded, label: 'Students'),
-          AppNavItem(icon: Icons.emoji_events_outlined, activeIcon: Icons.emoji_events_rounded, label: 'Arena'),
-          AppNavItem(icon: Icons.chat_bubble_outline_rounded, activeIcon: Icons.chat_bubble_rounded, label: 'Messages'),
-          AppNavItem(icon: Icons.person_outline_rounded, activeIcon: Icons.person_rounded, label: 'Profile'),
-        ],
-      ),
     );
   }
 
@@ -168,10 +139,10 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('VidyaSetu', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 16, fontWeight: FontWeight.w700)),
+                      Text('VidyaSetu', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w700)),
                       Text(
                         DateFormat('EEEE, MMM d').format(now).toUpperCase(),
-                        style: TextStyle(color: AppTheme.textLight, fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1),
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1),
                       ),
                     ],
                   ),
@@ -180,7 +151,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               const SizedBox(height: 20),
               Text(
                 'Welcome back,\n${user?.name ?? "Mentor"}!',
-                style: TextStyle(color: AppTheme.primaryNavy, fontSize: 28, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.5),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 28, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.5),
               ),
             ],
           ),
@@ -221,8 +192,8 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       Container(
                         width: 44,
                         height: 44,
-                        decoration: BoxDecoration(color: AppTheme.surface, shape: BoxShape.circle, boxShadow: AppTheme.cardBoxShadow),
-                        child: const Center(child: Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.textSecondary, size: 22)),
+                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.surface, shape: BoxShape.circle, boxShadow: AppTheme.cardBoxShadow),
+                        child: Center(child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 22)),
                       ),
                       if (unread > 0)
                         Positioned(
@@ -252,8 +223,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
   }
 
   Widget _buildQuickStats() {
-    return SizedBox(
-      height: 160,
+    return IntrinsicHeight(
       child: Row(
         children: [
           Expanded(
@@ -261,8 +231,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               label: 'Students',
               value: '${_students.length}',
               icon: Icons.people_rounded,
-              iconColor: AppTheme.accentBlue,
-              iconBgColor: AppTheme.accentBlue.withOpacity(0.1),
+              isDark: true,
             ),
           ),
           const SizedBox(width: 14),
@@ -286,7 +255,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Student Activity', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text('Student Activity', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.myStudents),
               child: Text('View All', style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w600)),
@@ -301,12 +270,12 @@ class _MentorDashboardState extends State<MentorDashboard> {
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
-                Icon(Icons.people_outline_rounded, color: AppTheme.textLight, size: 28),
+                Icon(Icons.people_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
                 const SizedBox(width: 14),
                 Expanded(
                   child: Text(
                     'No connected students yet. Students can find and connect with you from the Mentors screen.',
-                    style: TextStyle(color: AppTheme.textLight, fontSize: 13),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
                   ),
                 ),
               ],
@@ -351,14 +320,14 @@ class _MentorDashboardState extends State<MentorDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
+                Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Row(
                   children: [
                     Container(width: 8, height: 8, decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle)),
                     const SizedBox(width: 6),
                     Expanded(
-                      child: Text(status, style: TextStyle(color: AppTheme.textLight, fontSize: 12), overflow: TextOverflow.ellipsis),
+                      child: Text(status, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12), overflow: TextOverflow.ellipsis),
                     ),
                   ],
                 ),
@@ -366,7 +335,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
             ),
           ),
           IconButton(
-            icon: Icon(Icons.chat_bubble_outline_rounded, color: AppTheme.primaryNavy, size: 20),
+            icon: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
             onPressed: () async {
               final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
               if (uid == null) return;
@@ -392,7 +361,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Pending Requests', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text('Pending Requests', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         StreamBuilder<QuerySnapshot>(
           stream: _firestore.mentorRequestsStream(uid),
@@ -404,7 +373,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   children: [
                     Icon(Icons.check_circle_outline_rounded, color: AppTheme.successGreen, size: 28),
                     const SizedBox(width: 14),
-                    Text('No pending requests', style: TextStyle(color: AppTheme.textLight, fontSize: 14)),
+                    Text('No pending requests', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                   ],
                 ),
               );
@@ -433,8 +402,8 @@ class _MentorDashboardState extends State<MentorDashboard> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(name, style: TextStyle(color: AppTheme.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
-                              Text('Wants to connect', style: TextStyle(color: AppTheme.textLight, fontSize: 13)),
+                              Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600)),
+                              Text('Wants to connect', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
                             ],
                           ),
                         ),
@@ -472,15 +441,13 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Actions', style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text('Quick Actions', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
         const SizedBox(height: 12),
         Row(
           children: [
-            _actionCard('Students', Icons.people_rounded, AppTheme.accentBlue, () => Navigator.pushNamed(context, AppRoutes.myStudents)),
-            const SizedBox(width: 12),
-            _actionCard('Feedback', Icons.feedback_rounded, AppTheme.accentPurple, () => Navigator.pushNamed(context, AppRoutes.feedbackHistory)),
-            const SizedBox(width: 12),
-            _actionCard('Chat', Icons.chat_rounded, AppTheme.successGreen, () => Navigator.pushNamed(context, AppRoutes.chatList)),
+            _actionCard('Guidance', Icons.rate_review_rounded, AppTheme.warningAmber, () => Navigator.pushNamed(context, AppRoutes.feedbackHistory)),
+            const SizedBox(width: 12),         
+            _actionCard('Analytics', Icons.analytics_rounded, AppTheme.accentPurple, () => Navigator.pushNamed(context, AppRoutes.studentAnalyticsMentor)),
           ],
         ),
       ],
@@ -501,7 +468,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                 child: Icon(icon, color: color, size: 26),
               ),
               const SizedBox(height: 10),
-              Text(label, style: TextStyle(color: AppTheme.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -509,3 +476,4 @@ class _MentorDashboardState extends State<MentorDashboard> {
     );
   }
 }
+
