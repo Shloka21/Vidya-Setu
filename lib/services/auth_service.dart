@@ -169,4 +169,36 @@ class AuthService {
     await _googleSignIn.signOut();
     await _auth.signOut();
   }
+
+  // ─── Soft Delete Account (30-day grace period) ────────────
+  /// Marks the user's Firestore document as deleted.
+  /// The user is signed out. If they log back in within 30 days,
+  /// they can restore their account.
+  Future<void> softDeleteAccount(String uid) async {
+    final deletionDate = DateTime.now().add(const Duration(days: 30));
+    await _firestore.collection('users').doc(uid).update({
+      'isDeleted': true,
+      'scheduledDeleteAt': deletionDate.toIso8601String(),
+      'deletedAt': DateTime.now().toIso8601String(),
+    });
+    await signOut();
+  }
+
+  /// Restores a soft-deleted account by clearing the deletion flags.
+  Future<void> restoreAccount(String uid) async {
+    await _firestore.collection('users').doc(uid).update({
+      'isDeleted': false,
+      'scheduledDeleteAt': null,
+      'deletedAt': null,
+    });
+  }
+
+  /// Checks if a user account is marked as deleted.
+  Future<bool> isAccountDeleted(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists) {
+      return doc.data()?['isDeleted'] == true;
+    }
+    return false;
+  }
 }

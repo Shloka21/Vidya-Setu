@@ -7,6 +7,8 @@ import '../../../services/firestore_service.dart';
 import '../../../models/timetable_model.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/stat_card.dart';
+import '../../../widgets/common/translated_text.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class ProgressDashboardScreen extends StatefulWidget {
   const ProgressDashboardScreen({super.key});
@@ -16,7 +18,7 @@ class ProgressDashboardScreen extends StatefulWidget {
 }
 
 class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
-  String _selectedPeriod = 'Week';
+  String _selectedPeriod = 'week';
   final FirestoreService _firestore = FirestoreService();
   StudyPlan? _studyPlan;
   bool _loading = true;
@@ -39,26 +41,39 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
   }
 
   // ─── Computed Stats ─────────────────────────────────────────
-  List<TimetableSession> get _allSessions => _studyPlan?.sessions ?? [];
+
+  List<TimetableSession> get _sessionsInPeriod {
+    if (_studyPlan == null) return [];
+    final now = DateTime.now();
+    DateTime startDate;
+    if (_selectedPeriod == 'week') {
+      startDate = now.subtract(const Duration(days: 7));
+    } else if (_selectedPeriod == 'month') {
+      startDate = now.subtract(const Duration(days: 30));
+    } else {
+      startDate = DateTime.fromMillisecondsSinceEpoch(0);
+    }
+    return _studyPlan!.sessions.where((s) => s.date.isAfter(startDate) || s.date.isAtSameMomentAs(startDate)).toList();
+  }
 
   List<TimetableSession> get _completedSessions =>
-      _allSessions.where((s) => s.isCompleted).toList();
+      _sessionsInPeriod.where((s) => s.isCompleted).toList();
 
   int get _pendingSessions {
     final now = DateTime.now();
-    return _allSessions.where((s) => !s.isCompleted && s.endTime.isAfter(now)).length;
+    return _sessionsInPeriod.where((s) => !s.isCompleted && s.endTime.isAfter(now)).length;
   }
 
   int get _missedSessions {
     final now = DateTime.now();
-    return _allSessions.where((s) => !s.isCompleted && s.endTime.isBefore(now)).length;
+    return _sessionsInPeriod.where((s) => !s.isCompleted && s.endTime.isBefore(now)).length;
   }
 
   double get _totalStudyHours =>
       _completedSessions.fold<double>(0, (s, e) => s + e.durationMinutes / 60.0);
 
   double get _completionRate =>
-      _allSessions.isEmpty ? 0 : _completedSessions.length / _allSessions.length;
+      _sessionsInPeriod.isEmpty ? 0 : _completedSessions.length / _sessionsInPeriod.length;
 
   Map<String, double> get _subjectDistribution {
     final map = <String, double>{};
@@ -68,19 +83,41 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
     return map;
   }
 
-  // Weekly study hours for bar chart (last 7 days)
-  List<double> get _weeklyHours {
+  List<double> get _chartData {
     final now = DateTime.now();
-    final result = List<double>.filled(7, 0.0);
-    for (var s in _completedSessions) {
-      final diff = now.difference(s.date).inDays;
-      if (diff >= 0 && diff < 7) {
-        // Map to day index: 0=Mon, 6=Sun of current week
-        final dayIndex = s.date.weekday - 1; // 0=Mon
-        result[dayIndex] += s.durationMinutes / 60.0;
+    if (_selectedPeriod == 'week') {
+      final result = List<double>.filled(7, 0.0);
+      for (var s in _completedSessions) {
+        final diff = now.difference(s.date).inDays;
+        if (diff >= 0 && diff < 7) {
+          final dayIndex = s.date.weekday - 1; // 0=Mon
+          result[dayIndex] += s.durationMinutes / 60.0;
+        }
       }
+      return result;
+    } else if (_selectedPeriod == 'month') {
+      // 4 weeks representation
+      final result = List<double>.filled(4, 0.0);
+      for (var s in _completedSessions) {
+        final diff = now.difference(s.date).inDays;
+        if (diff >= 0 && diff < 28) {
+          final weekIndex = 3 - (diff ~/ 7); // 3=this week, 0=3 weeks ago
+          result[weekIndex] += s.durationMinutes / 60.0;
+        }
+      }
+      return result;
+    } else {
+      // All time - 6 months representation
+      final result = List<double>.filled(6, 0.0);
+      for (var s in _completedSessions) {
+        final diff = now.difference(s.date).inDays;
+        if (diff >= 0 && diff < 180) {
+          final monthIndex = 5 - (diff ~/ 30); // 5=this month, 0=5 months ago
+          result[monthIndex] += s.durationMinutes / 60.0;
+        }
+      }
+      return result;
     }
-    return result;
   }
 
   @override
@@ -89,7 +126,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
 
     return Scaffold(
       
-      appBar: AppBar(title: const Text('Analytics')),
+      appBar: AppBar(title: Text(context.tr('analytics'))),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -102,12 +139,12 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                   children: [
                     // Period selector
                     Row(
-                      children: ['Week', 'Month', 'All'].map((p) {
+                      children: ['week', 'month', 'all'].map((p) {
                         final isSelected = _selectedPeriod == p;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8),
                           child: ChoiceChip(
-                            label: Text(p),
+                            label: Text(context.tr(p)),
                             selected: isSelected,
                             onSelected: (_) => setState(() => _selectedPeriod = p),
                             selectedColor: AppTheme.primaryNavy,
@@ -119,7 +156,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         );
                       }).toList(),
                     ),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
 
                     // Stats cards
                     IntrinsicHeight(
@@ -127,16 +164,16 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         children: [
                           Expanded(
                             child: StatCard(
-                              label: 'Study Hours',
+                              label: context.tr('study_hours'),
                               value: _totalStudyHours.toStringAsFixed(1),
                               icon: Icons.timer_rounded,
                               iconColor: AppTheme.accentBlue,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: StatCard(
-                              label: 'Tasks Done',
+                              label: context.tr('tasks_done'),
                               value: '${_completedSessions.length}',
                               icon: Icons.task_alt_rounded,
                               iconColor: AppTheme.successGreen,
@@ -145,22 +182,22 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    SizedBox(height: 12),
                     IntrinsicHeight(
                       child: Row(
                         children: [
                           Expanded(
                             child: StatCard(
-                              label: 'Streak',
+                              label: context.tr('streak'),
                               value: '${user?.streak ?? 0}',
                               icon: Icons.local_fire_department_rounded,
                               isDark: true,
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          SizedBox(width: 12),
                           Expanded(
                             child: StatCard(
-                              label: 'Score',
+                              label: context.tr('score'),
                               value: '${(_completionRate * 100).toInt()}%',
                               icon: Icons.stars_rounded,
                               iconColor: AppTheme.warningAmber,
@@ -169,13 +206,13 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                     // Insights section
                     _buildInsightsSection(),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Study time chart
-                    Text('Study Time', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+                    Text(context.tr('study_time'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     AppCard(
                       padding: const EdgeInsets.all(20),
@@ -184,7 +221,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                         child: BarChart(
                           BarChartData(
                             alignment: BarChartAlignment.spaceAround,
-                            maxY: (_weeklyHours.reduce((a, b) => a > b ? a : b) + 1).ceilToDouble().clamp(2, 12),
+                            maxY: (_chartData.isEmpty ? 2.0 : _chartData.reduce((a, b) => a > b ? a : b) + 1).ceilToDouble().clamp(2, _selectedPeriod == 'week' ? 12.0 : 50.0),
                             barTouchData: BarTouchData(
                               touchTooltipData: BarTouchTooltipData(
                                 getTooltipItem: (group, gIdx, rod, rIdx) {
@@ -201,8 +238,17 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                                 sideTitles: SideTitles(
                                   showTitles: true,
                                   getTitlesWidget: (value, _) {
-                                    const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-                                    return Text(days[value.toInt()], style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12));
+                                    if (_selectedPeriod == 'week') {
+                                      const days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                                      if (value.toInt() >= 0 && value.toInt() < days.length) {
+                                        return Text(days[value.toInt()], style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12));
+                                      }
+                                    } else if (_selectedPeriod == 'month') {
+                                      return Text('W${value.toInt() + 1}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12));
+                                    } else {
+                                      return Text('M${value.toInt() + 1}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12));
+                                    }
+                                    return const Text('');
                                   },
                                   reservedSize: 24,
                                 ),
@@ -225,24 +271,24 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                               getDrawingHorizontalLine: (value) => FlLine(color: AppTheme.divider, strokeWidth: 1),
                             ),
                             borderData: FlBorderData(show: false),
-                            barGroups: List.generate(7, (i) => _makeBarGroup(i, _weeklyHours[i])),
+                            barGroups: List.generate(_chartData.length, (i) => _makeBarGroup(i, _chartData[i])),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Subject distribution
-                    Text('Subject Distribution', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 12),
+                    Text(context.tr('subject_distribution'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+                    SizedBox(height: 12),
                     _buildSubjectDistribution(),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
 
                     // Task completion
-                    Text('Task Completion', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+                    Text(context.tr('task_completion'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 12),
                     _buildTaskCompletion(),
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -256,7 +302,7 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
       return AppCard(
         padding: const EdgeInsets.all(24),
         child: Center(
-          child: Text('Complete study sessions to see your subject distribution.',
+          child: Text(context.tr('complete_study_sessions_to_see_your_subj'),
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
         ),
       );
@@ -345,16 +391,16 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
               ],
             ),
           ),
-          const SizedBox(width: 24),
+          SizedBox(width: 24),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildStatRow('Completed', '$completed', AppTheme.successGreen),
-                const SizedBox(height: 8),
-                _buildStatRow('Pending', '$pending', AppTheme.warningAmber),
-                const SizedBox(height: 8),
-                _buildStatRow('Missed', '$missed', AppTheme.errorRed),
+                _buildStatRow(context.tr('completed'), '$completed', AppTheme.successGreen),
+                SizedBox(height: 8),
+                _buildStatRow(context.tr('pending'), '$pending', AppTheme.warningAmber),
+                SizedBox(height: 8),
+                _buildStatRow(context.tr('missed'), '$missed', AppTheme.errorRed),
               ],
             ),
           ),
@@ -395,15 +441,15 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                   color: AppTheme.successGreen.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.trending_up_rounded, color: AppTheme.successGreen, size: 24),
+                child: Icon(Icons.trending_up_rounded, color: AppTheme.successGreen, size: 24),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Weekly Progress', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                    Text('You studied $trendValue% more than last week!', 
+                    Text(context.tr('weekly_progress'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    TranslatedText('You studied $trendValue% more than last week!', 
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                   ],
                 ),
@@ -419,15 +465,15 @@ class _ProgressDashboardScreenState extends State<ProgressDashboardScreen> {
                   color: AppTheme.accentPurple.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.psychology_rounded, color: AppTheme.accentPurple, size: 24),
+                child: Icon(Icons.psychology_rounded, color: AppTheme.accentPurple, size: 24),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Top Subject', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                    Text('Your most studied subject is $topSubject', 
+                    Text(context.tr('top_subject'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                    TranslatedText('Your most studied subject is $topSubject', 
                       style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                   ],
                 ),

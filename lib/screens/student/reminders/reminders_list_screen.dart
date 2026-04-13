@@ -8,6 +8,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../models/reminder_model.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class RemindersListScreen extends StatefulWidget {
   const RemindersListScreen({super.key});
@@ -70,14 +71,14 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
   Widget build(BuildContext context) {
     final uid = Provider.of<AuthProvider>(context).userModel?.uid;
     if (uid == null) {
-      return const Scaffold(
-        body: Center(child: Text('Please log in.')),
+      return Scaffold(
+        body: Center(child: Text(context.tr('please_log_in'))),
       );
     }
 
     return Scaffold(
       
-      appBar: AppBar(title: const Text('Reminders')),
+      appBar: AppBar(title: Text(context.tr('reminders'))),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.addReminder),
         backgroundColor: AppTheme.primaryNavy,
@@ -94,6 +95,27 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
             final data = doc.data() as Map<String, dynamic>;
             return ReminderModel.fromMap({...data, 'id': doc.id});
           }).toList();
+
+          // Auto-delete expired one-time reminders (5+ min past their time)
+          final now = DateTime.now();
+          final expiredIds = <String>[];
+          for (final r in allReminders) {
+            if (r.repeatType == 'once' &&
+                r.status != ReminderStatus.completed &&
+                r.dateTime.isBefore(now.subtract(const Duration(minutes: 5)))) {
+              expiredIds.add(r.id);
+            }
+          }
+          if (expiredIds.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              for (final id in expiredIds) {
+                _firestore.deleteReminder(uid, id);
+              }
+            });
+          }
+
+          // Remove expired from local list so they vanish immediately
+          allReminders.removeWhere((r) => expiredIds.contains(r.id));
 
           allReminders.sort((a, b) => a.dateTime.compareTo(b.dateTime));
           final filtered = allReminders.where(_matchesFilter).toList();
@@ -157,14 +179,14 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.notifications_off_rounded, size: 56, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5).withValues(alpha: 0.4)),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             Text(
-                              'No reminders in this view',
+                              context.tr('no_reminders_in_this_view'),
                               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16, fontWeight: FontWeight.w600),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
-                              'Tap the + button to add a reminder.',
+                              context.tr('tap_the__button_to_add_a_reminder'),
                               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
                             ),
                           ],
@@ -235,20 +257,20 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
             color: AppTheme.errorRed.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
-          child: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorRed, size: 28),
+          child: Icon(Icons.delete_outline_rounded, color: AppTheme.errorRed, size: 28),
         ),
         confirmDismiss: (direction) async {
           return await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Text('Delete Reminder'),
-              content: Text('Delete "${reminder.title}"?'),
+              title: Text(context.tr('delete_reminder')),
+              content: Text(context.tr('delete_1') + ' "${reminder.title}"?'),
               actions: [
-                TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+                TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('cancel'))),
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, true),
-                  child: Text('Delete', style: TextStyle(color: AppTheme.errorRed)),
+                  child: Text(context.tr('delete'), style: TextStyle(color: AppTheme.errorRed)),
                 ),
               ],
             ),
@@ -368,8 +390,8 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                           AppRoutes.editReminder,
                           arguments: reminder,
                         ),
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: const Text('Edit', style: TextStyle(fontSize: 13)),
+                        icon: Icon(Icons.edit_outlined, size: 18),
+                        label: Text(context.tr('edit'), style: TextStyle(fontSize: 13)),
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.accentBlue,
                           padding: EdgeInsets.zero,
@@ -382,8 +404,8 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                       height: 36,
                       child: TextButton.icon(
                         onPressed: () => _deleteReminder(uid, reminder),
-                        icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                        label: const Text('Delete', style: TextStyle(fontSize: 13)),
+                        icon: Icon(Icons.delete_outline_rounded, size: 18),
+                        label: Text(context.tr('delete'), style: TextStyle(fontSize: 13)),
                         style: TextButton.styleFrom(
                           foregroundColor: AppTheme.errorRed,
                           padding: EdgeInsets.zero,
@@ -439,13 +461,13 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Delete Reminder'),
-        content: Text('Delete "${reminder.title}"?'),
+        title: Text(context.tr('delete_reminder')),
+        content: Text(context.tr('delete_1') + ' "${reminder.title}"?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(context.tr('cancel'))),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Delete', style: TextStyle(color: AppTheme.errorRed)),
+            child: Text(context.tr('delete'), style: TextStyle(color: AppTheme.errorRed)),
           ),
         ],
       ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'theme.dart';
 import 'routes.dart';
+import '../main.dart' show navigatorKey;
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../screens/splash/splash_screen.dart';
@@ -36,16 +37,30 @@ import '../screens/mentor/reminders/create_reminder_screen.dart';
 import '../screens/mentor/profile/mentor_profile_screen.dart';
 import '../screens/mentor/settings/mentor_settings_screen.dart';
 import '../screens/mentor/students/browse_students_screen.dart';
+import '../screens/mentor/students/schedule_group_meeting_screen.dart';
 import '../screens/chat/chat_list_screen.dart';
 import '../screens/chat/chat_room_screen.dart';
 import '../screens/chat/video_call_screen.dart';
 import '../screens/gamification/achievements_screen.dart';
 import '../screens/gamification/leaderboard_screen.dart';
 import '../screens/gamification/point_system_screen.dart';
+import '../screens/alarm/alarm_screen.dart';
+import '../screens/student/focus/focus_mode_screen.dart';
+import '../screens/student/focus/focus_blocked_screen.dart';
 
-class VidyaSetuApp extends StatelessWidget {
+import '../services/notification_service.dart';
+import '../services/localization_service.dart';
+import '../widgets/common/app_card.dart';
+import '../widgets/common/translation_loader.dart';
+
+class VidyaSetuApp extends StatefulWidget {
   const VidyaSetuApp({super.key});
 
+  @override
+  State<VidyaSetuApp> createState() => _VidyaSetuAppState();
+}
+
+class _VidyaSetuAppState extends State<VidyaSetuApp> {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
@@ -56,18 +71,31 @@ class VidyaSetuApp extends StatelessWidget {
         ChangeNotifierProvider<ThemeProvider>(
           create: (_) => ThemeProvider(),
         ),
+        ChangeNotifierProvider<LocalizationService>(
+          create: (_) => LocalizationService(),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) => MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'VidyaSetu',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: themeProvider.themeMode,
+        builder: (context, child) {
+          final isTranslating = Provider.of<LocalizationService>(context).isTranslating;
+          return Stack(
+            children: [
+              if (child != null) child,
+              if (isTranslating) const PremiumTranslationLoader(),
+            ],
+          );
+        },
         initialRoute: AppRoutes.splash,
         routes: {
           AppRoutes.splash: (_) => const SplashScreen(),
-          AppRoutes.onboarding: (_) => const OnboardingScreen(),
+          AppRoutes.onboarding: (_) => OnboardingScreen(),
           AppRoutes.login: (_) => const LoginScreen(),
           AppRoutes.signup: (_) => const SignupScreen(),
           AppRoutes.phoneAuth: (_) => const PhoneAuthScreen(),
@@ -96,12 +124,13 @@ class VidyaSetuApp extends StatelessWidget {
           AppRoutes.studentProfileMentorView: (_) => const StudentProfileMentorView(),
           AppRoutes.studentAnalyticsMentor: (_) => const StudentAnalyticsMentorScreen(),
           AppRoutes.sendFeedback: (_) => const SendFeedbackScreen(),
-          AppRoutes.feedbackHistory: (_) => const FeedbackHistoryScreen(),
-          AppRoutes.mentorRemindersList: (_) => const MentorRemindersScreen(),
+          AppRoutes.feedbackHistory: (_) => FeedbackHistoryScreen(),
+          AppRoutes.mentorRemindersList: (_) => MentorRemindersScreen(),
           AppRoutes.createReminder: (_) => const CreateReminderScreen(),
           AppRoutes.mentorProfileScreen: (_) => const MentorProfileScreen(),
           AppRoutes.mentorSettings: (_) => const MentorSettingsScreen(),
           AppRoutes.browseStudents: (_) => const BrowseStudentsScreen(),
+          AppRoutes.scheduleGroupMeeting: (_) => const ScheduleGroupMeetingScreen(),
 
           // Chat
           AppRoutes.chatList: (_) => ChatListScreen(),
@@ -116,6 +145,13 @@ class VidyaSetuApp extends StatelessWidget {
           AppRoutes.achievements: (_) => const AchievementsScreen(),
           AppRoutes.leaderboard: (_) => const LeaderboardScreen(),
           AppRoutes.pointSystem: (_) => const PointSystemScreen(),
+
+          // Alarm
+          AppRoutes.alarmScreen: (_) => const AlarmScreen(),
+
+          // Focus
+          AppRoutes.focusMode: (_) => const FocusModeScreen(),
+          AppRoutes.focusBlocked: (_) => const FocusBlockedScreen(),
         },
       )),
     );

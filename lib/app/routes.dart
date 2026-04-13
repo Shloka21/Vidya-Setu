@@ -49,4 +49,10 @@ class AppRoutes {
   static const String achievements = '/gamification/achievements';
   static const String leaderboard = '/gamification/leaderboard';
   static const String pointSystem = '/gamification/points';
+
+  // Alarm
+  static const String alarmScreen = '/alarm';
+  static const String scheduleGroupMeeting = '/schedule-group-meeting';
+  static const String focusMode = '/focus-mode';
+  static const String focusBlocked = '/focus-blocked';
 }

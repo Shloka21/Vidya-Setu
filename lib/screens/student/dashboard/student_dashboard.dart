@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -6,10 +7,13 @@ import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../models/timetable_model.dart';
 import '../../../models/reminder_model.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/stat_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
+import '../../../widgets/common/translated_text.dart';
 
 class StudentDashboard extends StatefulWidget {
   const StudentDashboard({super.key});
@@ -22,11 +26,74 @@ class _StudentDashboardState extends State<StudentDashboard> {
   final FirestoreService _firestore = FirestoreService();
   StudyPlan? _studyPlan;
   bool _loadingPlan = true;
+  StreamSubscription? _notifSubscription;
+  final Set<String> _processedNotifIds = {};
+
+  Timer? _activeHeartbeatTimer;
 
   @override
   void initState() {
     super.initState();
     _loadStudyPlan();
+    _setupNotificationListener();
+
+    // Setup WhatsApp-style lastActive heartbeat
+    _activeHeartbeatTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null && mounted) {
+        _firestore.updateUser(uid, {'lastActive': Timestamp.now()});
+      }
+    });
+
+    // Set initial heartbeat immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null && mounted) {
+        _firestore.updateUser(uid, {'lastActive': Timestamp.now()});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notifSubscription?.cancel();
+    _activeHeartbeatTimer?.cancel();
+    super.dispose();
+  }
+
+  void _setupNotificationListener() {
+    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (uid == null) return;
+
+    _notifSubscription = _firestore.unreadNotificationsStream(uid).listen((snapshot) {
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final id = data['id'] as String? ?? doc.id;
+        if (_processedNotifIds.contains(id)) continue;
+        _processedNotifIds.add(id);
+
+        final type = data['type'] as String? ?? '';
+        final notifService = NotificationService();
+
+        if (type == 'chat') {
+          notifService.showChatNotification(
+            senderName: data['senderName'] ?? 'Someone',
+            message: data['message'] ?? 'New message',
+            roomId: data['roomId'] ?? '',
+            senderId: data['senderId'] ?? '',
+          );
+        } else if (type == 'feedback') {
+          notifService.showFeedbackNotification(
+            mentorName: data['mentorName'] ?? 'Your Mentor',
+            feedbackTitle: data['title'] ?? 'New Feedback',
+            feedbackPreview: data['message'] ?? '',
+          );
+        }
+
+        // Mark as read after showing notification
+        _firestore.markNotificationRead(uid, id);
+      }
+    });
   }
 
   Future<void> _loadStudyPlan() async {
@@ -88,6 +155,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 const SizedBox(height: 24),
                 _buildTodaySchedule(),
                 const SizedBox(height: 24),
+                _buildIncomingRequests(),
+                const SizedBox(height: 24),
                 _buildUpcomingSection(),
                 const SizedBox(height: 24),
                 _buildQuickActions(),
@@ -108,10 +177,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
     final user = authProvider.userModel;
     final now = DateTime.now();
     final greeting = now.hour < 12
-        ? 'Good Morning'
+        ? context.tr('good_morning')
         : now.hour < 17
-            ? 'Good Afternoon'
-            : 'Good Evening';
+            ? context.tr('good_afternoon')
+            : context.tr('good_evening');
 
     return Row(
       children: [
@@ -134,16 +203,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'VidyaSetu',
+                      Text(
+                        context.tr('vidyasetu'),
                         style: TextStyle(
-                          color: AppTheme.primaryNavy,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       Text(
-                        DateFormat('EEEE, MMM d').format(now).toUpperCase(),
+                        DateFormat('EEEE, MMM d', Provider.of<LocalizationService>(context).locale).format(now).toUpperCase(),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 10,
@@ -158,8 +227,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
               const SizedBox(height: 20),
               Text(
                 '$greeting,\n${user?.name ?? "Student"}!',
-                style: const TextStyle(
-                  color: AppTheme.primaryNavy,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 28,
                   fontWeight: FontWeight.w800,
                   height: 1.2,
@@ -271,17 +340,17 @@ class _StudentDashboardState extends State<StudentDashboard> {
         children: [
           Expanded(
             child: StatCard(
-              label: "Today's Tasks",
+              label: context.tr('todays_tasks'),
               value: todayTotal > 0 ? '$todayDone/$todayTotal' : '${user?.tasksCompleted ?? 0}',
               icon: Icons.task_alt_rounded,
               iconColor: AppTheme.successGreen,
               iconBgColor: AppTheme.successGreen.withValues(alpha: 0.1),
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: StatCard(
-              label: 'Study Streak',
+              label: context.tr('study_streak'),
               value: '${user?.streak ?? 0}',
               icon: Icons.local_fire_department_rounded,
               isDark: true,
@@ -312,16 +381,16 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 color: AppTheme.accentPurple.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: const Icon(Icons.bar_chart_rounded, color: AppTheme.accentPurple, size: 26),
+              child: Icon(Icons.bar_chart_rounded, color: AppTheme.accentPurple, size: 26),
             ),
-            const SizedBox(width: 16),
+            SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min, // Added to prevent column from expanding unnecessarily
                 children: [
                   Text(
-                    'Analytics Snapshot',
+                    context.tr('analytics_snapshot'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 15,
@@ -330,7 +399,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                   ),
                   const SizedBox(height: 2), // Slightly reduced to give breathing room
                   Text(
-                    '${hours.toStringAsFixed(1)}h studied • ${(rate * 100).toInt()}% complete',
+                    '${hours.toStringAsFixed(1)}${context.tr('h')} ${context.tr('studied')} • ${(rate * 100).toInt()}% ${context.tr('complete')}',
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), 
                       fontSize: 13,
@@ -360,7 +429,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              "Today's Study Plan",
+              context.tr('todays_study_plan'),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 20,
@@ -369,8 +438,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.timetableOverview),
-              child: const Text(
-                'View',
+              child: Text(
+                context.tr('view'),
                 style: TextStyle(
                   color: AppTheme.accentBlue,
                   fontWeight: FontWeight.w600,
@@ -408,28 +477,28 @@ class _StudentDashboardState extends State<StudentDashboard> {
       child: Column(
         children: [
           Icon(Icons.auto_awesome_rounded, size: 48, color: AppTheme.accentPurple.withValues(alpha: 0.5)),
-          const SizedBox(height: 12),
+          SizedBox(height: 12),
           Text(
-            'No Study Plan Yet',
+            context.tr('no_study_plan_yet'),
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontSize: 17,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 6),
+          SizedBox(height: 6),
           Text(
-            'Upload your syllabus PDF to generate a personalized study timetable.',
+            context.tr('upload_your_syllabus_pdf_to_generate_a_p'),
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.generateTimetable),
-              icon: const Icon(Icons.add_rounded, size: 20),
-              label: const Text('Generate Timetable'),
+              icon: Icon(Icons.add_rounded, size: 20),
+              label: Text(context.tr('generate_timetable')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accentPurple,
                 foregroundColor: Colors.white,
@@ -448,19 +517,19 @@ class _StudentDashboardState extends State<StudentDashboard> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          const Text('😌', style: TextStyle(fontSize: 40)),
-          const SizedBox(height: 10),
+          Text('😌', style: TextStyle(fontSize: 40)),
+          SizedBox(height: 10),
           Text(
-            'No sessions today',
+            context.tr('no_sessions_today'),
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(
-            'Take a break or review previous topics!',
+            context.tr('take_a_break_or_review_previous_topics'),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
           ),
         ],
@@ -503,43 +572,140 @@ class _StudentDashboardState extends State<StudentDashboard> {
         ),
         const SizedBox(width: 14),
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: isCurrent
-                  ? AppTheme.accentBlue.withValues(alpha: 0.1)
-                  : session.isCompleted
-                      ? AppTheme.successGreen.withValues(alpha: 0.06)
-                      : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.subject,
-                  style: TextStyle(
-                    color: isCurrent ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface,
-                    fontSize: 15,
-                    fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+          child: InkWell(
+            onTap: () {
+              Navigator.pushNamed(context, AppRoutes.sessionDetail, arguments: {
+                'session': session,
+                'planId': _studyPlan?.id,
+              });
+            },
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: isCurrent
+                    ? AppTheme.accentBlue.withValues(alpha: 0.1)
+                    : session.isCompleted
+                        ? AppTheme.successGreen.withValues(alpha: 0.06)
+                        : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TranslatedText(
+                    session.subject,
+                    style: TextStyle(
+                      color: session.isCompleted ? Theme.of(context).colorScheme.onSurface.withOpacity(0.5) : Theme.of(context).colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      decoration: session.isCompleted ? TextDecoration.lineThrough : null,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                Text(
-                  session.topic,
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                    fontSize: 12,
+                  TranslatedText(
+                    session.topic,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      fontSize: 12,
+                    ),
                   ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
         if (session.isCompleted)
           const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 20),
       ],
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════
+  // INCOMING REQUESTS
+  // ═══════════════════════════════════════════════════════════════════
+  Widget _buildIncomingRequests() {
+    final uid = Provider.of<AuthProvider>(context).userModel?.uid;
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.studentConnectionsStream(uid),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return const SizedBox.shrink();
+
+        final incomingRequests = snapshot.data!.docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final status = data['status'] as String? ?? '';
+          final requestedBy = data['requestedBy'] as String?;
+          // If status is pending and we didn't send it, it's incoming
+          return status == 'pending' && requestedBy != uid && requestedBy != null;
+        }).toList();
+
+        if (incomingRequests.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              context.tr('pending_requests') ?? 'Pending Requests',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...incomingRequests.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final name = data['mentorName'] ?? 'Mentor';
+              
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: AppCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 42, height: 42,
+                        decoration: BoxDecoration(
+                          color: AppTheme.accentPurple.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.person_add_rounded, color: AppTheme.accentPurple, size: 22),
+                      ),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600)),
+                            Text(context.tr('wants_to_connect') ?? 'Wants to connect', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            onPressed: () => _firestore.updateConnectionStatus(doc.id, 'declined'),
+                            icon: Icon(Icons.close_rounded, color: AppTheme.errorRed, size: 22),
+                            style: IconButton.styleFrom(backgroundColor: AppTheme.errorRed.withOpacity(0.1)),
+                          ),
+                          SizedBox(width: 8),
+                          IconButton(
+                            onPressed: () => _firestore.updateConnectionStatus(doc.id, 'approved'),
+                            icon: Icon(Icons.check_rounded, color: AppTheme.successGreen, size: 22),
+                            style: IconButton.styleFrom(backgroundColor: AppTheme.successGreen.withOpacity(0.1)),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ],
+        );
+      },
     );
   }
 
@@ -557,7 +723,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              'Upcoming Reminders',
+              context.tr('upcoming_reminders'),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 20,
@@ -566,8 +732,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
             ),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.remindersList),
-              child: const Text(
-                'See All',
+              child: Text(
+                context.tr('see_all'),
                 style: TextStyle(
                   color: AppTheme.accentBlue,
                   fontWeight: FontWeight.w600,
@@ -581,25 +747,29 @@ class _StudentDashboardState extends State<StudentDashboard> {
           stream: _firestore.upcomingRemindersStream(uid),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: Padding(
+              return Center(child: Padding(
                 padding: EdgeInsets.all(16),
                 child: CircularProgressIndicator(strokeWidth: 2),
               ));
             }
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return AppCard(
-                padding: const EdgeInsets.all(20),
-                child: Row(
-                  children: [
-                    Icon(Icons.event_available_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        'No upcoming reminders. Tap + to add one!',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+              return InkWell(
+                onTap: () => Navigator.pushNamed(context, AppRoutes.addReminder),
+                borderRadius: BorderRadius.circular(20),
+                child: AppCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      Icon(Icons.event_available_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
+                      SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          context.tr('no_upcoming_reminders_tap__to_add_one'),
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             }
@@ -637,9 +807,12 @@ class _StudentDashboardState extends State<StudentDashboard> {
   String _formatReminderTime(DateTime dt) {
     final now = DateTime.now();
     final diff = dt.difference(now);
-    if (diff.inDays == 0) return 'Today, ${DateFormat('h:mm a').format(dt)}';
-    if (diff.inDays == 1) return 'Tomorrow, ${DateFormat('h:mm a').format(dt)}';
-    return DateFormat('MMM d, h:mm a').format(dt);
+    final timeFormat = DateFormat('h:mm a');
+    final dateFormat = DateFormat('MMM d');
+    
+    if (diff.inDays == 0) return '${context.tr('today')}, ${timeFormat.format(dt)}';
+    if (diff.inDays == 1) return '${context.tr('tomorrow')}, ${timeFormat.format(dt)}';
+    return '${dateFormat.format(dt)}, ${timeFormat.format(dt)}';
   }
 
   Widget _buildUpcomingItem(
@@ -675,14 +848,13 @@ class _StudentDashboardState extends State<StudentDashboard> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                TranslatedText(
                   title,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -701,89 +873,299 @@ class _StudentDashboardState extends State<StudentDashboard> {
   }
 
   // ═══════════════════════════════════════════════════════════════════
-  // QUICK ACTIONS – 2x3 Grid
+  // QUICK ACTIONS – Premium Cards
   // ═══════════════════════════════════════════════════════════════════
+  // Widget _buildQuickActions() {
+  //   return Column(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Text(
+  //         context.tr('quick_actions'),
+  //         style: TextStyle(
+  //           color: Theme.of(context).colorScheme.onSurface,
+  //           fontSize: 20,
+  //           fontWeight: FontWeight.w700,
+  //         ),
+  //       ),
+  //       const SizedBox(height: 14),
+  //       // Row 1: Focus Mode (Full Width)
+  //       _buildPremiumCard(
+  //         title: context.tr('focus_mode') ?? 'Focus Mode',
+  //         subtitle: context.tr('deep_study') ?? 'Deep study and block apps',
+  //         icon: Icons.self_improvement_rounded,
+  //         gradient: const LinearGradient(
+  //           colors: [Color(0xFF0acffe), Color(0xFF495aff)],
+  //           begin: Alignment.topLeft,
+  //           end: Alignment.bottomRight,
+  //         ),
+  //         onTap: () => Navigator.pushNamed(context, AppRoutes.focusMode),
+  //       ),
+  //       const SizedBox(height: 12),
+  //       // Row 2: Mentors and Leaderboard
+  //       Row(
+  //         children: [
+  //           Expanded(
+  //             child: _buildPremiumCard(
+  //               title: context.tr('mentors'),
+  //               subtitle: context.tr('find_guidance') ?? 'Find guidance',
+  //               icon: Icons.people_rounded,
+  //               gradient: const LinearGradient(
+  //                 colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+  //                 begin: Alignment.topLeft,
+  //                 end: Alignment.bottomRight,
+  //               ),
+  //               onTap: () => Navigator.pushNamed(context, AppRoutes.findMentor),
+  //             ),
+  //           ),
+  //           const SizedBox(width: 12),
+  //           Expanded(
+  //             child: _buildPremiumCard(
+  //               title: context.tr('leaderboard'),
+  //               subtitle: context.tr('compete_rank') ?? 'Compete & rank',
+  //               icon: Icons.emoji_events_rounded,
+  //               gradient: const LinearGradient(
+  //                 colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+  //                 begin: Alignment.topLeft,
+  //                 end: Alignment.bottomRight,
+  //               ),
+  //               onTap: () => Navigator.pushNamed(context, AppRoutes.pointSystem),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ],
+  //   );
+  // }
+
+  // Widget _buildPremiumCard({
+  //   required String title,
+  //   required String subtitle,
+  //   required IconData icon,
+  //   required Gradient gradient,
+  //   required VoidCallback onTap,
+  // }) {
+  //   return GestureDetector(
+  //     onTap: onTap,
+  //     child: Container(
+  //       height: 100,
+  //       decoration: BoxDecoration(
+  //         gradient: gradient,
+  //         borderRadius: BorderRadius.circular(20),
+  //         boxShadow: [
+  //           BoxShadow(
+  //             color: (gradient as LinearGradient).colors.first.withOpacity(0.35),
+  //             blurRadius: 16,
+  //             offset: const Offset(0, 6),
+  //           ),
+  //         ],
+  //       ),
+  //       child: Stack(
+  //         children: [
+  //           // Decorative circle
+  //           Positioned(
+  //             right: -12,
+  //             top: -12,
+  //             child: Container(
+  //               width: 64,
+  //               height: 64,
+  //               decoration: BoxDecoration(
+  //                 color: Colors.white.withOpacity(0.12),
+  //                 shape: BoxShape.circle,
+  //               ),
+  //             ),
+  //           ),
+  //           Positioned(
+  //             right: 8,
+  //             bottom: -8,
+  //             child: Container(
+  //               width: 40,
+  //               height: 40,
+  //               decoration: BoxDecoration(
+  //                 color: Colors.white.withOpacity(0.08),
+  //                 shape: BoxShape.circle,
+  //               ),
+  //             ),
+  //           ),
+  //           // Content
+  //           Padding(
+  //             padding: const EdgeInsets.all(16),
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+  //               children: [
+  //                 Container(
+  //                   width: 36,
+  //                   height: 36,
+  //                   decoration: BoxDecoration(
+  //                     color: Colors.white.withOpacity(0.2),
+  //                     borderRadius: BorderRadius.circular(10),
+  //                   ),
+  //                   child: Icon(icon, color: Colors.white, size: 20),
+  //                 ),
+  //                 Column(
+  //                   crossAxisAlignment: CrossAxisAlignment.start,
+  //                   children: [
+  //                     Text(
+  //                       title,
+  //                       style: const TextStyle(
+  //                         color: Colors.white,
+  //                         fontSize: 15,
+  //                         fontWeight: FontWeight.w700,
+  //                         height: 1.1,
+  //                       ),
+  //                       maxLines: 1,
+  //                       overflow: TextOverflow.ellipsis,
+  //                     ),
+  //                     const SizedBox(height: 2),
+  //                     Text(
+  //                       subtitle,
+  //                       style: TextStyle(
+  //                         color: Colors.white.withOpacity(0.7),
+  //                         fontSize: 11,
+  //                         fontWeight: FontWeight.w500,
+  //                       ),
+  //                       maxLines: 1,
+  //                       overflow: TextOverflow.ellipsis,
+  //                     ),
+  //                   ],
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
   Widget _buildQuickActions() {
+    final cs = Theme.of(context).colorScheme;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Quick Actions',
+          context.tr('quick_actions'),
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontSize: 20,
+            color: cs.onSurface,
+            fontSize: 18,
             fontWeight: FontWeight.w700,
           ),
         ),
         const SizedBox(height: 14),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.0,
-          children: [
-          
-            _buildActionCard(
-              'Mentors',
-              Icons.people_rounded,
-              AppTheme.successGreen,
-              () => Navigator.pushNamed(context, AppRoutes.findMentor),
-            ),
-            _buildActionCard(
-              'Leaderboard',
-              Icons.emoji_events_rounded,
-              const Color(0xFFF97316),
-              () => Navigator.pushNamed(context, AppRoutes.leaderboard),
-            ),
-          ],
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.divider),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(  
+            children: [
+              // 🔵 Main Button
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.focusMode);
+                },
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.accentBlue.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.self_improvement_rounded,
+                          color: Colors.white, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.tr('focus_mode'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // ⚪ Bottom Small Cards
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMiniCard(
+                      icon: Icons.people_rounded,
+                      label: context.tr('mentors'),
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.findMentor),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: _buildMiniCard(
+                      icon: Icons.emoji_events_rounded,
+                      label: context.tr('leaderboard'),
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.leaderboard),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildActionCard(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+  Widget _buildMiniCard({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          color: cs.onSurface.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.divider),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(icon, color: color, size: 30),
-            ),
-            const SizedBox(height: 10),
+            Icon(icon, size: 24, color: Theme.of(context).colorScheme.onSurface),
+            const SizedBox(height: 6),
             Text(
               label,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
                 fontWeight: FontWeight.w600,
+                color: cs.onSurface,
               ),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

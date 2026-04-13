@@ -44,5 +44,21 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Environment variables
+# Environment variables & Secrets
 .env
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+*.jks
+*.keystore
+key.properties
+
+# Dev Screenshots (Root)
+flutter_*.png
+screenshot_*.png
+
+# Temporary Analysis/Logs (Root)
+analysis.txt
+analyze_*.txt
+errors.txt
+build_output.log
+filtered_analyze.txt

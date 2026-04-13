@@ -7,9 +7,10 @@ import '../../../app/routes.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class FeedbackHistoryScreen extends StatelessWidget {
-  const FeedbackHistoryScreen({super.key});
+  FeedbackHistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -18,8 +19,8 @@ class FeedbackHistoryScreen extends StatelessWidget {
 
     if (uid == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Feedback & Reminders')),
-        body: const Center(child: Text('Not logged in')),
+        appBar: AppBar(title: Text(context.tr('feedback__reminders'))),
+        body: Center(child: Text(context.tr('not_logged_in'))),
       );
     }
 
@@ -27,15 +28,15 @@ class FeedbackHistoryScreen extends StatelessWidget {
       length: 2,
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Feedback & Reminders'),
+          title: Text(context.tr('feedback__reminders')),
           bottom: TabBar(
             indicatorColor: AppTheme.accentBlue,
             labelColor: AppTheme.accentBlue,
             unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-            labelStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-            tabs: const [
-              Tab(icon: Icon(Icons.feedback_rounded, size: 20), text: 'Feedback'),
-              Tab(icon: Icon(Icons.notification_add_rounded, size: 20), text: 'Reminders'),
+            labelStyle: TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+            tabs: [
+              Tab(icon: Icon(Icons.feedback_rounded, size: 20), text: context.tr('feedback')),
+              Tab(icon: Icon(Icons.notification_add_rounded, size: 20), text: context.tr('reminders')),
             ],
           ),
         ),
@@ -51,8 +52,8 @@ class FeedbackHistoryScreen extends StatelessWidget {
                 }
               },
               backgroundColor: AppTheme.accentBlue,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: const Text('Create', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+              icon: Icon(Icons.add_rounded, color: Colors.white),
+              label: Text(context.tr('create'), style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
             );
           }
         ),
@@ -79,7 +80,7 @@ class _FeedbackTab extends StatelessWidget {
       stream: FirestoreService().getFeedbackStream(uid, isMentor: isMentor),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(child: CircularProgressIndicator());
         }
         final docs = snapshot.data?.docs ?? [];
         if (docs.isEmpty) {
@@ -88,10 +89,10 @@ class _FeedbackTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.feedback_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
-                const SizedBox(height: 16),
-                Text('No feedback yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
-                const SizedBox(height: 8),
-                Text('Tap + to send feedback to a student', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13)),
+                SizedBox(height: 16),
+                Text(context.tr('no_feedback_yet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
+                SizedBox(height: 8),
+                Text(context.tr('tap__to_send_feedback_to_a_stu'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13)),
               ],
             ),
           );
@@ -220,10 +221,10 @@ class _RemindersTab extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Icon(Icons.notifications_active_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
-                const SizedBox(height: 16),
-                Text('No reminders sent yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
-                const SizedBox(height: 8),
-                Text('Tap + to create a reminder for a student', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13)),
+                SizedBox(height: 16),
+                Text(context.tr('no_reminders_sent_yet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
+                SizedBox(height: 8),
+                Text(context.tr('tap__to_create_a_reminder_for'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4), fontSize: 13)),
               ],
             ),
           );
@@ -261,7 +262,7 @@ class _RemindersTab extends StatelessWidget {
                             children: [
                               Text(r['title'] as String? ?? 'Reminder',
                                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
-                              Text('To: $studentName',
+                              Text('${context.tr('to_label')}: $studentName',
                                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
                             ],
                           ),

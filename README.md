@@ -1,16 +1,27 @@
-# vidyasetu
+# VidyaSetu 🎓
 
-A new Flutter project.
+VidyaSetu is a smart learning companion designed to help students organize their studies with AI-powered timetables, focus modes, and mentor connections.
 
-## Getting Started
+## 🚀 Getting Started
 
-This project is a starting point for a Flutter application.
+### Prerequisites
+- Flutter SDK (Latest Stable)
+- Android Studio / Xcode
+- A Firebase Project
 
-A few resources to get you started if this is your first Flutter project:
+### 🔑 Security & Configuration
+For security reasons, project-specific secrets and Firebase configurations are **not** included in this repository. To run the app locally, you must provide your own configuration files:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+1. **Firebase (Android)**: Place your `google-services.json` in `android/app/`.
+2. **Firebase (iOS)**: Place your `GoogleService-Info.plist` in `ios/Runner/`.
+3. **Environment Variables**: Create a `.env` file in the root directory with the following keys:
+   ```env
+   # API Keys for AI & Services
+   GEMINI_API_KEY=your_key_here
+   ```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🛠️ Development Tools
+Developer scripts and utility tools are located in the `scripts/dev/` directory.
+
+## 📜 License
+This project is for educational purposes.

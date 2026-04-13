@@ -37,21 +37,20 @@ class PdfService {
       if (subjects.isNotEmpty) return subjects;
 
       // If AI returned empty, try regex fallback
-      return _regexFallback(text);
+      return _regexFallback(text, debugError: 'AI returned empty or invalid JSON:\n$jsonResult');
     } catch (e) {
       // Fallback to regex parser on any error
-      return _regexFallback(text);
+      return _regexFallback(text, debugError: e.toString());
     }
   }
 
   // ─── Gemini API Call ──────────────────────────────────────────────────────
   static Future<String> _extractWithGemini(String syllabusText) async {
     final model = GenerativeModel(
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       apiKey: _apiKey,
       generationConfig: GenerationConfig(
         temperature: 0.1,
-        maxOutputTokens: 32768,
         responseMimeType: 'application/json',
       ),
     );
@@ -86,25 +85,25 @@ DO NOT:
 
 Return ONLY valid JSON:
 {
-  "subjects": [
+  "subs": [
     {
       "code": "4324301",
-      "subjectName": "Full Complete Subject Name Here",
-      "semester": 3,
-      "credits": 4,
+      "name": "Full Complete Subject Name",
+      "sem": 3,
+      "cred": 4,
       "type": "theory",
-      "modules": [
+      "mods": [
         {
-          "moduleNumber": 1,
-          "moduleTitle": "Full Module Title",
-          "hours": 6,
-          "topics": ["Topic 1 as written in syllabus", "Topic 2", "Topic 3", "...all topics"]
+          "num": 1,
+          "title": "Full Module Title",
+          "hrs": 6,
+          "top": ["Topic 1 as written in syllabus", "Topic 2", "Topic 3", "...all topics"]
         },
         {
-          "moduleNumber": 2,
-          "moduleTitle": "Second Module Title",
-          "hours": 8,
-          "topics": ["Topic A", "Topic B", "Topic C"]
+          "num": 2,
+          "title": "Second Module Title",
+          "hrs": 8,
+          "top": ["Topic A", "Topic B", "Topic C"]
         }
       ]
     }
@@ -158,46 +157,94 @@ $syllabusText
   // ─── JSON Parser ──────────────────────────────────────────────────────────
   /// Converts Gemini's JSON response into SubjectInfo list.
   static List<SubjectInfo> _parseJsonToSubjects(String jsonStr) {
+    // Robustly extract just the JSON part, ignoring any AI conversational text.
+    String clean = jsonStr;
+    final match = RegExp(r'\{[\s\S]*\}').firstMatch(clean);
+    if (match != null) {
+      clean = match.group(0)!;
+    }
+
+    if (clean.isEmpty) {
+      throw Exception('Regex extraction failed. Raw text was: $jsonStr');
+    }
+
+    Map<String, dynamic>? data;
     try {
-      // Clean JSON string (remove markdown code fences if present)
-      String clean = jsonStr.trim();
-      if (clean.startsWith('```')) {
-        clean = clean.replaceFirst(RegExp(r'^```json?\s*'), '');
-        clean = clean.replaceFirst(RegExp(r'```\s*$'), '');
+      data = json.decode(clean);
+    } catch (e) {
+      if (e is FormatException && e.message.contains('Unexpected end of input')) {
+        // AI truncated the output string, missing closing bounds. Auto-repair it.
+        final List<String> closures = [
+          '}', ']}', '}]}', ']} ]}', '}]}]}', ']}]}]}', '}]}]}]}'
+        ];
+        
+        // Clean trailing commas if any
+        String repairBase = clean.trim();
+        if (repairBase.endsWith(',')) {
+          repairBase = repairBase.substring(0, repairBase.length - 1);
+        }
+
+        for (String suffix in closures) {
+          try {
+            data = json.decode(repairBase + suffix);
+            break; // Successfully repaired!
+          } catch (_) {}
+        }
+
+        if (data == null) {
+          // Try closing an unclosed string value first
+          for (String suffix in closures) {
+            try {
+              data = json.decode(repairBase + '"' + suffix);
+              break;
+            } catch (_) {}
+          }
+        }
       }
+      
+      if (data == null) throw e; // If all repairs failed, crash it up
+    }
 
-      final Map<String, dynamic> data = json.decode(clean);
-      final List<dynamic> subjectsJson = data['subjects'] ?? [];
-      final subjects = <SubjectInfo>[];
+    final List<dynamic> subjectsJson = data?['subjects'] ?? data?['subs'] ?? [];
+    final subjects = <SubjectInfo>[];
 
-      for (var sj in subjectsJson) {
+    for (var sj in subjectsJson) {
         final code = (sj['code'] ?? '').toString();
-        final name = (sj['subjectName'] ?? 'Unknown Subject').toString();
-        final semester = sj['semester'] is int
-            ? sj['semester'] as int
-            : int.tryParse(sj['semester']?.toString() ?? '');
-        final credits = sj['credits'] is int
-            ? sj['credits'] as int
-            : int.tryParse(sj['credits']?.toString() ?? '3') ?? 3;
-        final modulesJson = (sj['modules'] as List<dynamic>?) ?? [];
+        final name = (sj['subjectName'] ?? sj['name'] ?? 'Unknown Subject').toString();
+        final semesterVal = sj['semester'] ?? sj['sem'];
+        final semester = semesterVal is int
+            ? semesterVal
+            : int.tryParse(semesterVal?.toString() ?? '');
+        
+        final creditsVal = sj['credits'] ?? sj['cred'];
+        final credits = creditsVal is int
+            ? creditsVal
+            : int.tryParse(creditsVal?.toString() ?? '3') ?? 3;
+            
+        final modulesJson = (sj['modules'] as List<dynamic>?) ?? (sj['mods'] as List<dynamic>?) ?? [];
 
         final modules = <ModuleInfo>[];
         for (var mj in modulesJson) {
-          final topicsList = (mj['topics'] as List<dynamic>?)
+          final topicsVal = mj['topics'] ?? mj['top'];
+          final topicsList = (topicsVal as List<dynamic>?)
                   ?.map((t) => t.toString())
                   .where((t) => t.isNotEmpty)
                   .toList() ??
               [];
 
+          final numVal = mj['moduleNumber'] ?? mj['num'];
+          final titleVal = mj['moduleTitle'] ?? mj['title'];
+          final hrsVal = mj['hours'] ?? mj['hrs'];
+
           modules.add(ModuleInfo(
-            number: (mj['moduleNumber'] is int)
-                ? mj['moduleNumber']
-                : int.tryParse(mj['moduleNumber']?.toString() ?? '0') ?? 0,
-            name: (mj['moduleTitle'] ?? 'Module').toString(),
+            number: (numVal is int)
+                ? numVal
+                : int.tryParse(numVal?.toString() ?? '0') ?? 0,
+            name: (titleVal ?? 'Module').toString(),
             topics: topicsList.isNotEmpty
                 ? topicsList
                 : ['Topics covered in this module'],
-            hours: _parseHours(mj['hours']),
+            hours: _parseHours(hrsVal),
           ));
         }
 
@@ -215,9 +262,6 @@ $syllabusText
       }
 
       return subjects;
-    } catch (e) {
-      return [];
-    }
   }
 
   // Helper to robustly parse hours from various formats (e.g., "06 Hrs", 6, "6")
@@ -239,7 +283,7 @@ $syllabusText
 
   // ─── Regex Fallback ───────────────────────────────────────────────────────
   /// Simple regex fallback if Gemini AI fails (no internet, quota, etc.)
-  static List<SubjectInfo> _regexFallback(String text) {
+  static List<SubjectInfo> _regexFallback(String text, {String? debugError}) {
     final lines = text.split('\n').map((l) => l.trim()).toList();
 
     // Find 7-digit course codes
@@ -303,6 +347,22 @@ $syllabusText
       ));
     }
 
+    if (debugError != null) {
+      subjects.insert(0, SubjectInfo(
+        code: 'ERR',
+        name: 'AI Failed: $debugError',
+        modules: [
+          ModuleInfo(
+            number: 1,
+            name: 'Error Details',
+            topics: [debugError],
+            hours: 1,
+          )
+        ],
+        isSelected: true,
+      ));
+    }
+
     return subjects;
   }
 
@@ -316,7 +376,7 @@ $syllabusText
   }) async {
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         apiKey: _apiKey,
         generationConfig: GenerationConfig(
           temperature: 0.3,

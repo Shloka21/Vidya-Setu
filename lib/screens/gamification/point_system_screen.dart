@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../app/theme.dart';
 import '../../widgets/common/app_card.dart';
+import '../../providers/auth_provider.dart';
+import '../../models/user_model.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class PointSystemScreen extends StatelessWidget {
   const PointSystemScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Fetch real user data
+    final authProvider = Provider.of<AuthProvider>(context);
+    final points = authProvider.userModel?.points ?? 0;
+    final levelData = UserModel.calculateLevel(points);
+    final level = levelData['level'] as int;
+    final levelTitle = levelData['title'] as String;
+    final nextXp = levelData['nextXp'] as int;
+    final prevXp = levelData['prevXp'] as int;
+    final progress = ((points - prevXp) / (nextXp - prevXp)).clamp(0.0, 1.0);
+
     final activities = [
+
       {'icon': Icons.timer_rounded, 'label': 'Complete study session', 'xp': 20, 'color': AppTheme.accentBlue},
       {'icon': Icons.check_circle_rounded, 'label': 'Finish a topic', 'xp': 50, 'color': AppTheme.successGreen},
       {'icon': Icons.local_fire_department_rounded, 'label': 'Maintain daily streak', 'xp': 10, 'color': AppTheme.warningAmber},
@@ -33,7 +48,7 @@ class PointSystemScreen extends StatelessWidget {
 
     return Scaffold(
       
-      appBar: AppBar(title: const Text('Point System')),
+      appBar: AppBar(title: Text(context.tr('point_system'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -51,14 +66,14 @@ class PointSystemScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  const Text('Your Points',
-                      style: TextStyle(
+                    Text(context.tr('your_points'),
+                      style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
-                  const Text('1,240 XP',
-                      style: TextStyle(
+                  Text('$points XP',
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 36,
                           fontWeight: FontWeight.w800)),
@@ -70,8 +85,8 @@ class PointSystemScreen extends StatelessWidget {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Text('Level 5 — Scholar',
-                        style: TextStyle(
+                    child: Text('Level $level: $levelTitle',
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w600)),
@@ -83,11 +98,11 @@ class PointSystemScreen extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('1,240 / 1,500 XP',
+                          Text('$points / $nextXp XP',
                               style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 12)),
-                          Text('Level 6',
+                          Text('Level ${level + 1}',
                               style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 12)),
@@ -97,7 +112,7 @@ class PointSystemScreen extends StatelessWidget {
                       ClipRRect(
                         borderRadius: BorderRadius.circular(6),
                         child: LinearProgressIndicator(
-                          value: 1240 / 1500,
+                          value: progress,
                           minHeight: 8,
                           backgroundColor: Colors.white.withOpacity(0.2),
                           valueColor: const AlwaysStoppedAnimation(
@@ -109,10 +124,10 @@ class PointSystemScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // How to earn XP
-            Text('How to Earn XP',
+            Text(context.tr('how_to_earn_xp'),
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 17,
@@ -158,10 +173,10 @@ class PointSystemScreen extends StatelessWidget {
                     ),
                   ),
                 )),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // Level chart
-            Text('Level Progression',
+            Text(context.tr('level_progression'),
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 17,
@@ -171,7 +186,8 @@ class PointSystemScreen extends StatelessWidget {
               padding: EdgeInsets.zero,
               child: Column(
                 children: levels.map((l) {
-                  final isCurrent = l['level'] == 5;
+                  final lLevel = l['level'] as int;
+                  final isCurrent = lLevel == level;
                   return Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 16, vertical: 12),
@@ -187,7 +203,7 @@ class PointSystemScreen extends StatelessWidget {
                       children: [
                         SizedBox(
                           width: 32,
-                          child: Text('${l['level']}',
+                          child: Text('$lLevel',
                               style: TextStyle(
                                   color: isCurrent
                                       ? AppTheme.accentBlue

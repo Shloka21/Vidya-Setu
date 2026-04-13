@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
+import '../services/security_utils.dart';
+
+import '../services/firestore_service.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -33,24 +36,43 @@ class AuthProvider extends ChangeNotifier {
     _isInitialized = true;
     notifyListeners();
   }
-
+  // Refresh current user data from Firestore
+  Future<void> refreshUser() async {
+    final user = _authService.currentUser;
+    if (user != null) {
+      await _loadUserModel(user.uid);
+    }
+  }
   Future<void> _loadUserModel(String uid) async {
-    try {
-      _userModel = await _authService.getUserModel(uid);
-    } catch (e) {
-      debugPrint('Failed to load user model: $e');
-      _userModel = null;
+    // Try up to 2 times to load from Firestore (handles transient network failures)
+    for (int attempt = 0; attempt < 2; attempt++) {
+      try {
+        _userModel = await _authService.getUserModel(uid);
+        if (_userModel != null) {
+          // Initialize gamification fields if they don't exist
+          await FirestoreService().ensureUserInitialized(uid);
+          break;
+        }
+      } catch (e) {
+        debugPrint('Failed to load user model (attempt ${attempt + 1}): $e');
+        if (attempt == 0) {
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+      }
     }
     notifyListeners();
   }
 
-  /// Creates a basic UserModel from FirebaseAuth when Firestore is unreachable
+  /// Creates a basic UserModel from FirebaseAuth when Firestore is unreachable.
+  /// Uses 'student' as default role so returning users aren't sent back to role selection.
+  /// Genuinely new users (from Google/Phone sign-in) will have their role set properly
+  /// during the sign-up flow before this fallback is ever needed.
   UserModel _buildFallbackUser(User user) {
     return UserModel(
       uid: user.uid,
       name: user.displayName ?? 'User',
       email: user.email ?? '',
-      role: '', // Will trigger role selection
+      role: 'student', // Safe default — prevents role-selection loop for returning users
       phone: user.phoneNumber,
       profileImageUrl: user.photoURL,
     );
@@ -62,9 +84,14 @@ class AuthProvider extends ChangeNotifier {
     _error = null;
     try {
       final credential = await _authService.signInWithEmail(email, password);
-      await _loadUserModel(credential.user!.uid);
+      try {
+        await _loadUserModel(credential.user!.uid);
+      } catch (e) {
+        debugPrint('Firestore read failed during login: $e');
+      }
       // Fallback if Firestore failed
       _userModel ??= _buildFallbackUser(credential.user!);
+
       _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
@@ -92,14 +119,18 @@ class AuthProvider extends ChangeNotifier {
     try {
       final credential =
           await _authService.signUpWithEmail(email, password, name, role);
-      await _loadUserModel(credential.user!.uid);
-      // Fallback: create model locally if Firestore read failed
+      try {
+        await _loadUserModel(credential.user!.uid);
+      } catch (e) {
+        debugPrint('Firestore read failed during signup: $e');
+      }
       _userModel ??= UserModel(
         uid: credential.user!.uid,
         name: name,
         email: email,
         role: role,
       );
+
       _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
@@ -123,8 +154,13 @@ class AuthProvider extends ChangeNotifier {
         _setLoading(false);
         return false;
       }
-      await _loadUserModel(credential.user!.uid);
+      try {
+        await _loadUserModel(credential.user!.uid);
+      } catch (e) {
+        debugPrint('Firestore read failed during Google login: $e');
+      }
       _userModel ??= _buildFallbackUser(credential.user!);
+
       _setLoading(false);
       return true;
     } catch (e) {
@@ -239,6 +275,7 @@ class AuthProvider extends ChangeNotifier {
       );
       await _loadUserModel(credential.user!.uid);
       _userModel ??= _buildFallbackUser(credential.user!);
+
       _setLoading(false);
       return true;
     } on FirebaseAuthException catch (e) {
@@ -286,21 +323,6 @@ class AuthProvider extends ChangeNotifier {
   }
 
   String _getErrorMessage(String code) {
-    switch (code) {
-      case 'user-not-found':
-        return 'No account found with this email';
-      case 'wrong-password':
-        return 'Incorrect password';
-      case 'email-already-in-use':
-        return 'An account already exists with this email';
-      case 'weak-password':
-        return 'Password is too weak';
-      case 'invalid-email':
-        return 'Invalid email address';
-      case 'too-many-requests':
-        return 'Too many attempts. Try again later';
-      default:
-        return 'Authentication failed';
-    }
+    return SecurityUtils.maskAuthError(code);
   }
 }

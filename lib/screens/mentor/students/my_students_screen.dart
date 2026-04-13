@@ -7,9 +7,10 @@ import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class MyStudentsScreen extends StatelessWidget {
-  const MyStudentsScreen({super.key});
+  MyStudentsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -20,22 +21,29 @@ class MyStudentsScreen extends StatelessWidget {
     return Scaffold(
       
       appBar: AppBar(
-        title: const Text('My Students'),
+        title: Text(context.tr('my_students')),
         actions: [
           TextButton.icon(
             onPressed: () => Navigator.pushNamed(context, AppRoutes.browseStudents),
             icon: Icon(Icons.person_search_rounded, size: 20, color: AppTheme.accentPurple),
-            label: Text('Find Students', style: TextStyle(color: AppTheme.accentPurple, fontWeight: FontWeight.w600, fontSize: 13)),
+            label: Text(context.tr('find_students'), style: TextStyle(color: AppTheme.accentPurple, fontWeight: FontWeight.w600, fontSize: 13)),
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.pushNamed(context, AppRoutes.scheduleGroupMeeting),
+        icon: const Icon(Icons.groups_rounded),
+        label: Text(context.tr('schedule_group_meeting') ?? 'Group Meeting'),
+        backgroundColor: AppTheme.accentPurple,
+        foregroundColor: Colors.white,
+      ),
       body: uid.isEmpty
-          ? const Center(child: Text('Not logged in'))
+          ? Center(child: Text(context.tr('not_logged_in')))
           : StreamBuilder<QuerySnapshot>(
               stream: firestore.mentorConnectionsStream(uid),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator());
                 }
 
                 final docs = snapshot.data?.docs ?? [];
@@ -47,11 +55,11 @@ class MyStudentsScreen extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.people_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 64),
-                          const SizedBox(height: 16),
-                          Text('No students yet',
+                          SizedBox(height: 16),
+                          Text(context.tr('no_students_yet_1'),
                               style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
-                          const SizedBox(height: 8),
-                          Text('Students can send you connection requests from the Find Mentor screen.',
+                          SizedBox(height: 8),
+                          Text(context.tr('students_can_send_you_connection_request'),
                               textAlign: TextAlign.center,
                               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                         ],
@@ -115,52 +123,74 @@ class MyStudentsScreen extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                const SizedBox(height: 12),
-                                Row(
+                                SizedBox(height: 12),
+                                Column(
                                   children: [
-                                    _actionButton(
-                                      icon: Icons.chat_rounded,
-                                      label: 'Message',
-                                      color: AppTheme.primaryNavy,
-                                      onTap: () async {
-                                        final roomId = await firestore.getOrCreateChatRoom(uid, studentId);
-                                        if (context.mounted) {
-                                          Navigator.pushNamed(context, AppRoutes.chatConversation, arguments: {
-                                            'roomId': roomId,
-                                            'otherUserId': studentId,
-                                            'otherUserName': name,
-                                          });
-                                        }
-                                      },
+                                    Row(
+                                      children: [
+                                        _actionButton(
+                                          icon: Icons.chat_rounded,
+                                          label: context.tr('message'),
+                                          color: AppTheme.primaryNavy,
+                                          onTap: () async {
+                                            final roomId = await firestore.getOrCreateChatRoom(uid, studentId);
+                                            if (context.mounted) {
+                                              Navigator.pushNamed(context, AppRoutes.chatConversation, arguments: {
+                                                'roomId': roomId,
+                                                'otherUserId': studentId,
+                                                'otherUserName': name,
+                                              });
+                                            }
+                                          },
+                                        ),
+                                        SizedBox(width: 8),
+                                        _actionButton(
+                                          icon: Icons.videocam_rounded,
+                                          label: context.tr('video_call'),
+                                          color: AppTheme.successGreen,
+                                          onTap: () async {
+                                            final roomId = await firestore.getOrCreateChatRoom(uid, studentId);
+                                            if (context.mounted) {
+                                              Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
+                                                'roomId': roomId,
+                                                'otherUserName': name,
+                                              });
+                                            }
+                                          },
+                                        ),
+                                        SizedBox(width: 8),
+                                        _actionButton(
+                                          icon: Icons.calendar_month_rounded,
+                                          label: context.tr('schedule'),
+                                          color: AppTheme.accentPurple,
+                                          onTap: () => _showScheduleDialog(context, uid, studentId, name, firestore),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 8),
-                                    _actionButton(
-                                      icon: Icons.videocam_rounded,
-                                      label: 'Video Call',
-                                      color: AppTheme.successGreen,
-                                      onTap: () async {
-                                        final roomId = await firestore.getOrCreateChatRoom(uid, studentId);
-                                        if (context.mounted) {
-                                          Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
-                                            'roomId': roomId,
-                                            'otherUserName': name,
-                                          });
-                                        }
-                                      },
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _actionButton(
-                                      icon: Icons.calendar_month_rounded,
-                                      label: 'Schedule',
-                                      color: AppTheme.accentPurple,
-                                      onTap: () => _showScheduleDialog(context, uid, studentId, name, firestore),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    _actionButton(
-                                      icon: Icons.feedback_rounded,
-                                      label: 'Feedback',
-                                      color: AppTheme.warningAmber,
-                                      onTap: () => Navigator.pushNamed(context, AppRoutes.feedbackHistory),
+                                    SizedBox(height: 8),
+                                    Row(
+                                      children: [
+                                        _actionButton(
+                                          icon: Icons.feedback_rounded,
+                                          label: context.tr('feedback'),
+                                          color: AppTheme.warningAmber,
+                                          onTap: () => Navigator.pushNamed(context, AppRoutes.feedbackHistory),
+                                        ),
+                                        SizedBox(width: 8),
+                                        _actionButton(
+                                          icon: Icons.alarm_add_rounded,
+                                          label: context.tr('reminder') ?? 'Reminder',
+                                          color: AppTheme.errorRed,
+                                          onTap: () => Navigator.pushNamed(
+                                            context, 
+                                            AppRoutes.addReminder, 
+                                            arguments: {'studentId': studentId}
+                                          ),
+                                        ),
+                                        // Empty placeholder for alignment
+                                        SizedBox(width: 8),
+                                        Expanded(child: SizedBox()),
+                                      ],
                                     ),
                                   ],
                                 ),
@@ -205,8 +235,8 @@ class MyStudentsScreen extends StatelessWidget {
   }
 
   void _showScheduleDialog(BuildContext context, String mentorId, String studentId, String studentName, FirestoreService firestore) {
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
-    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
+    DateTime selectedDate = DateTime.now().add(Duration(days: 1));
+    TimeOfDay selectedTime = TimeOfDay(hour: 10, minute: 0);
     final titleController = TextEditingController(text: 'Study Session with $studentName');
 
     showDialog(
@@ -215,14 +245,14 @@ class MyStudentsScreen extends StatelessWidget {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: AppTheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Schedule Meeting', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+          title: Text(context.tr('schedule_meeting'), style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
                 decoration: InputDecoration(
-                  labelText: 'Meeting Title',
+                  labelText: context.tr('meeting_title'),
                   filled: true, fillColor: AppTheme.background,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 ),
@@ -252,7 +282,7 @@ class MyStudentsScreen extends StatelessWidget {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
             ElevatedButton(
               onPressed: () async {
                 final scheduledAt = DateTime(selectedDate.year, selectedDate.month, selectedDate.day, selectedTime.hour, selectedTime.minute);
@@ -286,7 +316,7 @@ class MyStudentsScreen extends StatelessWidget {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Meeting scheduled!'),
+                      content: Text(context.tr('meeting_scheduled')),
                       backgroundColor: AppTheme.successGreen,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -295,7 +325,7 @@ class MyStudentsScreen extends StatelessWidget {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-              child: const Text('Schedule'),
+              child: Text(context.tr('schedule')),
             ),
           ],
         ),

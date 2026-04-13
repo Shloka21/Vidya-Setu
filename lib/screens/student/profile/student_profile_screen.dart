@@ -7,8 +7,13 @@ import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/theme_provider.dart';
 import '../../../services/notification_service.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/localization_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/animated_theme_toggle.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as cloud_firestore;
+import '../../../services/firestore_service.dart';
+import '../../../models/timetable_model.dart';
 
 class StudentProfileScreen extends StatefulWidget {
   const StudentProfileScreen({super.key});
@@ -29,6 +34,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   double _breakDuration = 10;
   bool _breakReminders = true;
 
+  // Base prefs
+  String _selectedRingtone = 'nokia_classic';
+  String _selectedLanguage = 'en';
+
   bool _loaded = false;
 
   @override
@@ -48,6 +57,8 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         _defaultSessionDuration = prefs.getDouble('pref_session_duration') ?? 45;
         _breakDuration = prefs.getDouble('pref_break_duration') ?? 10;
         _breakReminders = prefs.getBool('pref_break_reminders') ?? true;
+        _selectedRingtone = prefs.getString('pref_ringtone') ?? 'nokia_classic';
+        _selectedLanguage = prefs.getString('pref_language') ?? 'en';
         _loaded = true;
       });
     }
@@ -73,6 +84,91 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     }
   }
 
+  void _confirmStudyPrefChange(String prefKey, double newValue) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(context.tr('update_study_plan')),
+        content: Text(
+          context.tr('are_you_sure_you_want_to_make_these_chan') +
+          ' Your future generated study timetables will automatically adjust to this new duration.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              _loadPreferences(); // Revert visual slider if canceled
+            },
+            child: Text(context.tr('cancel')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _savePref(prefKey, newValue);
+              
+              try {
+                final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+                if (uid != null) {
+                  final firestore = FirestoreService();
+                  final currentPlan = await firestore.getStudyPlan(uid);
+                  
+                  if (currentPlan != null) {
+                    final updatedSessions = currentPlan.sessions.map((s) {
+                      if (s.startTime.isAfter(DateTime.now())) {
+                        return TimetableSession(
+                          id: s.id,
+                          subject: s.subject,
+                          topic: s.topic,
+                          moduleName: s.moduleName,
+                          date: s.date,
+                          startTime: s.startTime,
+                          durationMinutes: _defaultSessionDuration.toInt(),
+                          colorHex: s.colorHex,
+                          isCompleted: s.isCompleted,
+                          location: s.location,
+                          notes: s.notes,
+                          isHolidaySession: s.isHolidaySession,
+                          resourceLinks: s.resourceLinks,
+                          youtubeLinks: s.youtubeLinks,
+                          quizCompleted: s.quizCompleted,
+                        );
+                      }
+                      return s;
+                    }).toList();
+
+                    final updatedPlan = StudyPlan(
+                      id: currentPlan.id,
+                      sessions: updatedSessions,
+                      subjects: currentPlan.subjects,
+                      constraints: currentPlan.constraints,
+                      collegeSlots: currentPlan.collegeSlots,
+                      createdAt: currentPlan.createdAt,
+                      startDate: currentPlan.startDate,
+                      endDate: currentPlan.endDate,
+                      weeklyAvailableHours: currentPlan.weeklyAvailableHours,
+                    );
+                    
+                    await firestore.saveStudyPlan(uid, updatedPlan);
+                  }
+                }
+              } catch (e) {
+                debugPrint('Failed to recalculate slots: $e');
+              }
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.tr('study_preferences_updated'))),
+                );
+              }
+            },
+            child: Text(context.tr('confirm')),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (!_loaded) {
@@ -83,51 +179,59 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
 
+    final isTranslating = Provider.of<LocalizationService>(context).isTranslating;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 200,
-            pinned: true,
+            expandedHeight: 160,
+                pinned: true,
+                elevation: 0,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppTheme.primaryNavy, Color(0xFF6C4DE6), Color(0xFF4A7BF7)],
-                  ),
-                ),
-                child: SafeArea(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+              background: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 52, 24, 0),
+                  child: Row(
                     children: [
-                      const SizedBox(height: 20),
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: 70,
+                        height: 70,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
-                          color: Colors.white24,
+                          color: Theme.of(context).colorScheme.surface,
+                          border: Border.all(color: AppTheme.accentBlue.withOpacity(0.3), width: 2),
+                          boxShadow: [
+                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+                          ],
                         ),
                         child: user?.profileImageUrl != null
                             ? ClipOval(child: Image.network(user!.profileImageUrl!, fit: BoxFit.cover))
                             : Center(
                                 child: Text(
                                   user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'S',
-                                  style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w700),
+                                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 28, fontWeight: FontWeight.w700),
                                 ),
                               ),
                       ),
-                      const SizedBox(height: 12),
-                      Text(
-                        user?.name ?? 'Student',
-                        style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        user?.email ?? '',
-                        style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+                      const SizedBox(width: 20),
+                      Expanded(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user?.name ?? 'Student',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              user?.email ?? '',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -136,7 +240,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
             ),
             actions: [
               IconButton(
-                icon: const Icon(Icons.edit_rounded, color: Colors.white),
+                icon: Icon(Icons.edit_rounded, color: Theme.of(context).colorScheme.onSurface),
                 onPressed: () => Navigator.pushNamed(context, AppRoutes.editStudentProfile),
               ),
             ],
@@ -148,20 +252,25 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // ── Stats ──
-                  Row(
-                    children: [
-                      _buildStatItem('Level', '${user?.level ?? 1}', Icons.star_rounded, AppTheme.warningAmber),
-                      const SizedBox(width: 12),
-                      _buildStatItem('Points', '${user?.points ?? 0}', Icons.bolt_rounded, AppTheme.accentPurple),
-                      const SizedBox(width: 12),
-                      _buildStatItem('Streak', '${user?.streak ?? 0}', Icons.local_fire_department, AppTheme.errorRed),
-                    ],
+                  // Stats
+                  AppCard(
+                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 6),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatItem(context.tr('level'), '${user?.level ?? 1}', Icons.star_rounded, AppTheme.warningAmber),
+                        Container(width: 5, height: 40, color: Colors.transparent),
+                        _buildStatItem(context.tr('points'), '${user?.points ?? 0}', Icons.bolt_rounded, AppTheme.accentPurple),
+                        Container(width: 5, height: 40, color: Colors.transparent),
+                        _buildStatItem(context.tr('streak'), '${user?.streak ?? 0}', Icons.local_fire_department, AppTheme.errorRed),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28),
 
                   // ── Bio ──
                   if (user?.bio != null && user!.bio!.isNotEmpty) ...[
-                    _sectionTitle('ABOUT ME'),
+                    _sectionTitle(context.tr('about_me')),
                     AppCard(
                       padding: const EdgeInsets.all(16),
                       child: Text(
@@ -169,99 +278,99 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 14, height: 1.5),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: 24),
                   ],
 
                   // ── Achievements ──
-                  _sectionTitle('ACHIEVEMENTS'),
-                  AppCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        _buildAchievementBadge('🔥', 'Streak Master', user?.streak != null && user!.streak >= 7),
-                        const SizedBox(width: 12),
-                        _buildAchievementBadge('⭐', 'Rising Star', user?.level != null && user!.level >= 3),
-                        const SizedBox(width: 12),
-                        _buildAchievementBadge('📚', 'Bookworm', user?.points != null && user!.points >= 100),
-                        const SizedBox(width: 12),
-                        _buildAchievementBadge('🏆', 'Champion', user?.points != null && user!.points >= 500),
-                      ],
-                    ),
+                  _sectionTitle(context.tr('achievements') ?? 'Achievements'),
+                  _buildAchievementsSection(user),
+                  SizedBox(height: 28),
+
+                  // ── Recent Mentor Feedback ──
+                  _sectionTitle('Recent Mentor Feedback'),
+                  StreamBuilder<cloud_firestore.QuerySnapshot>(
+                    stream: FirestoreService().getFeedbackStream(user?.uid ?? ''),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return Center(child: CircularProgressIndicator());
+                      }
+                      final docs = snapshot.data?.docs ?? [];
+                      if (docs.isEmpty) {
+                        return AppCard(
+                          padding: const EdgeInsets.all(16),
+                          child: Center(
+                            child: Text(
+                              'No recent feedback from your mentors.',
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13),
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: docs.take(3).map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          final content = data['content'] ?? '';
+                          final isPositive = data['isPositive'] ?? true;
+                          final mentorName = data['mentorName'] ?? 'Mentor';
+                          
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: AppCard(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Container(
+                                    width: 36, height: 36,
+                                    decoration: BoxDecoration(
+                                      color: isPositive ? AppTheme.successGreen.withOpacity(0.1) : AppTheme.warningAmber.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      isPositive ? Icons.thumb_up_rounded : Icons.lightbulb_outline_rounded,
+                                      color: isPositive ? AppTheme.successGreen : AppTheme.warningAmber,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(mentorName, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700)),
+                                        SizedBox(height: 4),
+                                        Text(content, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), fontSize: 13)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
                   ),
-                  const SizedBox(height: 28),
+                  SizedBox(height: 28),
 
                   // ── Account ──
-                  _sectionTitle('ACCOUNT'),
+                  _sectionTitle(context.tr('account')),
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
-                        _buildNavItem(Icons.lock_rounded, 'Change Password', _showChangePasswordDialog),
-                        const Divider(height: 1),
-                        _buildNavItem(Icons.shield_rounded, 'Privacy Settings', _showPrivacySettingsDialog),
+                        _buildNavItem(Icons.lock_rounded, context.tr('change_password'), _showChangePasswordDialog),
+                        Divider(height: 1),
+                        _buildNavItem(Icons.shield_rounded, context.tr('privacy_settings'), _showPrivacySettingsDialog),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
-                  // ── Study Preferences ──
-                  _sectionTitle('STUDY PREFERENCES'),
-                  AppCard(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Default Session Duration', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
-                            Text('${_defaultSessionDuration.toInt()} min', style: TextStyle(color: AppTheme.accentPurple, fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                        Slider(
-                          value: _defaultSessionDuration,
-                          min: 15, max: 120, divisions: 7,
-                          activeColor: AppTheme.accentPurple,
-                          onChanged: (v) { setState(() => _defaultSessionDuration = v); _savePref('pref_session_duration', v); },
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Break Duration', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
-                            Text('${_breakDuration.toInt()} min', style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w700)),
-                          ],
-                        ),
-                        Slider(
-                          value: _breakDuration,
-                          min: 5, max: 30, divisions: 5,
-                          activeColor: AppTheme.accentBlue,
-                          onChanged: (v) { setState(() => _breakDuration = v); _savePref('pref_break_duration', v); },
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Notifications ──
-                  _sectionTitle('NOTIFICATIONS'),
+                  // ── System Preferences (App Base) ──
+                  _sectionTitle(context.tr('system_preferences')),
                   AppCard(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Column(
-                      children: [
-                        _buildSwitchItem('Study Reminders', _reminderNotifications, (v) => _updateNotifPref('pref_reminder_notif', v)),
-                        _buildSwitchItem('Voice Alerts (Beta)', _voiceNotifications, (v) => _updateNotifPref('pref_voice_notif', v)),
-                        _buildSwitchItem('Mentor Messages', _mentorMessages, (v) => _updateNotifPref('pref_mentor_msgs', v)),
-                        _buildSwitchItem('System Notifications', _systemNotifications, (v) => _updateNotifPref('pref_system_notif', v)),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // ── Appearance ──
-                  _sectionTitle('APPEARANCE'),
-                  AppCard(
-                    padding: EdgeInsets.zero,
                     child: Column(
                       children: [
                         Padding(
@@ -269,17 +378,17 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           child: Row(
                             children: [
                               AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 350),
+                                duration: Duration(milliseconds: 350),
                                 transitionBuilder: (child, anim) => RotationTransition(turns: Tween(begin: 0.75, end: 1.0).animate(anim), child: FadeTransition(opacity: anim, child: child)),
                                 child: Icon(isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded, key: ValueKey(isDark), color: isDark ? AppTheme.warningAmber : AppTheme.accentBlue, size: 24),
                               ),
-                              const SizedBox(width: 14),
+                              SizedBox(width: 14),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('App Theme', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
-                                    Text(isDark ? 'Currently using dark theme' : 'Currently using light theme', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
+                                    Text(context.tr('app_theme'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
+                                    Text(isDark ? context.tr('using_dark_theme') : context.tr('using_light_theme'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                                   ],
                                 ),
                               ),
@@ -290,48 +399,170 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             ],
                           ),
                         ),
-                        const Divider(height: 1),
-                        _buildNavItem(Icons.language_rounded, 'Language', () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('English is currently the only available language')));
-                        }),
+                        Divider(height:1),
+                        ListTile(
+                          leading: Icon(Icons.language_rounded, color: AppTheme.accentBlue),
+                          title: Text(context.tr('language'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
+                          trailing: DropdownButton<String>(
+                            value: _selectedLanguage,
+                            alignment: AlignmentDirectional.centerEnd,
+                            isDense: true,
+                            menuMaxHeight: 300,
+                            borderRadius: BorderRadius.circular(12),
+                            underline: const SizedBox(),
+                            dropdownColor: Theme.of(context).colorScheme.surface,
+                            items: const [
+                              DropdownMenuItem(value: 'en', child: Text('English')),
+                              DropdownMenuItem(value: 'hi', child: Text('Hindi (हिन्दी)')),
+                              DropdownMenuItem(value: 'bn', child: Text('Bengali (বাংলা)')),
+                              DropdownMenuItem(value: 'mr', child: Text('Marathi (मराठी)')),
+                              DropdownMenuItem(value: 'te', child: Text('Telugu (తెలుగు)')),
+                              DropdownMenuItem(value: 'ta', child: Text('Tamil (தமிழ்)')),
+                              DropdownMenuItem(value: 'gu', child: Text('Gujarati (ગુજરાતી)')),
+                              DropdownMenuItem(value: 'kn', child: Text('Kannada (ಕನ್ನಡ)')),
+                              DropdownMenuItem(value: 'ur', child: Text('Urdu (اردو)')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedLanguage = val);
+                                Provider.of<LocalizationService>(context, listen: false).setLocale(val);
+                                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('language_updated')} $val')));
+                              }
+                            },
+                          ),
+                        ),
+                        Divider(height: 1),
+                        ListTile(
+                          leading: Icon(Icons.music_note_rounded, color: AppTheme.accentPurple),
+                          title: Text(context.tr('alarm_ringtone'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
+                          trailing: DropdownButton<String>(
+                            value: _selectedRingtone,
+                            alignment: AlignmentDirectional.centerEnd,
+                            isDense: true,
+                            menuMaxHeight: 300,
+                            borderRadius: BorderRadius.circular(12),
+                            underline: const SizedBox(),
+                            dropdownColor: Theme.of(context).colorScheme.surface,
+                            items: const [
+                              DropdownMenuItem(value: 'nokia_classic', child: Text('Nokia Classic')),
+                              DropdownMenuItem(value: 'classic_phone', child: Text('Classic Phone')),
+                              DropdownMenuItem(value: 'gentle_chime', child: Text('Gentle Chime')),
+                              DropdownMenuItem(value: 'morning_bell', child: Text('Morning Bell')),
+                              DropdownMenuItem(value: 'soft_melody', child: Text('Soft Melody')),
+                              DropdownMenuItem(value: 'bright_tone', child: Text('Bright Tone')),
+                              DropdownMenuItem(value: 'crystal_alert', child: Text('Crystal Alert')),
+                              DropdownMenuItem(value: 'rising_pulse', child: Text('Rising Pulse')),
+                              DropdownMenuItem(value: 'echo_ring', child: Text('Echo Ring')),
+                            ],
+                            onChanged: (val) {
+                              if (val != null) {
+                                setState(() => _selectedRingtone = val);
+                                _savePref(context.tr('prefringtone'), val);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('${context.tr('ringtone_set')} ${val.replaceAll('_', ' ').toUpperCase()}')),
+                                );
+                              }
+                            },
+                          ),
+                        ),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
+
+                  // ── Study Preferences ──
+                  _sectionTitle(context.tr('study_preferences')),
+                  AppCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(context.tr('default_session_duration'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
+                            Text('${_defaultSessionDuration.toInt()} min', style: TextStyle(color: AppTheme.accentPurple, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                        Slider(
+                          value: _defaultSessionDuration,
+                          min: 15, max: 120, divisions: 7,
+                          activeColor: AppTheme.accentPurple,
+                          onChanged: (v) {
+                            setState(() => _defaultSessionDuration = v);
+                          },
+                          onChangeEnd: (v) => _confirmStudyPrefChange(context.tr('prefsessionduration'), v),
+                        ),
+                        SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(context.tr('break_duration'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
+                            Text('${_breakDuration.toInt()} min', style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w700)),
+                          ],
+                        ),
+                        Slider(
+                          value: _breakDuration,
+                          min: 5, max: 30, divisions: 5,
+                          activeColor: AppTheme.accentBlue,
+                          onChanged: (v) {
+                            setState(() => _breakDuration = v);
+                          },
+                          onChangeEnd: (v) => _confirmStudyPrefChange(context.tr('prefbreakduration'), v),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
+
+                  // ── Notifications ──
+                  _sectionTitle(context.tr('notifications')),
+                  AppCard(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Column(
+                      children: [
+                        _buildSwitchItem(context.tr('study_reminders'), _reminderNotifications, (v) => _updateNotifPref(context.tr('prefremindernotif'), v)),
+                        _buildSwitchItem(context.tr('voice_alerts_beta'), _voiceNotifications, (v) => _updateNotifPref(context.tr('prefvoicenotif'), v)),
+                        _buildSwitchItem(context.tr('mentor_messages'), _mentorMessages, (v) => _updateNotifPref(context.tr('prefmentormsgs'), v)),
+                        _buildSwitchItem(context.tr('system_notifications'), _systemNotifications, (v) => _updateNotifPref(context.tr('prefsystemnotif'), v)),
+                      ],
+                    ),
+                  ),
+                  SizedBox(height: 24),
 
                   // ── Support ──
-                  _sectionTitle('SUPPORT'),
+                  _sectionTitle(context.tr('support')),
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
-                        _buildNavItem(Icons.help_outline_rounded, 'Help & FAQ', _showHelpDialog),
-                        const Divider(height: 1),
-                        _buildNavItem(Icons.headset_mic_rounded, 'Contact Support', _showContactSupportDialog),
-                        const Divider(height: 1),
-                        _buildNavItem(Icons.policy_rounded, 'Terms of Service', _showTermsDialog),
-                        const Divider(height: 1),
-                        _buildNavItem(Icons.info_outline_rounded, 'About VidyaSetu', _showAboutAppDialog),
+                        _buildNavItem(Icons.help_outline_rounded, context.tr('help__faq'), _showHelpDialog),
+                        Divider(height: 1),
+                        _buildNavItem(Icons.headset_mic_rounded, context.tr('contact_support'), _showContactSupportDialog),
+                        Divider(height: 1),
+                        _buildNavItem(Icons.policy_rounded, context.tr('terms_of_service'), _showTermsDialog),
+                        Divider(height: 1),
+                        _buildNavItem(Icons.info_outline_rounded, context.tr('about_vidyasetu'), _showAboutAppDialog),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: 24),
 
-                  // ── Danger Zone ──
-                  _sectionTitle('DANGER ZONE'),
+                  // ── Critical Actions ──
+                  _sectionTitle(context.tr('critical_actions')),
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
                         ListTile(
-                          leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 20)),
-                          title: const Text('Logout', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
+                          leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 20)),
+                          title: Text(context.tr('logout'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
                           onTap: _showLogoutDialog,
                         ),
-                        const Divider(height: 1),
+                        Divider(height: 1),
                         ListTile(
-                          leading: const Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed),
-                          title: const Text('Delete Account', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
+                          leading: Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed),
+                          title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
                           onTap: _showDeleteAccountDialog,
                         ),
                       ],
@@ -390,10 +621,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   }
 
   Widget _sectionTitle(String title) {
+    // Convert to Title Case with spaces handled properly
+    final cleanTitle = title.replaceAll('_', ' ');
+    final titleCase = cleanTitle.split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}' : '').join(' ');
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 12, top: 8),
       child: Text(
-        title,
+        titleCase,
         style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1.2),
       ),
     );
@@ -427,17 +661,17 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Change Password', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w700)),
+        title: Text(context.tr('change_password'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: currentPassCtrl, obscureText: true, decoration: InputDecoration(labelText: 'Current Password', filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
-            const SizedBox(height: 12),
-            TextField(controller: newPassCtrl, obscureText: true, decoration: InputDecoration(labelText: 'New Password', filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            TextField(controller: currentPassCtrl, obscureText: true, decoration: InputDecoration(labelText: context.tr('current_password'), filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            SizedBox(height: 12),
+            TextField(controller: newPassCtrl, obscureText: true, decoration: InputDecoration(labelText: context.tr('new_password'), filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               try {
@@ -447,34 +681,71 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   await user.reauthenticateWithCredential(cred);
                   await user.updatePassword(newPassCtrl.text);
                   if (ctx.mounted) Navigator.pop(ctx);
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Password updated!'), backgroundColor: AppTheme.successGreen));
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('password_updated')), backgroundColor: AppTheme.successGreen));
                 }
               } catch (e) {
                 if (ctx.mounted) Navigator.pop(ctx);
-                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed));
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('error')}: $e'), backgroundColor: AppTheme.errorRed));
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-            child: const Text('Update'),
+            child: Text(context.tr('update')),
           ),
         ],
       ),
     );
   }
 
+  bool _shareProgress = true;
+  bool _showActivityStatus = true;
+
   void _showPrivacySettingsDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Privacy Settings'),
-        content: Column(mainAxisSize: MainAxisSize.min, children: [
-          SwitchListTile(title: const Text('Share progress with Mentor'), value: true, onChanged: (v) {}),
-          SwitchListTile(title: const Text('Show Activity Status'), value: true, onChanged: (v) {}),
-        ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
-      ),
-    );
+    // Load current values
+    SharedPreferences.getInstance().then((prefs) {
+      _shareProgress = prefs.getBool('pref_share_progress') ?? true;
+      _showActivityStatus = prefs.getBool('pref_activity_status') ?? true;
+
+      showDialog(
+        context: context,
+        builder: (_) => StatefulBuilder(
+          builder: (dialogCtx, setDialogState) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Text(context.tr('privacy_settings')),
+            content: Column(mainAxisSize: MainAxisSize.min, children: [
+              SwitchListTile(
+                title: Text(context.tr('share_progress_with_mentor')),
+                value: _shareProgress,
+                activeColor: AppTheme.accentBlue,
+                onChanged: (v) async {
+                  setDialogState(() => _shareProgress = v);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('pref_share_progress', v);
+                  final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+                  if (uid != null) {
+                    FirestoreService().updateUser(uid, {'shareProgress': v});
+                  }
+                },
+              ),
+              SwitchListTile(
+                title: Text(context.tr('show_activity_status')),
+                value: _showActivityStatus,
+                activeColor: AppTheme.accentBlue,
+                onChanged: (v) async {
+                  setDialogState(() => _showActivityStatus = v);
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('pref_activity_status', v);
+                  final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+                  if (uid != null) {
+                    FirestoreService().updateUser(uid, {'showActivityStatus': v});
+                  }
+                },
+              ),
+            ]),
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
+          ),
+        ),
+      );
+    });
   }
 
   void _showHelpDialog() {
@@ -482,20 +753,20 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Help & FAQ'),
+        title: Text(context.tr('help__faq')),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _faq('How do I generate a timetable?', 'Go to Timetable (Dashboard/Nav bar) → Tap "+" in the timeline.'),
-              _faq('How do I connect with a mentor?', 'Go to Mentors tab → Find Mentor → Send Request.'),
-              _faq('How do I take a quiz?', 'Click on a study session in your timetable → Start Quiz.'),
-              _faq('What does Streak mean?', 'It is the number of consecutive days you have completed at least one study session.'),
+              _faq(context.tr('how_do_i_generate_a_timetable'), context.tr('how_do_i_generate_a_timetable_ans')),
+              _faq(context.tr('how_do_i_connect_with_a_mentor'), context.tr('how_do_i_connect_with_a_mentor_ans')),
+              _faq(context.tr('how_do_i_take_a_quiz'), context.tr('how_do_i_take_a_quiz_ans')),
+              _faq(context.tr('what_does_streak_mean'), context.tr('what_does_streak_mean_ans')),
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -507,7 +778,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Q: $q', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(a, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12)),
         ],
       ),
@@ -519,12 +790,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Contact Support'),
+        title: Text(context.tr('contact_support')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _contactRow(Icons.email_rounded, 'Email', 'support@vidyasetu.app'),
-          _contactRow(Icons.language_rounded, 'Help Center', 'vidyasetu.app/help'),
+          _contactRow(Icons.email_rounded, context.tr('email'), 'support@vidyasetu.app'),
+          _contactRow(Icons.language_rounded, context.tr('help_center'), 'vidyasetu.app/help'),
         ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -534,7 +805,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Icon(icon, size: 20, color: AppTheme.accentBlue),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
           Text(value, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w500)),
@@ -548,9 +819,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Terms of Service'),
-        content: const SingleChildScrollView(child: Text('By using VidyaSetu, you agree to our Terms...\n\n(This is a placeholder for actual TS)')),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        title: Text(context.tr('terms_of_service')),
+        content: SingleChildScrollView(child: Text(context.tr('by_using_vidyasetu_you_agree_to_our_term'))),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -560,13 +831,13 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('About VidyaSetu'),
+        title: Text(context.tr('about_vidyasetu')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _aboutRow(Icons.apps_rounded, 'Version', '1.0.0'),
-          _aboutRow(Icons.build_rounded, 'Build', '2026.03.07'),
-          _aboutRow(Icons.school_rounded, 'For', 'Students'),
+          _aboutRow(Icons.apps_rounded, context.tr('version'), '1.0.0'),
+          _aboutRow(Icons.build_rounded, context.tr('build'), '2026.03.07'),
+          _aboutRow(Icons.school_rounded, context.tr('for'), context.tr('students')),
         ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -576,9 +847,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Icon(icon, size: 18, color: AppTheme.accentBlue),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
-        const Spacer(),
+        Spacer(),
         Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
       ]),
     );
@@ -589,10 +860,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(context.tr('logout')),
+        content: Text(context.tr('are_you_sure_you_want_to_logout')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -601,7 +872,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
               if (context.mounted) Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: const Text('Logout'),
+            child: Text(context.tr('logout')),
           ),
         ],
       ),
@@ -613,27 +884,124 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Delete Account', style: TextStyle(color: AppTheme.errorRed)),
-        content: const Text('This action is irreversible. All your study data, notes, and connections will be lost permanently. Are you absolutely sure?'),
+        title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed)),
+        content: Text(
+          context.tr('your_account_will_be_scheduled_for_delet') + 
+          ' You have 30 days to restore it by logging back in. ' +
+          'After 30 days, all your study data, notes, and connections will be permanently removed.',
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
               final auth = Provider.of<AuthProvider>(context, listen: false);
+              final uid = FirebaseAuth.instance.currentUser?.uid;
               try {
-                await FirebaseAuth.instance.currentUser?.delete();
-                await auth.signOut();
-                if (context.mounted) Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+                if (uid != null) {
+                  await AuthService().softDeleteAccount(uid);
+                } else {
+                  await auth.signOut();
+                }
+                if (context.mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (_) => false);
+                }
               } catch (e) {
-                if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('${context.tr('error_please_reauth')} $e'), backgroundColor: AppTheme.errorRed),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: const Text('Delete Forever'),
+            child: Text(context.tr('delete_account')),
           ),
         ],
       ),
+    );
+  }
+
+  // --- Dynamic Achievements Block ---
+  Widget _buildAchievementsSection(dynamic user) {
+    if (user == null) return const SizedBox.shrink();
+    
+    // Evaluate earned vs locked based on XP/stats
+    final streak = user.streak ?? 0;
+    final points = user.points ?? 0;
+    final tasks = user.tasksCompleted ?? 0;
+
+    // Hardcode some display values dynamically based on default badges
+    final List<Map<String, dynamic>> badges = [
+      {'name': 'Week Warrior', 'icon': Icons.local_fire_department, 'color': AppTheme.warningAmber, 'unlocked': streak >= 7},
+      {'name': 'Getting Started', 'icon': Icons.check_circle, 'color': AppTheme.successGreen, 'unlocked': tasks >= 10},
+      {'name': 'Point Master', 'icon': Icons.military_tech, 'color': AppTheme.accentPurple, 'unlocked': points >= 1000},
+      {'name': 'Monthly Master', 'icon': Icons.whatshot, 'color': AppTheme.errorRed, 'unlocked': streak >= 30},
+      {'name': 'Task Master', 'icon': Icons.verified, 'color': AppTheme.accentBlue, 'unlocked': tasks >= 50},
+      {'name': 'Centurion', 'icon': Icons.star, 'color': Color(0xFFFFD700), 'unlocked': tasks >= 100},
+    ];
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('${badges.where((b) => b['unlocked']).length} / ${badges.length} Unlocked', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600)),
+              TextButton(
+                onPressed: () => Navigator.pushNamed(context, AppRoutes.achievements),
+                child: Text('View All', style: TextStyle(color: AppTheme.accentBlue, fontSize: 13, fontWeight: FontWeight.w700)),
+              )
+            ],
+          ),
+          const SizedBox(height: 12),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: badges.map((b) {
+                final isUnlocked = b['unlocked'] as bool;
+                return Container(
+                  margin: const EdgeInsets.only(right: 16),
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 60, height: 60,
+                        decoration: BoxDecoration(
+                          color: isUnlocked ? b['color'].withOpacity(0.15) : Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+                          shape: BoxShape.circle,
+                          border: isUnlocked ? Border.all(color: b['color'], width: 2) : Border.all(color: Colors.transparent),
+                        ),
+                        child: Icon(
+                          b['icon'],
+                          color: isUnlocked ? b['color'] : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                          size: 28,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: 70,
+                        child: Text(
+                          b['name'],
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: isUnlocked ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                            fontSize: 11,
+                            fontWeight: isUnlocked ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+          )
+        ],
+      )
     );
   }
 }

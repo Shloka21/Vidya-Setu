@@ -1,0 +1,267 @@
+login_screen.dart:328 -> Login
+login_screen.dart:360 -> Continue with Google
+login_screen.dart:372 -> Continue with Phone
+phone_auth_screen.dart:269 -> Send OTP
+phone_auth_screen.dart:318 -> We sent a 6-digit code to 
+phone_auth_screen.dart:432 -> Verify & Sign In
+role_selection_screen.dart:97 -> Continue
+signup_screen.dart:165 -> Full Name
+signup_screen.dart:182 -> Email
+signup_screen.dart:202 -> Password
+signup_screen.dart:263 -> Confirm Password
+signup_screen.dart:292 -> I am a
+signup_screen.dart:340 -> I agree to the 
+signup_screen.dart:342 -> Terms & Conditions
+signup_screen.dart:395 -> Create Account
+signup_screen.dart:427 -> Continue with Google
+chat_room_screen.dart:145 -> Study Session
+leaderboard_screen.dart:109 -> Weekly
+leaderboard_screen.dart:110 -> Monthly
+leaderboard_screen.dart:111 -> All Time
+mentor_dashboard.dart:271 -> Students
+mentor_dashboard.dart:280 -> Pending\nRequests
+mentor_dashboard.dart:488 -> Guidance
+mentor_dashboard.dart:490 -> Analytics
+feedback_history_screen.dart:38 -> Feedback
+feedback_history_screen.dart:39 -> Reminders
+send_feedback_screen.dart:144 -> Select Student
+send_feedback_screen.dart:165 -> Feedback Type
+send_feedback_screen.dart:190 -> Overall Rating
+send_feedback_screen.dart:212 -> Title
+send_feedback_screen.dart:213 -> e.g., Great work on Algebra!
+send_feedback_screen.dart:217 -> Detailed Feedback
+send_feedback_screen.dart:226 -> Send Feedback
+mentor_profile_screen.dart:150 -> Students
+mentor_profile_screen.dart:151 -> Rating
+mentor_profile_screen.dart:152 -> Sessions
+mentor_profile_screen.dart:206 -> mentor_notif_requests
+mentor_profile_screen.dart:210 -> mentor_notif_messages
+mentor_profile_screen.dart:214 -> mentor_notif_updates
+mentor_profile_screen.dart:269 Text() -> English
+mentor_profile_screen.dart:270 Text() -> Hindi (हिन्दी)
+mentor_profile_screen.dart:271 Text() -> Bengali (বাংলা)
+mentor_profile_screen.dart:272 Text() -> Marathi (मराठी)
+mentor_profile_screen.dart:273 Text() -> Telugu (తెలుగు)
+mentor_profile_screen.dart:274 Text() -> Tamil (தமிழ்)
+mentor_profile_screen.dart:275 Text() -> Gujarati (ગુજરાતી)
+mentor_profile_screen.dart:276 Text() -> Kannada (ಕನ್ನಡ)
+mentor_profile_screen.dart:277 Text() -> Urdu (اردو)
+mentor_profile_screen.dart:509 -> How do I connect with students?
+mentor_profile_screen.dart:509 -> Go to Browse Students (Find Students button on Dashboard) and tap Connect.
+mentor_profile_screen.dart:510 -> How do I schedule meetings?
+mentor_profile_screen.dart:510 -> Open a chat → tap the ⋮ menu → Schedule Meeting.
+mentor_profile_screen.dart:511 -> How do I provide feedback?
+mentor_profile_screen.dart:511 -> Go to My Students → tap a student → Send Feedback.
+mentor_profile_screen.dart:512 -> How do I send reminders?
+mentor_profile_screen.dart:512 -> Go to Reminders from Quick Actions → Create Reminder.
+mentor_profile_screen.dart:542 -> Email
+mentor_profile_screen.dart:543 -> Website
+mentor_profile_screen.dart:590 -> Version
+mentor_profile_screen.dart:591 -> Build
+mentor_profile_screen.dart:592 -> Framework
+mentor_profile_screen.dart:593 -> Backend
+create_reminder_screen.dart:119 -> Select Student
+create_reminder_screen.dart:137 -> Title
+create_reminder_screen.dart:138 -> e.g., Complete Chapter 5
+create_reminder_screen.dart:141 -> Message
+create_reminder_screen.dart:149 -> Priority
+create_reminder_screen.dart:178 -> Due Date
+create_reminder_screen.dart:210 -> Send Reminder
+mentor_settings_screen.dart:73 -> ACCOUNT
+mentor_settings_screen.dart:78 -> Edit Profile
+mentor_settings_screen.dart:82 -> Change Password
+mentor_settings_screen.dart:84 -> Verification Status
+mentor_settings_screen.dart:91 -> AVAILABILITY
+mentor_settings_screen.dart:114 -> NOTIFICATIONS
+mentor_settings_screen.dart:119 -> New Student Requests
+mentor_settings_screen.dart:121 -> mentor_notif_requests
+mentor_settings_screen.dart:123 -> Messages
+mentor_settings_screen.dart:125 -> mentor_notif_messages
+mentor_settings_screen.dart:127 -> Student Progress Updates
+mentor_settings_screen.dart:129 -> mentor_notif_updates
+mentor_settings_screen.dart:137 -> APPEARANCE
+mentor_settings_screen.dart:178 -> Language
+mentor_settings_screen.dart:189 -> SUPPORT
+mentor_settings_screen.dart:194 -> Help & FAQ
+mentor_settings_screen.dart:196 -> Contact Support
+mentor_settings_screen.dart:198 -> Clear Cache
+mentor_settings_screen.dart:205 -> LEGAL
+mentor_settings_screen.dart:210 -> Privacy Policy
+mentor_settings_screen.dart:212 -> Terms of Service
+mentor_settings_screen.dart:214 -> About VidyaSetu
+mentor_settings_screen.dart:377 -> How do I connect with students?
+mentor_settings_screen.dart:377 -> Go to Browse Students (from Quick Actions) and tap Connect on their profile.
+mentor_settings_screen.dart:378 -> How do I schedule meetings?
+mentor_settings_screen.dart:378 -> Open a chat → tap the ⋮ menu → Schedule Meeting.
+mentor_settings_screen.dart:379 -> How do I provide feedback?
+mentor_settings_screen.dart:379 -> Go to My Students → tap a student → Send Feedback.
+mentor_settings_screen.dart:380 -> How do I send reminders?
+mentor_settings_screen.dart:380 -> Go to Reminders from Quick Actions → Create Reminder.
+mentor_settings_screen.dart:412 -> Email
+mentor_settings_screen.dart:413 -> Website
+mentor_settings_screen.dart:511 -> Version
+mentor_settings_screen.dart:512 -> Build
+mentor_settings_screen.dart:513 -> Framework
+mentor_settings_screen.dart:514 -> Backend
+my_students_screen.dart:124 -> Message
+my_students_screen.dart:140 -> Video Call
+my_students_screen.dart:155 -> Schedule
+my_students_screen.dart:162 -> Feedback
+student_analytics_mentor_screen.dart:101 -> Total Students
+student_analytics_mentor_screen.dart:115 -> Active Streaks
+student_analytics_mentor_screen.dart:118 -> Avg Progress
+student_profile_mentor_view.dart:76 -> Level
+student_profile_mentor_view.dart:77 -> XP
+student_profile_mentor_view.dart:77 -> 1240
+student_profile_mentor_view.dart:78 -> Streak
+student_profile_mentor_view.dart:78 -> 12d
+student_profile_mentor_view.dart:79 -> Hours
+student_profile_mentor_view.dart:79 -> 86
+student_profile_mentor_view.dart:85 -> Study Progress
+student_profile_mentor_view.dart:89 -> Mathematics
+student_profile_mentor_view.dart:91 -> Physics
+student_profile_mentor_view.dart:93 -> Chemistry
+student_profile_mentor_view.dart:95 -> English
+student_profile_mentor_view.dart:102 -> Recent Activity
+student_profile_mentor_view.dart:116 -> Send Feedback
+student_profile_mentor_view.dart:126 -> Message
+onboarding_screen.dart:23 -> Smart Reminders
+onboarding_screen.dart:24 -> Never miss deadlines
+onboarding_screen.dart:31 -> AI-Powered Timetables
+onboarding_screen.dart:32 -> Study smarter, not harder
+onboarding_screen.dart:39 -> Mentor Guidance
+onboarding_screen.dart:40 -> Get expert help anytime
+progress_dashboard_screen.dart:131 -> Study Hours
+progress_dashboard_screen.dart:140 -> Tasks Done
+progress_dashboard_screen.dart:155 -> Streak
+progress_dashboard_screen.dart:164 -> Score
+progress_dashboard_screen.dart:354 -> Completed
+progress_dashboard_screen.dart:356 -> Pending
+progress_dashboard_screen.dart:358 -> Missed
+student_dashboard.dart:321 -> Today
+student_dashboard.dart:331 -> Study Streak
+mentor_profile_view_screen.dart:101 -> 👨‍🎓
+mentor_profile_view_screen.dart:155 -> Ananya K.
+mentor_profile_view_screen.dart:157 -> Raj P.
+mentor_profile_view_screen.dart:159 -> Priya S.
+mentor_profile_view_screen.dart:168 -> Send Request
+mentor_profile_view_screen.dart:182 -> Message
+edit_profile_screen.dart:285 -> Notifications Enabled
+edit_profile_screen.dart:286 -> Exact Alarms Allowed
+edit_profile_screen.dart:287 -> Service Initialized
+edit_profile_screen.dart:442 -> Full Name
+edit_profile_screen.dart:443 -> Email
+edit_profile_screen.dart:445 -> Phone
+edit_profile_screen.dart:451 -> Bio
+student_profile_screen.dart:206 -> Level
+student_profile_screen.dart:208 -> Points
+student_profile_screen.dart:210 -> Streak
+student_profile_screen.dart:235 -> Streak Master
+student_profile_screen.dart:237 -> Rising Star
+student_profile_screen.dart:239 -> Bookworm
+student_profile_screen.dart:241 -> Champion
+student_profile_screen.dart:253 -> Change Password
+student_profile_screen.dart:255 -> Privacy Settings
+student_profile_screen.dart:275 Text() -> English
+student_profile_screen.dart:276 Text() -> Hindi (हिन्दी)
+student_profile_screen.dart:277 Text() -> Bengali (বাংলা)
+student_profile_screen.dart:278 Text() -> Marathi (मराठी)
+student_profile_screen.dart:279 Text() -> Telugu (తెలుగు)
+student_profile_screen.dart:280 Text() -> Tamil (தமிழ்)
+student_profile_screen.dart:281 Text() -> Gujarati (ગુજરાતી)
+student_profile_screen.dart:282 Text() -> Kannada (ಕನ್ನಡ)
+student_profile_screen.dart:283 Text() -> Urdu (اردو)
+student_profile_screen.dart:303 Text() -> Nokia Classic
+student_profile_screen.dart:304 Text() -> Classic Phone
+student_profile_screen.dart:305 Text() -> Gentle Chime
+student_profile_screen.dart:306 Text() -> Morning Bell
+student_profile_screen.dart:307 Text() -> Soft Melody
+student_profile_screen.dart:308 Text() -> Bright Tone
+student_profile_screen.dart:309 Text() -> Crystal Alert
+student_profile_screen.dart:310 Text() -> Rising Pulse
+student_profile_screen.dart:311 Text() -> Echo Ring
+student_profile_screen.dart:316 -> pref_ringtone
+student_profile_screen.dart:350 -> pref_session_duration
+student_profile_screen.dart:367 -> pref_break_duration
+student_profile_screen.dart:380 -> Study Reminders
+student_profile_screen.dart:380 -> pref_reminder_notif
+student_profile_screen.dart:381 -> Voice Alerts (Beta)
+student_profile_screen.dart:381 -> pref_voice_notif
+student_profile_screen.dart:382 -> Mentor Messages
+student_profile_screen.dart:382 -> pref_mentor_msgs
+student_profile_screen.dart:383 -> System Notifications
+student_profile_screen.dart:383 -> pref_system_notif
+student_profile_screen.dart:422 -> Language
+student_profile_screen.dart:436 -> Help & FAQ
+student_profile_screen.dart:438 -> Contact Support
+student_profile_screen.dart:440 -> Terms of Service
+student_profile_screen.dart:442 -> About VidyaSetu
+student_profile_screen.dart:619 -> How do I generate a timetable?
+student_profile_screen.dart:619 -> Go to Timetable (Dashboard/Nav bar) → Tap 
+student_profile_screen.dart:620 -> How do I connect with a mentor?
+student_profile_screen.dart:620 -> Go to Mentors tab → Find Mentor → Send Request.
+student_profile_screen.dart:621 -> How do I take a quiz?
+student_profile_screen.dart:621 -> Click on a study session in your timetable → Start Quiz.
+student_profile_screen.dart:622 -> What does Streak mean?
+student_profile_screen.dart:622 -> It is the number of consecutive days you have completed at least one study session.
+student_profile_screen.dart:652 -> Email
+student_profile_screen.dart:653 -> Help Center
+student_profile_screen.dart:693 -> Version
+student_profile_screen.dart:694 -> Build
+student_profile_screen.dart:695 -> For
+add_edit_reminder_screen.dart:178 -> Title
+add_edit_reminder_screen.dart:185 -> Type
+add_edit_reminder_screen.dart:212 -> Date
+add_edit_reminder_screen.dart:249 -> Time
+add_edit_reminder_screen.dart:283 -> Priority
+add_edit_reminder_screen.dart:322 -> Description
+add_edit_reminder_screen.dart:331 -> Notifications
+add_edit_reminder_screen.dart:341 -> Popup Notification
+add_edit_reminder_screen.dart:345 -> Voice Notification
+add_edit_reminder_screen.dart:354 -> Remind Before
+add_edit_reminder_screen.dart:366 -> 5 min
+add_edit_reminder_screen.dart:367 -> 15 min
+add_edit_reminder_screen.dart:368 -> 30 min
+add_edit_reminder_screen.dart:369 -> 1 hour
+add_edit_reminder_screen.dart:370 -> 1 day
+add_edit_reminder_screen.dart:376 -> Repeat
+daily_study_plan_screen.dart:580 -> 📚 Study Resources
+daily_study_plan_screen.dart:587 -> 🎬 YouTube Videos
+daily_study_plan_screen.dart:612 -> 🧠 Test Your Knowledge
+daily_study_plan_screen.dart:656 -> No resources found
+daily_study_plan_screen.dart:695 -> No videos found
+daily_study_plan_screen.dart:736 -> No quiz available
+edit_timetable_slot_screen.dart:74 -> Topic / Chapter
+edit_timetable_slot_screen.dart:91 -> Location (Optional)
+edit_timetable_slot_screen.dart:100 -> Notes
+generate_timetable_screen.dart:332 -> View PDF
+generate_timetable_screen.dart:339 -> Remove
+generate_timetable_screen.dart:436 -> Analyzing Your Syllabus
+generate_timetable_screen.dart:441 -> Reading PDF
+generate_timetable_screen.dart:442 -> Finding subjects
+generate_timetable_screen.dart:443 -> Extracting topics
+generate_timetable_screen.dart:444 -> Almost done
+generate_timetable_screen.dart:972 -> Final Exam
+generate_timetable_screen.dart:999 -> Before PT1
+generate_timetable_screen.dart:1002 -> PT1 → PT2
+generate_timetable_screen.dart:1002 -> Complete second portion
+generate_timetable_screen.dart:1004 -> PT2 → PT3
+generate_timetable_screen.dart:1004 -> Complete third portion
+generate_timetable_screen.dart:1351 -> Crafting Your Plan
+generate_timetable_screen.dart:1356 -> Checking calendar
+generate_timetable_screen.dart:1357 -> Scheduling sessions
+generate_timetable_screen.dart:1358 -> Balancing subjects
+generate_timetable_screen.dart:1359 -> Finishing up
+generate_timetable_screen.dart:1402 -> Final
+generate_timetable_screen.dart:1697 -> Final
+session_detail_screen.dart:219 -> STUDY NOTES
+session_detail_screen.dart:228 -> Tap 
+session_detail_screen.dart:232 -> VIDEO RESOURCES
+session_detail_screen.dart:259 -> Tap 
+session_quiz_screen.dart:313 -> Score
+session_quiz_screen.dart:315 -> Percentage
+session_quiz_screen.dart:317 -> Status
+timetable_overview_screen.dart:96 -> 0xFF
+timetable_overview_screen.dart:433 -> Reschedule
+college_timetable_input.dart:82 -> Busy (College)
+college_timetable_input.dart:84 -> Free

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/timetable/college_timetable_input.dart';
@@ -11,6 +12,8 @@ import '../../../services/holiday_service.dart' as hs;
 import '../../../services/firestore_service.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../models/timetable_model.dart';
+import '../../../services/notification_service.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class GenerateTimetableScreen extends StatefulWidget {
   const GenerateTimetableScreen({super.key});
@@ -65,7 +68,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: Text('Smart Timetable',
+        title: Text(context.tr('smart_timetable'),
             style: Theme.of(context).textTheme.headlineSmall),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -187,14 +190,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
           Center(
             child: Column(
               children: [
-                const Icon(Icons.auto_stories,
+                Icon(Icons.auto_stories,
                     size: 48, color: AppTheme.accentBlue),
-                const SizedBox(height: 16),
-                Text('Upload Syllabus',
+                SizedBox(height: 16),
+                Text(context.tr('upload_syllabus'),
                     style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
-                  'Upload one or more university syllabus PDFs',
+                  context.tr('upload_one_or_more_university_syllabus_p'),
                   textAlign: TextAlign.center,
                   style: Theme.of(context)
                       .textTheme
@@ -216,13 +219,13 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text('Uploaded Files (${_pickedFiles.length})',
-                        style: const TextStyle(
+                    Text('${context.tr('uploaded_files')} (${_pickedFiles.length})',
+                        style: TextStyle(
                             fontWeight: FontWeight.bold, fontSize: 16)),
                     TextButton.icon(
                       onPressed: _pickFile,
-                      icon: const Icon(Icons.add_rounded, size: 20),
-                      label: const Text('Add More'),
+                      icon: Icon(Icons.add_rounded, size: 20),
+                      label: Text(context.tr('add_more')),
                       style: TextButton.styleFrom(
                           foregroundColor: AppTheme.accentBlue),
                     ),
@@ -254,21 +257,21 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 12,
-              offset: const Offset(0, 4),
+              offset: Offset(0, 4),
             ),
           ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.cloud_upload_outlined,
               size: 56,
               color: AppTheme.accentBlue,
             ),
-            const SizedBox(height: 12),
-            const Text(
-              'Tap to Upload PDF(s)',
+            SizedBox(height: 12),
+            Text(
+              context.tr('tap_to_upload_pdfs'),
               style: TextStyle(
                 color: AppTheme.accentBlue,
                 fontSize: 15,
@@ -276,7 +279,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
               ),
             ),
             Text(
-              'Select multiple files if needed',
+              context.tr('select_multiple_files_if_needed'),
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
             ),
           ],
@@ -326,14 +329,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
               icon: Icon(Icons.visibility_outlined,
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
               onPressed: () => _viewFile(file),
-              tooltip: 'View PDF',
+              tooltip: context.tr('view_pdf'),
             ),
             IconButton(
-              icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+              icon: Icon(Icons.close_rounded, color: Colors.redAccent),
               onPressed: () {
                 setState(() => _pickedFiles.remove(file));
               },
-              tooltip: 'Remove',
+              tooltip: context.tr('remove'),
             ),
           ],
         ),
@@ -354,9 +357,9 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Size: ${(file.size / 1024).toStringAsFixed(1)} KB'),
-              const SizedBox(height: 16),
-              const Text(
-                'Extracted Text Preview:',
+              SizedBox(height: 16),
+              Text(
+                context.tr('extracted_text_preview'),
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
               ),
               const SizedBox(height: 8),
@@ -376,21 +379,21 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                     }
                     if (snapshot.hasError) {
                       return Text('Error extracting text: ${snapshot.error}',
-                          style: const TextStyle(fontSize: 11, color: Colors.red));
+                          style: TextStyle(fontSize: 11, color: Colors.red));
                     }
                     final text = snapshot.data ?? 'No text found';
                     return SingleChildScrollView(
                       child: Text(
                         text.length > 2000 ? '${text.substring(0, 2000)}...' : text,
-                        style: const TextStyle(fontSize: 11, fontFamily: 'monospace'),
+                        style: TextStyle(fontSize: 11, fontFamily: 'monospace'),
                       ),
                     );
                   },
                 ),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'This preview shows the raw text that will be used for AI analysis.',
+              SizedBox(height: 12),
+              Text(
+                context.tr('this_preview_shows_the_raw_text_that_wil'),
                 style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
               ),
             ],
@@ -399,7 +402,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Back'),
+            child: Text(context.tr('back')),
           ),
         ],
       ),
@@ -430,7 +433,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildProcessingStep() {
     return _AnimatedLoadingScreen(
-      title: 'Analyzing Your Syllabus',
+      title: context.tr('analyzing_your_syllabus'),
       statusText: _processingStatus,
       icon: Icons.auto_stories,
       color: AppTheme.accentBlue,
@@ -528,12 +531,12 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.warning_amber, size: 48, color: Colors.orange),
-            const SizedBox(height: 16),
-            Text('No subjects found',
+            Icon(Icons.warning_amber, size: 48, color: Colors.orange),
+            SizedBox(height: 16),
+            Text(context.tr('no_subjects_found'),
                 style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text('Try uploading a different PDF',
+            SizedBox(height: 8),
+            Text(context.tr('try_uploading_a_different_pdf'),
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ],
         ),
@@ -552,19 +555,19 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Select Subjects',
+        Text(context.tr('select_subjects'),
             style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text('${_extractedSubjects.length} subjects found across ${sortedKeys.length} semester(s)',
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
 
         // Select All
         AppCard(
           child: CheckboxListTile(
             value: _selectAll,
             activeColor: AppTheme.accentBlue,
-            title: const Text('Select All',
+            title: Text(context.tr('select_all'),
                 style: TextStyle(fontWeight: FontWeight.bold)),
             subtitle: Text(
                 '${_extractedSubjects.where((s) => s.isSelected).length} of ${_extractedSubjects.length} selected'),
@@ -727,10 +730,10 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('College Timetable',
+        Text(context.tr('college_timetable'),
             style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text('Tap time slots where you have college lectures',
+        SizedBox(height: 4),
+        Text(context.tr('tap_time_slots_where_you_have_college_le'),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 20),
         AppCard(
@@ -742,15 +745,15 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        SizedBox(height: 16),
         AppCard(
           child: ListTile(
             leading:
-                const Icon(Icons.info_outline, color: AppTheme.accentBlue),
-            title: const Text('Study only after college',
+                Icon(Icons.info_outline, color: AppTheme.accentBlue),
+            title: Text(context.tr('study_only_after_college'),
                 style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
             subtitle: Text(
-              'On college days, sessions are scheduled only in the evening after your last lecture',
+              context.tr('on_college_days_sessions_are_scheduled_o'),
               style:
                   TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
             ),
@@ -767,10 +770,10 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Your Daily Routine',
+        Text(context.tr('your_daily_routine'),
             style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text('Tell us about your schedule so we plan around it',
+        SizedBox(height: 4),
+        Text(context.tr('tell_us_about_your_schedule_so_we_plan_a'),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 24),
         _buildSliderCard(Icons.bedtime, Colors.indigo, 'Sleep Duration',
@@ -787,7 +790,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         _buildSliderCard(Icons.coffee, Colors.brown, 'Break Time',
             _constraints.breakMinutes, 'min', 0, 120, 12,
             (v) => setState(() => _constraints.breakMinutes = v)),
-        const SizedBox(height: 8),
+        SizedBox(height: 8),
         AppCard(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -797,25 +800,25 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Flexible(
-                      child: Text('Unavailable (college days)',
+                      child: Text(context.tr('unavailable_college_days'),
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                           overflow: TextOverflow.ellipsis),
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8),
                     Text(
                       '${_constraints.totalUnavailableHours.toStringAsFixed(1)} hrs',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.accentBlue,
                           fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
-                const SizedBox(height: 4),
+                SizedBox(height: 4),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Flexible(
-                      child: Text('Unavailable (holidays/weekends)',
+                      child: Text(context.tr('unavailable_holidaysweekends'),
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12),
                           overflow: TextOverflow.ellipsis),
                     ),
@@ -890,14 +893,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Exam Schedule',
+        Text(context.tr('exam_schedule'),
             style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
+        SizedBox(height: 4),
         Text(
-          'Set your periodic test and final exam dates. Syllabus will be divided accordingly.',
+          context.tr('set_your_periodic_test_and_final_exam_da'),
           style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         // PT Count
         AppCard(
@@ -906,7 +909,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Number of Periodic Tests (PT)',
+                Text(context.tr('number_of_periodic_tests_pt'),
                     style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 12),
                 Row(
@@ -966,7 +969,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
 
         // Final Exam Date Range
         _buildDateRangePickerCard(
-          label: 'Final Exam',
+          label: context.tr('final_exam'),
           icon: Icons.school,
           iconColor: Colors.red,
           startDate: _finalExamStartDate,
@@ -975,7 +978,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
           onTapEnd: () => _pickExamDate(0, isStart: false, isPt: false),
         ),
 
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         AppCard(
           child: Padding(
             padding: const EdgeInsets.all(16),
@@ -984,23 +987,23 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.lightbulb_outline,
+                    Icon(Icons.lightbulb_outline,
                         color: Colors.amber, size: 20),
-                    const SizedBox(width: 8),
-                    const Text('How it works',
+                    SizedBox(width: 8),
+                    Text(context.tr('how_it_works'),
                         style: TextStyle(fontWeight: FontWeight.bold,
                             fontSize: 13)),
                   ],
                 ),
-                const SizedBox(height: 8),
-                _infoRow('Before PT1',
+                SizedBox(height: 8),
+                _infoRow(context.tr('before_pt1'),
                     _ptCount == 1 ? 'Complete full syllabus' : 'Complete first portion'),
                 if (_ptCount >= 2)
-                  _infoRow('PT1 → PT2', 'Complete second portion'),
+                  _infoRow(context.tr('pt1__pt2'), 'Complete second portion'),
                 if (_ptCount >= 3)
-                  _infoRow('PT2 → PT3', 'Complete third portion'),
+                  _infoRow(context.tr('pt2__pt3'), 'Complete third portion'),
                 _infoRow(
-                    'After last PT → Finals',
+                    context.tr('after_last_pt__finals'),
                     'Revision of ALL topics (no college hours)'),
               ],
             ),
@@ -1084,7 +1087,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('From',
+                            Text(context.tr('from'),
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
@@ -1130,7 +1133,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('To',
+                            Text(context.tr('to'),
                                 style: TextStyle(
                                     fontSize: 11,
                                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
@@ -1164,9 +1167,17 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   Future<void> _pickExamDate(int index,
       {required bool isStart, required bool isPt}) async {
     final now = DateTime.now();
+    
+    DateTime? currentSelection;
+    if (isPt) {
+      currentSelection = isStart ? _ptStartDates[index] : (_ptEndDates[index] ?? _ptStartDates[index]);
+    } else {
+      currentSelection = isStart ? _finalExamStartDate : (_finalExamEndDate ?? _finalExamStartDate);
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: now.add(const Duration(days: 30)),
+      initialDate: currentSelection ?? now,
       firstDate: now,
       lastDate: now.add(const Duration(days: 365)),
     );
@@ -1204,10 +1215,10 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Plan Summary',
+        Text(context.tr('plan_summary'),
             style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text('Review before generating',
+        SizedBox(height: 4),
+        Text(context.tr('review_before_generating'),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
         const SizedBox(height: 24),
 
@@ -1223,22 +1234,22 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
           Expanded(child: _summaryCard(Icons.access_time,
               '${totalHours.toStringAsFixed(0)}h', 'Study Time',
               Colors.orange)),
-          const SizedBox(width: 12),
+          SizedBox(width: 12),
           Expanded(child: _summaryCard(Icons.calendar_today,
               '$weeklyHrs h', 'Per Week', Colors.green)),
         ]),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         if (predictedEnd != null)
           AppCard(
             child: ListTile(
-              leading: const Icon(Icons.flag, color: AppTheme.successGreen),
-              title: const Text('Completion Target',
+              leading: Icon(Icons.flag, color: AppTheme.successGreen),
+              title: Text(context.tr('completion_target'),
                   style: TextStyle(fontWeight: FontWeight.bold)),
               subtitle: Text(DateFormat('dd MMM yyyy').format(predictedEnd)),
             ),
           ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
 
         // Exam info
         if (_ptCount > 0) ...[
@@ -1248,7 +1259,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Exam Schedule',
+                  Text(context.tr('exam_schedule'),
                       style: TextStyle(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 8),
                   ...List.generate(_ptCount, (i) {
@@ -1276,14 +1287,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text('Final Exam',
+                        Text(context.tr('final_exam'),
                             style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 color: Colors.red)),
                         Flexible(
                           child: Text(
                             '${DateFormat('dd MMM').format(_finalExamStartDate!)}${_finalExamEndDate != null ? ' – ${DateFormat('dd MMM').format(_finalExamEndDate!)}' : ''}',
-                              style: const TextStyle(color: Colors.red),
+                              style: TextStyle(color: Colors.red),
                               overflow: TextOverflow.ellipsis),
                         ),
                       ],
@@ -1296,8 +1307,8 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
 
         // Holidays
         if (_holidays.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Text('Upcoming Holidays',
+          SizedBox(height: 12),
+          Text(context.tr('upcoming_holidays'),
               style: Theme.of(context).textTheme.titleMedium),
           const SizedBox(height: 8),
           ..._holidays.take(5).map((h) => ListTile(
@@ -1324,7 +1335,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
           Text(value,
               style: TextStyle(
                   fontSize: 22, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(label,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
         ]),
@@ -1337,22 +1348,22 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   // ═══════════════════════════════════════════════════════════════════════════
   Widget _buildGeneratingStep() {
     return _AnimatedLoadingScreen(
-      title: 'Crafting Your Plan',
+      title: context.tr('crafting_your_plan'),
       statusText: _generatingStatus,
       icon: Icons.calendar_month,
       color: const Color(0xFF8B5CF6),
-      stages: const [
-        _LoadingStage('📅', 'Checking calendar'),
-        _LoadingStage('📊', 'Scheduling sessions'),
-        _LoadingStage('🔄', 'Balancing subjects'),
-        _LoadingStage('✨', 'Finishing up'),
+      stages: [
+        _LoadingStage('📅', context.tr('checking_calendar')),
+        _LoadingStage('📊', context.tr('scheduling_sessions')),
+        _LoadingStage('🔄', context.tr('balancing_subjects')),
+        _LoadingStage('✨', context.tr('finishing_up')),
       ],
-      tips: const [
-        '📅 Your plan adapts to your college schedule',
-        '🔄 Subjects are rotated daily for variety',
-        '🏖️ Holidays get 1.5× more study time',
-        '📝 Each session includes quiz & resources',
-        '🎯 Equal coverage ensures no subject falls behind',
+      tips: [
+        '📅 ' + context.tr('plan_adapts_to_college'),
+        '🔄 ' + context.tr('subjects_rotated_daily'),
+        '🏖️ ' + context.tr('holidays_study_time'),
+        '📝 ' + context.tr('session_includes_quiz'),
+        '🎯 ' + context.tr('equal_coverage_subject'),
       ],
     );
   }
@@ -1360,13 +1371,14 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
   Future<void> _generatePlan() async {
     setState(() {
       _isGenerating = true;
-      _generatingStatus = 'Fetching holidays...';
+      _generatingStatus = context.tr('fetching_holidays');
     });
 
     try {
-      _holidays = await hs.HolidayService.getHolidays();
-
-      if (mounted) setState(() => _generatingStatus = 'Building exam schedule...');
+      final allHolidays = await hs.HolidayService.getHolidays();
+      final today = DateTime.now().subtract(const Duration(days: 1));
+      _holidays = allHolidays.where((h) => h.date.isAfter(today)).toList();
+      if (mounted) setState(() => _generatingStatus = context.tr('building_exam_schedule'));
       await Future.delayed(const Duration(milliseconds: 400));
 
       // Build ExamSchedule from user input
@@ -1387,7 +1399,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
           ptDates: ptDates,
           finalExamDate: _finalExamStartDate != null
               ? ExamDate(
-                  label: 'Final',
+                  label: context.tr('final'),
                   startDate: _finalExamStartDate!,
                   endDate: _finalExamEndDate ?? _finalExamStartDate!,
                 )
@@ -1397,6 +1409,10 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
 
       if (mounted) setState(() => _generatingStatus = 'Distributing topics...');
       await Future.delayed(const Duration(milliseconds: 400));
+      
+      final prefs = await SharedPreferences.getInstance();
+      final sessionMinutes = (prefs.getDouble('pref_session_duration') ?? 45).toInt();
+      final breakMinutes = (prefs.getDouble('pref_break_duration') ?? 10).toInt();
 
       final startDate = DateTime.now().add(const Duration(days: 1));
       final plan = TimetableGeneratorService.generateStudyPlan(
@@ -1406,6 +1422,8 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         holidays: _holidays,
         startDate: startDate,
         examSchedule: examSchedule,
+        sessionMinutes: sessionMinutes,
+        breakMinutes: breakMinutes,
       );
 
       if (mounted) setState(() => _generatingStatus = 'Finalizing...');
@@ -1437,12 +1455,12 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.warning_amber, size: 48, color: Colors.orange),
-            const SizedBox(height: 16),
-            Text('No sessions generated',
+            Icon(Icons.warning_amber, size: 48, color: Colors.orange),
+            SizedBox(height: 16),
+            Text(context.tr('no_sessions_generated'),
                 style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 8),
-            Text('Try adjusting your constraints',
+            SizedBox(height: 8),
+            Text(context.tr('try_adjusting_your_constraints'),
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ],
         ),
@@ -1461,10 +1479,10 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         Padding(
           padding: const EdgeInsets.all(20),
           child: Column(children: [
-            const Icon(Icons.check_circle,
+            Icon(Icons.check_circle,
                 size: 48, color: AppTheme.successGreen),
-            const SizedBox(height: 12),
-            Text('Plan Ready!',
+            SizedBox(height: 12),
+            Text(context.tr('plan_ready'),
                 style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 4),
             Text(
@@ -1491,7 +1509,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                     padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(children: [
                       Text(DateFormat('EEE, dd MMM').format(date),
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 14)),
                       if (isHoliday)
                         Container(
@@ -1502,7 +1520,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                             color: Colors.orange.shade100,
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text('🎉 Holiday/Weekend',
+                          child: Text(context.tr('holidayweekend'),
                               style: TextStyle(
                                   fontSize: 10,
                                   color: Colors.orange.shade800)),
@@ -1581,7 +1599,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Back'),
+                child: Text(context.tr('back')),
               ),
             ),
           if (_currentStep > 0 && _currentStep >= 2)
@@ -1623,7 +1641,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
       case 0: // Upload → Processing
         if (_pickedFiles.isEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Please upload at least one PDF syllabus')));
+              SnackBar(content: Text(context.tr('please_upload_at_least_one_pdf'))));
           return;
         }
         setState(() => _currentStep = 1);
@@ -1634,7 +1652,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         final hasSelected = _extractedSubjects.any((s) => s.isSelected);
         if (!hasSelected) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Select at least one subject')));
+              SnackBar(content: Text(context.tr('select_at_least_one_subject'))));
           return;
         }
         setState(() => _currentStep = 3);
@@ -1651,7 +1669,9 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
       case 5: // Exam Schedule → Summary
         // Pre-fetch holidays and calculate summary
         try {
-          _holidays = await hs.HolidayService.getHolidays();
+          final allHolidays = await hs.HolidayService.getHolidays();
+          final today = DateTime.now().subtract(const Duration(days: 1));
+          _holidays = allHolidays.where((h) => h.date.isAfter(today)).toList();
         } catch (_) {
           _holidays = [];
         }
@@ -1674,7 +1694,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
             ptDates: ptDates,
             finalExamDate: _finalExamStartDate != null
                 ? ExamDate(
-                    label: 'Final',
+                    label: context.tr('final'),
                     startDate: _finalExamStartDate!,
                     endDate: _finalExamEndDate ?? _finalExamStartDate!,
                   )
@@ -1714,12 +1734,25 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         final firestore = FirestoreService();
         await firestore.saveStudyPlan(userId, _studyPlan!);
         await firestore.updateUser(userId, {'isTimetableCreated': true});
+
+        // Schedule notifications for all future study sessions
+        final notifService = NotificationService();
+        final sessionMaps = _studyPlan!.sessions
+            .where((s) => s.startTime.isAfter(DateTime.now()))
+            .map((s) => {
+                  'subject': s.subject,
+                  'topic': s.topic,
+                  'startTime': s.startTime.toIso8601String(),
+                  'durationMinutes': s.durationMinutes,
+                })
+            .toList();
+        await notifService.scheduleStudyPlanNotifications(sessions: sessionMaps);
       }
       if (mounted) {
         Navigator.pushNamedAndRemoveUntil(
             context, '/student/dashboard', (route) => false);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('🎉 Smart Timetable Created!'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(context.tr('smart_timetable_created_notifi')),
           backgroundColor: AppTheme.successGreen,
         ));
       }
@@ -1728,7 +1761,7 @@ class _GenerateTimetableScreenState extends State<GenerateTimetableScreen> {
         Navigator.pushNamedAndRemoveUntil(
             context, '/student/dashboard', (route) => false);
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Timetable created (save pending)')));
+            SnackBar(content: Text(context.tr('timetable_created_save_pending'))));
       }
     }
   }

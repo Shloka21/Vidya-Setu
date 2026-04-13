@@ -4,6 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/firestore_service.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class VideoCallScreen extends StatefulWidget {
   const VideoCallScreen({super.key});
@@ -15,18 +17,44 @@ class VideoCallScreen extends StatefulWidget {
 class _VideoCallScreenState extends State<VideoCallScreen> {
   String _roomId = 'default';
   String _otherUserName = 'User';
+  String? _otherUserId;
   bool _launching = false;
   bool _inCall = false;
   final _jitsiMeet = JitsiMeet();
+  final _firestoreService = FirestoreService();
+
+  bool _hasAutoStarted = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_hasAutoStarted) return;
+    _hasAutoStarted = true;
+
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     if (args != null) {
       _roomId = args['roomId'] as String? ?? 'default';
       _otherUserName = args['otherUserName'] as String? ?? 'User';
+      _otherUserId = args['otherUserId'] as String?;
+      
+      final autoStart = args['autoStart'] as bool? ?? false;
+      final audioOnly = args['audioOnly'] as bool? ?? false;
+      
+      if (autoStart) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _startCall(audioOnly: audioOnly);
+        });
+      }
     }
+  }
+
+  @override
+  void dispose() {
+    // Clean up call signal when leaving
+    if (_inCall) {
+      _firestoreService.endCall(_roomId);
+    }
+    super.dispose();
   }
 
   Future<void> _startCall({bool audioOnly = false}) async {
@@ -35,15 +63,41 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final userName = auth.userModel?.name ?? 'User';
     final userEmail = auth.userModel?.email ?? '';
+    final uid = auth.userModel?.uid ?? '';
     final isMentor = auth.userModel?.role == 'mentor';
 
     try {
-      // Request hardware permissions explicitly to avoid Jitsi's internal Android clash
-      await [
+      // Request hardware permissions explicitly
+      final statuses = await [
         Permission.camera,
         Permission.microphone,
         Permission.bluetoothConnect,
       ].request();
+
+      // Check if critical permissions are denied
+      if (statuses[Permission.camera]?.isDenied == true ||
+          statuses[Permission.microphone]?.isDenied == true) {
+        if (mounted) {
+          setState(() => _launching = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.tr('camera_and_microphone_permissi')),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Signal incoming call to the other user (mentor → student)
+      if (isMentor && _otherUserId != null) {
+        await _firestoreService.startCall(
+          roomId: _roomId,
+          callerId: uid,
+          callerName: userName,
+          receiverId: _otherUserId!,
+        );
+      }
 
       var options = JitsiMeetConferenceOptions(
         room: 'vidyasetu-${_roomId.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '')}',
@@ -81,13 +135,33 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
         },
       );
 
-      await _jitsiMeet.join(options);
-      if (mounted) {
-        setState(() {
-          _launching = false;
-          _inCall = true;
-        });
-      }
+      // Add event listeners for call lifecycle
+      var listener = JitsiMeetEventListener(
+        conferenceTerminated: (url, error) {
+          if (mounted) {
+            setState(() {
+              _inCall = false;
+              _launching = false;
+            });
+          }
+          // Clean up call signal
+          _firestoreService.endCall(_roomId);
+        },
+        conferenceJoined: (url) {
+          if (mounted) {
+            setState(() {
+              _launching = false;
+              _inCall = true;
+            });
+          }
+          // Update call status
+          if (_otherUserId != null) {
+            _firestoreService.updateCallStatus(_roomId, 'accepted');
+          }
+        },
+      );
+
+      await _jitsiMeet.join(options, listener);
     } catch (e) {
       if (mounted) {
         setState(() => _launching = false);
@@ -95,14 +169,15 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
           SnackBar(content: Text('Could not start call: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
+      // Clean up call signal on failure
+      _firestoreService.endCall(_roomId);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      
-      appBar: AppBar(title: const Text('Video Call')),
+      appBar: AppBar(title: Text(context.tr('video_call'))),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -125,12 +200,12 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Text(_otherUserName, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 24, fontWeight: FontWeight.w700)),
-              const SizedBox(height: 8),
-              Text('Powered by Jitsi Meet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
-              const SizedBox(height: 12),
-              Text('No login required • Instant join', style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w500)),
+              SizedBox(height: 8),
+              Text(context.tr('powered_by_jitsi_meet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
+              SizedBox(height: 12),
+              Text(context.tr('no_login_required__instant_joi'), style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w500)),
               const SizedBox(height: 36),
 
               if (!_inCall) ...[
@@ -147,17 +222,17 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                      textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+                      textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: _launching ? null : () => _startCall(audioOnly: true),
-                    icon: const Icon(Icons.phone_rounded, size: 20),
-                    label: const Text('Audio Only'),
+                    icon: Icon(Icons.phone_rounded, size: 20),
+                    label: Text(context.tr('audio_only')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.accentBlue,
                       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -174,19 +249,19 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 48),
-                      const SizedBox(height: 12),
-                      Text('Call started!', style: TextStyle(color: AppTheme.successGreen, fontSize: 16, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Text('Switch to the call window to continue', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
+                      Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 48),
+                      SizedBox(height: 12),
+                      Text(context.tr('call_in_progress'), style: TextStyle(color: AppTheme.successGreen, fontSize: 16, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 4),
+                      Text(context.tr('switch_to_the_call_window_to_c'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 OutlinedButton.icon(
                   onPressed: () => _startCall(audioOnly: false),
-                  icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('Rejoin Call'),
+                  icon: Icon(Icons.refresh_rounded),
+                  label: Text(context.tr('rejoin_call')),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.accentBlue,
                     padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
@@ -194,16 +269,18 @@ class _VideoCallScreenState extends State<VideoCallScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 32),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Back to Chat', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15)),
-                ),
-              ],
-            ),
+              SizedBox(height: 32),
+              TextButton(
+                onPressed: () {
+                  _firestoreService.endCall(_roomId);
+                  Navigator.pop(context);
+                },
+                child: Text(context.tr('back_to_chat'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15)),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    );
   }
 }
-

@@ -17,6 +17,8 @@ class TimetableGeneratorService {
     required DateTime startDate,
     ExamSchedule? examSchedule,
     int planDurationDays = 90,
+    int sessionMinutes = 45,
+    int breakMinutes = 10,
   }) {
     final selectedSubjects = subjects.where((s) => s.isSelected).toList();
     final endDate = examSchedule?.finalExamDate?.startDate ??
@@ -125,6 +127,8 @@ class TimetableGeneratorService {
           constraints: constraints,
           holidays: holidays,
           isRevisionPeriod: isRevision,
+          sessionMinutes: sessionMinutes,
+          breakMinutes: breakMinutes,
         );
         sessions.addAll(chunkSessions);
 
@@ -151,6 +155,8 @@ class TimetableGeneratorService {
         constraints: constraints,
         holidays: holidays,
         isRevisionPeriod: false,
+        sessionMinutes: sessionMinutes,
+        breakMinutes: breakMinutes,
       );
       sessions.addAll(scheduled);
 
@@ -186,6 +192,8 @@ class TimetableGeneratorService {
     required LifestyleConstraints constraints,
     required List<HolidayInfo> holidays,
     required bool isRevisionPeriod,
+    required int sessionMinutes,
+    required int breakMinutes,
   }) {
     final sessions = <TimetableSession>[];
     final totalDays = endDate.difference(startDate).inDays;
@@ -197,7 +205,7 @@ class TimetableGeneratorService {
       final dayInfo = _getDayInfo(
           currentDate, collegeSlots, constraints, holidays, isRevisionPeriod);
       if (dayInfo.availableMinutes >= 30) {
-        final slots = _generateStudySlots(currentDate, dayInfo, collegeSlots);
+        final slots = _generateStudySlots(currentDate, dayInfo, collegeSlots, sessionMinutes, breakMinutes);
         totalSlots += slots.length;
       }
     }
@@ -249,7 +257,7 @@ class TimetableGeneratorService {
 
       if (dayInfo.availableMinutes < 30) continue;
 
-      final slots = _generateStudySlots(currentDate, dayInfo, collegeSlots);
+      final slots = _generateStudySlots(currentDate, dayInfo, collegeSlots, sessionMinutes, breakMinutes);
       if (slots.isEmpty) continue;
 
       // Determine how many subjects today (2-3)
@@ -419,11 +427,11 @@ class TimetableGeneratorService {
     DateTime date,
     _DayInfo dayInfo,
     List<CollegeSlot> collegeSlots,
+    int sessionMinutes,
+    int breakMinutes,
   ) {
     final slots = <_StudySlot>[];
     int remainingMinutes = dayInfo.availableMinutes;
-    const sessionMinutes = 50;
-    const breakMinutes = 10;
 
     int startHour;
     if (dayInfo.isFreeDay) {
@@ -478,6 +486,24 @@ class TimetableGeneratorService {
       while (currentMinute >= 60) {
         currentHour++;
         currentMinute -= 60;
+      }
+    }
+
+    // ── Post-process: Insert 5-min break between back-to-back slots ──
+    for (int i = 0; i < slots.length - 1; i++) {
+      final currentEnd = slots[i].startTime.add(
+        Duration(minutes: slots[i].durationMinutes),
+      );
+      final nextStart = slots[i + 1].startTime;
+      final gap = nextStart.difference(currentEnd).inMinutes;
+
+      // If gap is less than 5 minutes (back-to-back), shorten current slot
+      if (gap < 5 && slots[i].durationMinutes > 15) {
+        final trimAmount = (5 - gap).clamp(1, 10);
+        slots[i] = _StudySlot(
+          startTime: slots[i].startTime,
+          durationMinutes: slots[i].durationMinutes - trimAmount,
+        );
       }
     }
 

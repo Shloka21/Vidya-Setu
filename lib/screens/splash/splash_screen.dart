@@ -4,6 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/notification_service.dart';
+
+import 'package:vidyasetu/services/localization_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -17,10 +20,12 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   late Animation<double> _fadeAnimation;
+  bool _isColdStartAlarm = false;
 
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -36,6 +41,18 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
       ),
     );
+
+    // Check if the app was launched by a notification (cold start alarm)
+    if (NotificationService().initialResponse != null) {
+      _isColdStartAlarm = true;
+      // Don't animate splash — go straight to alarm screen
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          NotificationService().handleInitialNotification(context);
+        }
+      });
+      return;
+    }
 
     _controller.forward();
     _navigateAfterDelay();
@@ -76,6 +93,15 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    // If this is a cold-start alarm launch, render a pure black screen
+    // so the user never sees the splash UI flash before the alarm screen.
+    if (_isColdStartAlarm) {
+      return const Scaffold(
+        backgroundColor: Colors.black,
+        body: SizedBox.shrink(),
+      );
+    }
+
     return Scaffold(
       
       body: Center(
@@ -117,9 +143,9 @@ class _SplashScreenState extends State<SplashScreen>
                             letterSpacing: -1,
                           ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
-                      'SMART LEARNING COMPANION',
+                      context.tr('smart_learning_companion'),
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                         fontSize: 12,

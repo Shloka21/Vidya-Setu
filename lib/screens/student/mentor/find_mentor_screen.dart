@@ -6,6 +6,7 @@ import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class FindMentorScreen extends StatefulWidget {
   const FindMentorScreen({super.key});
@@ -102,12 +103,13 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
         'mentorId': mentorId,
         'mentorName': mentor['name'] ?? '',
         'status': 'pending',
+        'requestedBy': studentId, // Explicitly identify sender
         'createdAt': Timestamp.now(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Request sent to ${mentor['name']}!'),
+            content: Text('${context.tr('request_sent_to')} ${mentor['name']}!'),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -117,7 +119,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('${context.tr('error')}: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
     }
@@ -143,7 +145,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       
-      appBar: AppBar(title: const Text('Find a Mentor')),
+      appBar: AppBar(title: Text(context.tr('find_a_mentor'))),
       body: Column(
         children: [
           Padding(
@@ -153,7 +155,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
               onChanged: _filterMentors,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
-                hintText: 'Search by name or subject...',
+                hintText: context.tr('search_by_name_or_subject'),
                 hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                 prefixIcon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                 filled: true,
@@ -167,18 +169,18 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
           ),
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : _filteredMentors.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.person_search_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 64),
-                            const SizedBox(height: 16),
-                            Text('No mentors found',
+                            SizedBox(height: 16),
+                            Text(context.tr('no_mentors_found'),
                                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 18, fontWeight: FontWeight.w600)),
-                            const SizedBox(height: 8),
-                            Text('Try a different search term',
+                            SizedBox(height: 8),
+                            Text(context.tr('try_a_different_search_term'),
                                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                           ],
                         ),
@@ -201,12 +203,10 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
     final name = mentor['name'] as String? ?? 'Mentor';
     final subjects = List<String>.from(mentor['subjectsTaught'] ?? []);
     final rating = (mentor['rating'] ?? 0).toDouble();
-    final students = mentor['studentCount'] ?? 0;
-    final maxStudents = mentor['maxStudents'] ?? 20;
     final yearsExp = mentor['experienceYears'] ?? 0;
     final bio = mentor['bio'] as String? ?? '';
     final mentorId = mentor['uid'] as String? ?? '';
-    final status = _connectionStatus[mentorId]; // null, 'pending', 'approved', 'rejected'
+    final status = _connectionStatus[mentorId];
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -245,7 +245,17 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                     ],
                   ),
                 ),
+                if (status == 'approved') ...[
+                  IconButton(
+                    onPressed: () => _openChat(mentor),
+                    icon: Icon(Icons.chat_rounded, color: AppTheme.accentBlue, size: 24),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  const SizedBox(width: 12),
+                ],
                 Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Row(
                       mainAxisSize: MainAxisSize.min,
@@ -267,30 +277,9 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ],
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: students < maxStudents
-                        ? AppTheme.successGreen.withOpacity(0.1)
-                        : AppTheme.errorRed.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    students < maxStudents ? '${maxStudents - students} spots available' : 'Full',
-                    style: TextStyle(
-                      color: students < maxStudents ? AppTheme.successGreen : AppTheme.errorRed,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                _buildConnectionButton(mentor, status),
-              ],
-            ),
+            const SizedBox(height: 16),
+            // Full-width Connect button
+            _buildConnectionButton(mentor, status),
           ],
         ),
       ),
@@ -298,80 +287,50 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
   }
 
   Widget _buildConnectionButton(Map<String, dynamic> mentor, String? status) {
-    final students = mentor['studentCount'] ?? 0;
-    final maxStudents = mentor['maxStudents'] ?? 20;
+    String labelText = context.tr('connect');
+    IconData iconData = Icons.person_add_rounded;
+    Color btnColor = AppTheme.accentBlue;
+    VoidCallback? onPressed = () => _sendRequest(mentor);
 
     if (status == 'approved') {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.successGreen.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 16),
-                const SizedBox(width: 4),
-                Text('Connected', style: TextStyle(color: AppTheme.successGreen, fontSize: 12, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          SizedBox(
-            height: 36,
-            child: ElevatedButton.icon(
-              onPressed: () => _openChat(mentor),
-              icon: const Icon(Icons.chat_rounded, size: 16),
-              label: const Text('Message', style: TextStyle(fontSize: 13)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryNavy,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-            ),
-          ),
-        ],
-      );
+      labelText = context.tr('connected');
+      iconData = Icons.check_circle_rounded;
+      btnColor = AppTheme.successGreen;
+      onPressed = null; // Already connected
+    } else if (status == 'pending') {
+      labelText = context.tr('request_sent') ?? 'Connection Sent';
+      iconData = Icons.hourglass_top_rounded;
+      btnColor = AppTheme.warningAmber;
+      onPressed = null; // Wait for response
     }
 
-    if (status == 'pending') {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: AppTheme.warningAmber.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.hourglass_top_rounded, color: AppTheme.warningAmber, size: 16),
-            const SizedBox(width: 4),
-            Text('Request Sent', style: TextStyle(color: AppTheme.warningAmber, fontSize: 12, fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
-    }
-
-    // No connection or rejected — show Connect button
     return SizedBox(
-      height: 36,
+      width: double.infinity,
+      height: 40, // Increased height to accommodate larger font
       child: ElevatedButton.icon(
-        onPressed: students < maxStudents ? () => _sendRequest(mentor) : null,
-        icon: const Icon(Icons.person_add_rounded, size: 16),
-        label: const Text('Connect', style: TextStyle(fontSize: 13)),
+        onPressed: onPressed,
+        icon: Icon(iconData, size: 22),
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            labelText,
+            style: const TextStyle(
+              fontSize: 15, 
+              fontWeight: FontWeight.w600, 
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.accentBlue,
+          backgroundColor: btnColor,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          padding: const EdgeInsets.symmetric(horizontal: 16),
+          disabledBackgroundColor: btnColor.withOpacity(0.8),
+          disabledForegroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 16), // Explicit horizontal padding
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          elevation: 0,
         ),
       ),
     );
   }
 }
-

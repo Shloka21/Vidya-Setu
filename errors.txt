@@ -1,3 +1,0 @@
-ERROR|COMPILE_TIME_ERROR|UNDEFINED_IDENTIFIER|D:\\vidyasetu\\lib\\screens\\mentor\\students\\student_profile_mentor_view.dart|115|58|9|Undefined name 'AppRoutes'.
-ERROR|COMPILE_TIME_ERROR|UNDEFINED_IDENTIFIER|D:\\vidyasetu\\lib\\screens\\mentor\\students\\student_profile_mentor_view.dart|127|59|9|Undefined name 'AppRoutes'.
-ERROR|COMPILE_TIME_ERROR|DUPLICATE_DEFINITION|D:\\vidyasetu\\lib\\services\\firestore_service.dart|389|27|18|The name 'feedbackCollection' is already defined.

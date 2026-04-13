@@ -5,6 +5,8 @@ import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_button.dart';
 
+import 'package:vidyasetu/services/localization_service.dart';
+
 class RoleSelectionScreen extends StatefulWidget {
   const RoleSelectionScreen({super.key});
 
@@ -46,10 +48,10 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 40),
+              SizedBox(height: 40),
 
               Text(
-                'Choose\nYour Role',
+                context.tr('choosenyour_role'),
                 style: Theme.of(context).textTheme.displayMedium?.copyWith(
                       fontWeight: FontWeight.w800,
                       color: AppTheme.primaryNavy,
@@ -57,9 +59,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                       letterSpacing: -1,
                     ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
-                'Select how you want to use VidyaSetu',
+                context.tr('select_how_you_want_to_use_vidyasetu'),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   fontSize: 16,
@@ -88,11 +90,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                 color: AppTheme.accentPurple,
               ),
 
-              const Spacer(),
+              Spacer(),
 
               // Continue button
               AppButton(
-                text: 'Continue',
+                text: context.tr('continue'),
                 onPressed: _selectedRole != null ? _continue : null,
                 icon: Icons.arrow_forward_rounded,
               ),

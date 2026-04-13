@@ -11,6 +11,8 @@ import '../../../models/timetable_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
+import '../../../widgets/common/translated_text.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   const SessionDetailScreen({super.key});
@@ -47,7 +49,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       );
 
@@ -86,7 +88,7 @@ Keep it concise and student-friendly.''';
       if (mounted) {
         setState(() => _loadingNotes = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating notes: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('${context.tr('error_generating_notes')}: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
     }
@@ -98,7 +100,7 @@ Keep it concise and student-friendly.''';
 
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       );
 
@@ -122,7 +124,7 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
       if (mounted) {
         setState(() => _loadingVideos = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('${context.tr('error')}: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
     }
@@ -135,7 +137,7 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not open link: $e')),
+          SnackBar(content: Text('${context.tr('could_not_open_link_error')}: $e')),
         );
       }
     }
@@ -144,7 +146,7 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
   @override
   Widget build(BuildContext context) {
     if (_session == null) {
-      return Scaffold(appBar: AppBar(title: const Text('Session')), body: const Center(child: Text('No session data')));
+      return Scaffold(appBar: AppBar(title: Text(context.tr('session'))), body: Center(child: Text(context.tr('no_session_data'))));
     }
 
     final session = _session!;
@@ -153,7 +155,7 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Session Details')),
+      appBar: AppBar(title: Text(context.tr('session_details'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -181,55 +183,59 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
                       Expanded(child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(session.subject, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
-                          if (session.moduleName != null) Text(session.moduleName!, style: TextStyle(color: cs.onSurface.withOpacity(0.5), fontSize: 13)),
+                          TranslatedText(session.subject, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w700)),
+                          if (session.moduleName != null) TranslatedText(session.moduleName!, style: TextStyle(color: cs.onSurface.withOpacity(0.5), fontSize: 13)),
                         ],
                       )),
                       if (session.isCompleted)
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(color: AppTheme.successGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                          child: const Row(mainAxisSize: MainAxisSize.min, children: [
+                          child: Row(mainAxisSize: MainAxisSize.min, children: [
                             Icon(Icons.check_circle, color: AppTheme.successGreen, size: 16),
                             SizedBox(width: 4),
-                            Text('Done', style: TextStyle(color: AppTheme.successGreen, fontSize: 12, fontWeight: FontWeight.w600)),
+                            Text(context.tr('done'), style: TextStyle(color: AppTheme.successGreen, fontSize: 12, fontWeight: FontWeight.w600)),
                           ]),
                         ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Text(session.topic, style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w600)),
+                  TranslatedText(session.topic, style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 12),
                   Row(children: [
                     Icon(Icons.schedule_rounded, color: cs.onSurface.withOpacity(0.4), size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text(timeRange, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 14)),
-                    const SizedBox(width: 16),
+                    SizedBox(width: 16),
                     Icon(Icons.timer_outlined, color: cs.onSurface.withOpacity(0.4), size: 16),
-                    const SizedBox(width: 6),
+                    SizedBox(width: 6),
                     Text('${session.durationMinutes} min', style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 14)),
                   ]),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ─── Notes Section ───
-            _sectionHeader('STUDY NOTES', _generatedNotes == null
-                ? TextButton.icon(onPressed: _loadingNotes ? null : _generateNotes, icon: Icon(_loadingNotes ? Icons.hourglass_top : Icons.auto_awesome, size: 16), label: Text(_loadingNotes ? 'Generating...' : 'Generate with AI'))
+            _sectionHeader(context.tr('study_notes'), _generatedNotes == null
+                ? TextButton.icon(
+                    onPressed: _loadingNotes ? null : _generateNotes,
+                    icon: Icon(_loadingNotes ? Icons.hourglass_top : Icons.auto_awesome, size: 16),
+                    label: Text(_loadingNotes ? context.tr('generating_notes') : context.tr('generate_with_ai')),
+                  )
                 : null),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             if (_loadingNotes)
-              const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
+              Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()))
             else if (_generatedNotes != null)
               AppCard(padding: const EdgeInsets.all(16), child: MarkdownBody(data: _generatedNotes!, selectable: true))
             else
-              _emptyCard(Icons.note_alt_outlined, 'Tap "Generate with AI" to create study notes'),
-            const SizedBox(height: 24),
+              _emptyCard(Icons.note_alt_outlined, context.tr('tap_generate_with_to_create_notes')),
+            SizedBox(height: 24),
 
             // ─── Videos Section ───
-            _sectionHeader('VIDEO RESOURCES', _videoLinks.isEmpty
-                ? TextButton.icon(onPressed: _loadingVideos ? null : _searchVideos, icon: const Icon(Icons.play_circle_outline, size: 16), label: const Text('Find Videos'))
+            _sectionHeader(context.tr('video_resources'), _videoLinks.isEmpty
+                ? TextButton.icon(onPressed: _loadingVideos ? null : _searchVideos, icon: Icon(Icons.play_circle_outline, size: 16), label: Text(context.tr('find_videos')))
                 : null),
             const SizedBox(height: 8),
             if (_loadingVideos)
@@ -255,8 +261,8 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
                 ),
               ))
             else
-              _emptyCard(Icons.video_library_outlined, 'Tap "Find Videos" to get YouTube suggestions'),
-            const SizedBox(height: 32),
+              _emptyCard(Icons.video_library_outlined, context.tr('tap_to_find_videos_hint')),
+            SizedBox(height: 32),
 
             // ─── Complete Button ───
             if (!session.isCompleted)
@@ -264,8 +270,8 @@ Return ONLY the search queries, one per line, no numbering or bullets.''';
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => _navigateToQuiz(),
-                  icon: const Icon(Icons.quiz_rounded, size: 20),
-                  label: const Text('Mark Complete & Take Quiz'),
+                  icon: Icon(Icons.quiz_rounded, size: 20),
+                  label: Text(context.tr('mark_complete__take_quiz')),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.successGreen,
                     foregroundColor: Colors.white,

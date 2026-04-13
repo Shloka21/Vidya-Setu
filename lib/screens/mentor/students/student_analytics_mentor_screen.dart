@@ -4,6 +4,7 @@ import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class StudentAnalyticsMentorScreen extends StatefulWidget {
   const StudentAnalyticsMentorScreen({super.key});
@@ -72,8 +73,8 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Student Analytics')),
-        body: const Center(child: CircularProgressIndicator()),
+        appBar: AppBar(title: Text(context.tr('student_analytics'))),
+        body: Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -85,7 +86,7 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
     double avgProgress = totalStudents > 0 ? (totalProgress / totalStudents) : 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Student Analytics')),
+      appBar: AppBar(title: Text(context.tr('student_analytics'))),
       body: RefreshIndicator(
         onRefresh: _fetchAnalytics,
         child: SingleChildScrollView(
@@ -108,25 +109,25 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
                       AppTheme.accentPurple),
                 ],
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Row(
                 children: [
                   _overviewCard(context, 'Active Streaks', '$activeStreaks',
                       Icons.local_fire_department_rounded, AppTheme.warningAmber),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   _overviewCard(context, 'Avg Progress', '${(avgProgress * 100).toStringAsFixed(0)}%',
                       Icons.trending_up_rounded, AppTheme.successGreen),
                 ],
               ),
-              const SizedBox(height: 24),
+              SizedBox(height: 24),
 
               // Student cards
-              Text('Individual Progress',
+              Text(context.tr('individual_progress'),
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 17,
                       fontWeight: FontWeight.w700)),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               
               if (_students.isEmpty)
                 Center(
@@ -135,8 +136,8 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
                     child: Column(
                       children: [
                         Icon(Icons.analytics_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
-                        const SizedBox(height: 16),
-                        Text('No students yet.', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 16)),
+                        SizedBox(height: 16),
+                        Text(context.tr('no_students_yet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 16)),
                       ],
                     ),
                   ),

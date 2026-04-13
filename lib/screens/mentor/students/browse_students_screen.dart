@@ -6,6 +6,7 @@ import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class BrowseStudentsScreen extends StatefulWidget {
   const BrowseStudentsScreen({super.key});
@@ -103,12 +104,13 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
         'studentId': studentId,
         'studentName': student['name'] ?? '',
         'status': 'pending',
+        'requestedBy': mentorId, // Explicitly identify sender
         'createdAt': Timestamp.now(),
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Request sent to ${student['name']}!'),
+            content: Text('${context.tr('request_sent_to')} ${student['name']}!'),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -118,7 +120,7 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('${context.tr('error')}: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
     }
@@ -143,7 +145,7 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Browse Students'),
+        title: Text(context.tr('browse_students')),
         elevation: 0,
       ),
       body: Column(
@@ -156,7 +158,7 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
               onChanged: _filterStudents,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
-                hintText: 'Search by name, course or institution...',
+                hintText: context.tr('search_by_name_course_or_insti'),
                 hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4)),
                 prefixIcon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                 suffixIcon: _searchCtrl.text.isNotEmpty
@@ -195,20 +197,20 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
 
           // Student List
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? Center(child: CircularProgressIndicator())
                 : _filtered.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(Icons.person_search_rounded, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
-                            const SizedBox(height: 16),
-                            Text('No students found', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
+                            SizedBox(height: 16),
+                            Text(context.tr('no_students_found'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 16)),
                           ],
                         ),
                       )
@@ -298,7 +300,7 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 16, color: color),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(text, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.w600)),
       ],
     );
@@ -311,8 +313,8 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
           Expanded(
             child: OutlinedButton.icon(
               onPressed: () => _openChat(student),
-              icon: const Icon(Icons.chat_rounded, size: 18),
-              label: const Text('Message'),
+              icon: Icon(Icons.chat_rounded, size: 18),
+              label: Text(context.tr('message')),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppTheme.accentBlue,
                 side: const BorderSide(color: AppTheme.accentBlue),
@@ -321,7 +323,7 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(
@@ -332,8 +334,8 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Icon(Icons.check_circle_rounded, size: 16, color: AppTheme.successGreen),
-                const SizedBox(width: 6),
-                Text('Connected', style: TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w600, fontSize: 13)),
+                SizedBox(width: 6),
+                Text(context.tr('connected'), style: TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w600, fontSize: 13)),
               ],
             ),
           ),
@@ -344,11 +346,11 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
         width: double.infinity,
         child: OutlinedButton.icon(
           onPressed: null,
-          icon: const Icon(Icons.schedule_rounded, size: 18),
-          label: const Text('Request Pending'),
+          icon: Icon(Icons.schedule_rounded, size: 18),
+          label: Text(context.tr('request_pending')),
           style: OutlinedButton.styleFrom(
             foregroundColor: AppTheme.warningAmber,
-            side: const BorderSide(color: AppTheme.warningAmber),
+            side: BorderSide(color: AppTheme.warningAmber),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             padding: const EdgeInsets.symmetric(vertical: 12),
             disabledForegroundColor: AppTheme.warningAmber.withOpacity(0.6),
@@ -360,8 +362,8 @@ class _BrowseStudentsScreenState extends State<BrowseStudentsScreen> {
         width: double.infinity,
         child: ElevatedButton.icon(
           onPressed: () => _sendRequest(student),
-          icon: const Icon(Icons.person_add_rounded, size: 18),
-          label: const Text('Connect'),
+          icon: Icon(Icons.person_add_rounded, size: 18),
+          label: Text(context.tr('connect')),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppTheme.accentBlue,
             foregroundColor: Colors.white,

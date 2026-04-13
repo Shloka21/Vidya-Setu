@@ -7,6 +7,7 @@ import '../../../app/theme.dart';
 import '../../../models/timetable_model.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class SessionQuizScreen extends StatefulWidget {
   const SessionQuizScreen({super.key});
@@ -40,7 +41,7 @@ class _SessionQuizScreenState extends State<SessionQuizScreen> {
 
     try {
       final model = GenerativeModel(
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3-flash-preview',
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       );
 
@@ -76,7 +77,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
       if (mounted) {
         setState(() => _loading = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating quiz: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('${context.tr('error_generating_quiz')}: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
     }
@@ -101,6 +102,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
     try {
       await FirestoreService().updateSessionStatus(uid, _planId!, _session!.id, true);
       await FirestoreService().updateSessionQuizCompleted(uid, _planId!, _session!.id, true);
+      await FirestoreService().updateStreak(uid);
     } catch (_) {}
   }
 
@@ -125,9 +127,9 @@ Return ONLY the JSON array, no extra text or markdown.''';
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 20),
-          Text('Generating quiz questions...', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15)),
+          CircularProgressIndicator(),
+          SizedBox(height: 20),
+          Text(context.tr('generating_quiz_questions'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15)),
           const SizedBox(height: 8),
           Text('${_session?.topic}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
         ],
@@ -148,7 +150,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
               Text('${_selectedAnswers.length}/${_questions.length} answered',
                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13, fontWeight: FontWeight.w600)),
               const Spacer(),
-              Text(_session?.topic ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12), overflow: TextOverflow.ellipsis),
+              //Text(_session?.topic ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12), overflow: TextOverflow.ellipsis),
             ],
           ),
         ),
@@ -296,7 +298,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
             textAlign: TextAlign.center,
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 15, height: 1.5),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Score Card
           Container(
@@ -309,18 +311,18 @@ Return ONLY the JSON array, no extra text or markdown.''';
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                _scoreItem('Score', '$_score/${_questions.length}', passed ? AppTheme.successGreen : AppTheme.warningAmber),
+                _scoreItem(context.tr('score'), '$_score/${_questions.length}', passed ? AppTheme.successGreen : AppTheme.warningAmber),
                 Container(width: 1, height: 50, color: AppTheme.divider),
-                _scoreItem('Percentage', '$percentage%', passed ? AppTheme.successGreen : AppTheme.warningAmber),
+                _scoreItem(context.tr('percentage'), '$percentage%', passed ? AppTheme.successGreen : AppTheme.warningAmber),
                 Container(width: 1, height: 50, color: AppTheme.divider),
-                _scoreItem('Status', passed ? 'Passed' : 'Retry', passed ? AppTheme.successGreen : AppTheme.errorRed),
+                _scoreItem(context.tr('status'), passed ? 'Passed' : 'Retry', passed ? AppTheme.successGreen : AppTheme.errorRed),
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Review answers
-          Text('REVIEW ANSWERS', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
+          Text(context.tr('review_answers'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12, fontWeight: FontWeight.w700, letterSpacing: 1)),
           const SizedBox(height: 12),
           ..._questions.asMap().entries.map((entry) {
             final i = entry.key;
@@ -350,8 +352,8 @@ Return ONLY the JSON array, no extra text or markdown.''';
                   ),
                   const SizedBox(height: 8),
                   if (!isCorrect && selected >= 0 && selected < options.length)
-                    Text('Your answer: ${options[selected]}', style: TextStyle(color: AppTheme.errorRed, fontSize: 13)),
-                  Text('Correct: ${options[correct]}', style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('${context.tr('your_answer')}: ${options[selected]}', style: TextStyle(color: AppTheme.errorRed, fontSize: 13)),
+                  Text('${context.tr('correct_answer')}: ${options[correct]}', style: TextStyle(color: AppTheme.successGreen, fontSize: 13, fontWeight: FontWeight.w600)),
                   if (q['explanation'] != null) ...[
                     const SizedBox(height: 6),
                     Text(q['explanation'], style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12, fontStyle: FontStyle.italic)),
@@ -360,7 +362,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
               ),
             );
           }),
-          const SizedBox(height: 24),
+          SizedBox(height: 24),
 
           // Action Buttons
           if (passed) ...[
@@ -371,8 +373,8 @@ Return ONLY the JSON array, no extra text or markdown.''';
                   Navigator.pop(context);
                   Navigator.pop(context);
                 },
-                icon: const Icon(Icons.arrow_back_rounded),
-                label: const Text('Back to Timetable'),
+                icon: Icon(Icons.arrow_back_rounded),
+                label: Text(context.tr('back_to_timetable')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.successGreen,
                   foregroundColor: Colors.white,
@@ -386,8 +388,8 @@ Return ONLY the JSON array, no extra text or markdown.''';
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () => _generateQuiz(),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Retry with New Questions'),
+                icon: Icon(Icons.refresh_rounded),
+                label: Text(context.tr('retry_with_new_questions')),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.accentBlue,
                   foregroundColor: Colors.white,
@@ -396,15 +398,15 @@ Return ONLY the JSON array, no extra text or markdown.''';
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
                 onPressed: () {
                   Navigator.pop(context); // Go back to session detail for notes
                 },
-                icon: const Icon(Icons.book_rounded),
-                label: const Text('Review Notes & Study Materials'),
+                icon: Icon(Icons.book_rounded),
+                label: Text(context.tr('review_notes__study_materials')),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.accentPurple,
                   padding: const EdgeInsets.symmetric(vertical: 14),

@@ -13,6 +13,57 @@ class FirestoreService {
     await usersCollection.doc(uid).update(data);
   }
 
+  /// Ensures a user dot has all necessary gamification fields
+  Future<void> ensureUserInitialized(String uid) async {
+    final doc = await usersCollection.doc(uid).get();
+    if (!doc.exists) return;
+    
+    final data = doc.data() as Map<String, dynamic>;
+    final updates = <String, dynamic>{};
+    
+    if (data['points'] == null) updates['points'] = 0;
+    if (data['level'] == null) updates['level'] = 1;
+    if (data['streak'] == null) updates['streak'] = 0;
+    if (data['tasksCompleted'] == null) updates['tasksCompleted'] = 0;
+    if (data['totalStudyHours'] == null) updates['totalStudyHours'] = 0.0;
+    
+    if (updates.isNotEmpty) {
+      await usersCollection.doc(uid).update(updates);
+    }
+  }
+
+  Future<void> updateStreak(String uid) async {
+    final doc = await usersCollection.doc(uid).get();
+    if (!doc.exists) return;
+    final data = doc.data() as Map<String, dynamic>;
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    final lastStudyDateTs = data['lastStudyDate'] as Timestamp?;
+    final lastStudyDate = lastStudyDateTs != null 
+        ? DateTime(lastStudyDateTs.toDate().year, lastStudyDateTs.toDate().month, lastStudyDateTs.toDate().day)
+        : null;
+
+    int currentStreak = data['streak'] ?? 0;
+
+    if (lastStudyDate == null || today.difference(lastStudyDate).inDays > 1) {
+      // First time or missed a day
+      currentStreak = 1;
+    } else if (today.difference(lastStudyDate).inDays == 1) {
+      // Consecutive day
+      currentStreak++;
+    }
+    // If today.difference(lastStudyDate).inDays == 0, already tracked today
+
+    await usersCollection.doc(uid).update({
+      'streak': currentStreak,
+      'lastStudyDate': Timestamp.fromDate(now),
+      'points': FieldValue.increment(10), // Give 10 XP per session tracked
+      'tasksCompleted': FieldValue.increment(1),
+    });
+  }
+
   Future<Map<String, dynamic>?> getUser(String uid) async {
     final doc = await usersCollection.doc(uid).get();
     return doc.data() as Map<String, dynamic>?;
@@ -424,6 +475,104 @@ class FirestoreService {
       }
       return total;
     });
+  }
+
+  // ─── Active Call Signaling (incoming call UI) ─────────────
+  CollectionReference get activeCallsCollection =>
+      _firestore.collection('activeCalls');
+
+  Future<void> startCall({
+    required String roomId,
+    required String callerId,
+    required String callerName,
+    required String receiverId,
+  }) async {
+    await activeCallsCollection.doc(roomId).set({
+      'roomId': roomId,
+      'callerId': callerId,
+      'callerName': callerName,
+      'receiverId': receiverId,
+      'status': 'ringing', // ringing, accepted, declined, ended
+      'startedAt': Timestamp.now(),
+    });
+  }
+
+  Future<void> updateCallStatus(String roomId, String status) async {
+    await activeCallsCollection.doc(roomId).update({'status': status});
+  }
+
+  Future<void> endCall(String roomId) async {
+    await activeCallsCollection.doc(roomId).delete();
+  }
+
+  Stream<DocumentSnapshot> activeCallStream(String roomId) {
+    return activeCallsCollection.doc(roomId).snapshots();
+  }
+
+  /// Stream for a user to know if they are being called
+  Stream<QuerySnapshot> incomingCallsStream(String userId) {
+    return activeCallsCollection
+        .where('receiverId', isEqualTo: userId)
+        .where('status', isEqualTo: 'ringing')
+        .snapshots();
+  }
+
+  // ─── In-App Notifications ─────────────────────────────────
+  CollectionReference userNotificationsCollection(String userId) =>
+      usersCollection.doc(userId).collection('notifications');
+
+  /// Write a notification to a user's notification subcollection
+  Future<void> writeNotification(String userId, Map<String, dynamic> data) async {
+    final id = data['id'] ?? _firestore.collection('_').doc().id;
+    data['id'] = id;
+    data['createdAt'] = data['createdAt'] ?? Timestamp.now();
+    data['read'] = false;
+    await userNotificationsCollection(userId).doc(id).set(data);
+  }
+
+  /// Stream unread notifications for a user
+  Stream<QuerySnapshot> unreadNotificationsStream(String userId) {
+    return userNotificationsCollection(userId)
+        .where('read', isEqualTo: false)
+        .orderBy('createdAt', descending: true)
+        .limit(20)
+        .snapshots();
+  }
+
+  /// Mark a notification as read
+  Future<void> markNotificationRead(String userId, String notificationId) async {
+    await userNotificationsCollection(userId).doc(notificationId).update({'read': true});
+  }
+
+  /// Mark all notifications as read
+  Future<void> markAllNotificationsRead(String userId) async {
+    final snapshot = await userNotificationsCollection(userId)
+        .where('read', isEqualTo: false)
+        .get();
+    final batch = _firestore.batch();
+    for (final doc in snapshot.docs) {
+      batch.update(doc.reference, {'read': true});
+    }
+    await batch.commit();
+  }
+
+  // ─── Leaderboard (extended) ───────────────────────────────
+  /// Get user's rank even if they're not in the top N
+  Future<Map<String, dynamic>?> getUserRankData(String userId) async {
+    final userDoc = await usersCollection.doc(userId).get();
+    if (!userDoc.exists) return null;
+    final userData = userDoc.data() as Map<String, dynamic>;
+    final userPoints = userData['points'] ?? 0;
+
+    // Count how many students have more points
+    final higherRanked = await usersCollection
+        .where('role', isEqualTo: 'student')
+        .where('points', isGreaterThan: userPoints)
+        .count()
+        .get();
+
+    userData['rank'] = (higherRanked.count ?? 0) + 1;
+    return userData;
   }
 }
 

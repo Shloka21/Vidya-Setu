@@ -4,6 +4,9 @@ import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/common/app_button.dart';
+import '../../services/security_utils.dart';
+import '../../services/auth_service.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -73,16 +76,71 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _navigateToHome(AuthProvider authProvider) {
+  void _navigateToHome(AuthProvider authProvider) async {
     if (authProvider.needsRoleSelection) {
       Navigator.pushReplacementNamed(context, AppRoutes.roleSelection);
       return;
     }
+    
+    // Check soft-delete status
+    final uid = authProvider.userModel?.uid;
+    if (uid != null) {
+      final isDeleted = await AuthService().isAccountDeleted(uid);
+      if (isDeleted && mounted) {
+        _showRestoreAccountDialog(uid, authProvider);
+        return;
+      }
+    }
+    
     if (authProvider.userModel?.isStudent == true) {
       Navigator.pushReplacementNamed(context, AppRoutes.studentDashboard);
     } else {
       Navigator.pushReplacementNamed(context, AppRoutes.mentorDashboard);
     }
+  }
+
+  void _showRestoreAccountDialog(String uid, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(context.tr('account_scheduled_for_deletion')),
+        content: Text(
+          context.tr('your_account_was_previously_marked_for_d') +
+          ' Would you like to restore it and continue using VidyaSetu?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await authProvider.signOut();
+              if (mounted) {
+                Navigator.pushReplacementNamed(context, AppRoutes.login);
+              }
+            },
+            child: Text(context.tr('no_delete_it')),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await AuthService().restoreAccount(uid);
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(context.tr('account_restored_successfully'))),
+                );
+                if (authProvider.userModel?.isStudent == true) {
+                  Navigator.pushReplacementNamed(context, AppRoutes.studentDashboard);
+                } else {
+                  Navigator.pushReplacementNamed(context, AppRoutes.mentorDashboard);
+                }
+              }
+            },
+            child: Text(context.tr('restore_account')),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -97,11 +155,11 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
+                SizedBox(height: 40),
 
                 // Header
                 Text(
-                  'Welcome\nBack',
+                  context.tr('welcomenback'),
                   style: Theme.of(context).textTheme.displayMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primaryNavy,
@@ -109,60 +167,59 @@ class _LoginScreenState extends State<LoginScreen> {
                         letterSpacing: -1,
                       ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
-                  'Sign in to continue your learning journey',
+                  context.tr('sign_in_to_continue_your_learning_journe'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 16,
                   ),
                 ),
-                const SizedBox(height: 40),
+                SizedBox(height: 40),
 
                 // Email field
                 Text(
-                  'Email',
+                  context.tr('email'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    hintText: 'Enter your email',
+                  decoration: InputDecoration(hintText: context.tr('enter_your_email'),
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter your email';
                     }
-                    if (!value.contains('@')) {
-                      return 'Please enter a valid email';
+                    if (!SecurityUtils.isValidEmail(value)) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
 
                 // Password field
                 Text(
-                  'Password',
+                  context.tr('password'),
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 TextFormField(
                   controller: _passwordController,
                   obscureText: _obscurePassword,
                   decoration: InputDecoration(
-                    hintText: 'Enter your password',
+                    hintText: context.tr('enter_your_password'),
                     prefixIcon: const Icon(Icons.lock_outline_rounded),
                     suffixIcon: IconButton(
                       icon: Icon(
@@ -204,9 +261,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: 8),
                         Text(
-                          'Remember me',
+                          context.tr('remember_me'),
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             fontSize: 13,
@@ -217,7 +274,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextButton(
                       onPressed: () => _showForgotPasswordDialog(),
                       child: Text(
-                        'Forgot Password?',
+                        context.tr('forgot_password'),
                         style: TextStyle(
                           color: AppTheme.accentBlue,
                           fontSize: 13,
@@ -268,13 +325,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     return AppButton(
-                      text: 'Login',
+                      text: context.tr('login'),
                       onPressed: _login,
                       isLoading: auth.isLoading,
                     );
                   },
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // Divider
                 Row(
@@ -283,7 +340,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'OR',
+                        context.tr('or'),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                           fontSize: 12,
@@ -294,13 +351,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     Expanded(child: Divider(color: AppTheme.divider)),
                   ],
                 ),
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
 
                 // Google sign in
                 Consumer<AuthProvider>(
                   builder: (context, auth, _) {
                     return AppButton(
-                      text: 'Continue with Google',
+                      text: context.tr('continue_with_google'),
                       onPressed: _googleSignIn,
                       isOutlined: true,
                       icon: Icons.g_mobiledata_rounded,
@@ -308,18 +365,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 12),
+                SizedBox(height: 12),
 
                 // Phone sign in
                 AppButton(
-                  text: 'Continue with Phone',
+                  text: context.tr('continue_with_phone'),
                   onPressed: () {
                     Navigator.pushNamed(context, AppRoutes.phoneAuth);
                   },
                   isOutlined: true,
                   icon: Icons.phone_rounded,
                 ),
-                const SizedBox(height: 32),
+                SizedBox(height: 32),
 
                 // Sign up link
                 Center(
@@ -327,7 +384,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
-                        "Don't have an account? ",
+                        context.tr('dont_have_an_account'),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 14,
@@ -341,7 +398,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           );
                         },
                         child: Text(
-                          'Sign Up',
+                          context.tr('sign_up'),
                           style: TextStyle(
                             color: AppTheme.accentBlue,
                             fontSize: 14,
@@ -368,18 +425,17 @@ class _LoginScreenState extends State<LoginScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         ),
-        title: const Text('Reset Password'),
+        title: Text(context.tr('reset_password')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
-              'Enter your email address and we\'ll send you a link to reset your password.',
+            Text(
+              context.tr('enter_your_email_address_and_we'),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             TextFormField(
               controller: resetEmailController,
-              decoration: const InputDecoration(
-                hintText: 'Email address',
+              decoration: InputDecoration(hintText: context.tr('email_address'),
                 prefixIcon: Icon(Icons.email_outlined),
               ),
             ),
@@ -388,7 +444,7 @@ class _LoginScreenState extends State<LoginScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           ElevatedButton(
             onPressed: () async {
@@ -399,7 +455,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: const Text('Password reset email sent!'),
+                    content: Text(context.tr('password_reset_email_sent')),
                     backgroundColor: AppTheme.successGreen,
                     behavior: SnackBarBehavior.floating,
                     shape: RoundedRectangleBorder(
@@ -409,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               }
             },
-            child: const Text('Send Link'),
+            child: Text(context.tr('send_link')),
           ),
         ],
       ),

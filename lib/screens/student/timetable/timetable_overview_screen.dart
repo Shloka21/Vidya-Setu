@@ -8,6 +8,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class TimetableOverviewScreen extends StatefulWidget {
   const TimetableOverviewScreen({super.key});
@@ -74,12 +75,12 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
     if (_studyPlan == null) return;
     final now = DateTime.now();
     final upcomingSessions = _studyPlan!.sessions
-        .where((s) => !s.isCompleted && s.date.isAfter(now.subtract(const Duration(days: 1))))
+        .where((s) => !s.isCompleted && s.date.isAfter(now.subtract(Duration(days: 1))))
         .toList()
       ..sort((a, b) => a.date.compareTo(b.date));
     if (upcomingSessions.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No upcoming sessions found'), behavior: SnackBarBehavior.floating),
+        SnackBar(content: Text(context.tr('no_upcoming_sessions_found')), behavior: SnackBarBehavior.floating),
       );
       return;
     }
@@ -151,7 +152,7 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: Text('My Timetable', style: Theme.of(context).textTheme.headlineSmall),
+        title: Text(context.tr('my_timetable'), style: Theme.of(context).textTheme.headlineSmall),
         actions: [
           PopupMenuButton<String>(
             onSelected: (value) {
@@ -160,8 +161,8 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
               }
             },
             itemBuilder: (_) => [
-              const PopupMenuItem(value: 'generate', child: Row(children: [
-                Icon(Icons.auto_awesome_outlined, size: 20), SizedBox(width: 8), Text('Generate New'),
+              PopupMenuItem(value: 'generate', child: Row(children: [
+                Icon(Icons.auto_awesome_outlined, size: 20), SizedBox(width: 8), Text(context.tr('generate_new')),
               ])),
             ],
           ),
@@ -176,9 +177,9 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                   child: Column(
                     children: [
                       _buildWeekSelector(),
-                      const SizedBox(height: 12),
+                      SizedBox(height: 12),
                       _buildProgressBar(),
-                      const SizedBox(height: 8),
+                      SizedBox(height: 8),
                       Expanded(child: _buildSessionsList()),
                     ],
                   ),
@@ -186,8 +187,8 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
       floatingActionButton: _studyPlan != null
           ? FloatingActionButton.extended(
               onPressed: _jumpToNextSession,
-              icon: const Icon(Icons.skip_next_rounded),
-              label: const Text('Next Session'),
+              icon: Icon(Icons.skip_next_rounded),
+              label: Text(context.tr('next_session')),
               backgroundColor: AppTheme.accentBlue,
               foregroundColor: Colors.white,
             )
@@ -203,16 +204,16 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.calendar_month_outlined, size: 80, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5).withOpacity(0.4)),
-            const SizedBox(height: 20),
-            Text('No Study Plan Yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text('Upload your syllabus PDF and generate a smart study timetable.',
+            SizedBox(height: 20),
+            Text(context.tr('no_study_plan_yet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w700)),
+            SizedBox(height: 8),
+            Text(context.tr('upload_your_syllabus_pdf_and_generate_a'),
                 textAlign: TextAlign.center, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.generateTimetable).then((_) => _loadPlan()),
-              icon: const Icon(Icons.auto_awesome_rounded, size: 20),
-              label: const Text('Generate Timetable'),
+              icon: Icon(Icons.auto_awesome_rounded, size: 20),
+              label: Text(context.tr('generate_timetable')),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.accentPurple, foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
@@ -269,7 +270,7 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                 onTap: () => setState(() { _weekOffset = 0; _selectedDate = DateTime.now(); }),
                 child: Column(children: [
                   Text('${DateFormat('MMM d').format(startOfWeek)} – ${DateFormat('MMM d').format(endOfWeek)}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
-                  if (_weekOffset != 0) Text('Tap to return to today', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
+                  if (_weekOffset != 0) Text(context.tr('tap_to_return_to_today'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
                 ]),
               ),
               IconButton(onPressed: () => setState(() => _weekOffset++), icon: Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)), splashRadius: 20),
@@ -321,8 +322,8 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
       return Center(
         child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.event_note_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
-          const SizedBox(height: 16),
-          Text('No sessions on this day', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
+          SizedBox(height: 16),
+          Text(context.tr('no_sessions_on_this_day'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
         ]),
       );
     }
@@ -426,10 +427,10 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
                             color: session.isCompleted ? AppTheme.warningAmber : AppTheme.successGreen,
                             onTap: () => _markComplete(session),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8),
                           _actionChip(
                             icon: Icons.calendar_month_rounded,
-                            label: 'Reschedule',
+                            label: context.tr('reschedule'),
                             color: AppTheme.accentPurple,
                             onTap: () => _rescheduleSession(session),
                           ),

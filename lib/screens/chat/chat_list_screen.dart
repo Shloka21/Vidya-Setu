@@ -6,6 +6,7 @@ import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
 import '../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class ChatListScreen extends StatefulWidget {
   const ChatListScreen({super.key});
@@ -26,18 +27,18 @@ class _ChatListScreenState extends State<ChatListScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: Text(context.tr('messages')),
         actions: [
-          IconButton(icon: const Icon(Icons.search_rounded), onPressed: () {}),
+          IconButton(icon: Icon(Icons.search_rounded), onPressed: () {}),
         ],
       ),
       body: currentUserId.isEmpty
-          ? const Center(child: Text('Please log in to view messages'))
+          ? Center(child: Text(context.tr('please_log_in_to_view_messages')))
           : StreamBuilder<QuerySnapshot>(
               stream: _firestoreService.chatRoomsStream(currentUserId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
+                  return Center(child: CircularProgressIndicator());
                 }
 
                 if (snapshot.hasError) {
@@ -46,8 +47,8 @@ class _ChatListScreenState extends State<ChatListScreen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 48),
-                        const SizedBox(height: 12),
-                        Text('Error loading chats', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
+                        SizedBox(height: 12),
+                        Text(context.tr('error_loading_chats'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                       ],
                     ),
                   );
@@ -224,10 +225,10 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     ),
                     child: Icon(Icons.people_outline_rounded, color: AppTheme.accentBlue, size: 40),
                   ),
-                  const SizedBox(height: 20),
-                  Text('No conversations yet',
+                  SizedBox(height: 20),
+                  Text(context.tr('no_conversations_yet'),
                       style: TextStyle(color: AppTheme.primaryNavy, fontSize: 20, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     userRole == 'student'
                         ? 'Connect with a mentor to start chatting!'
@@ -236,11 +237,11 @@ class _ChatListScreenState extends State<ChatListScreen> {
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14),
                   ),
                   if (userRole == 'student') ...[
-                    const SizedBox(height: 20),
+                    SizedBox(height: 20),
                     ElevatedButton.icon(
                       onPressed: () => Navigator.pushNamed(context, AppRoutes.findMentor),
-                      icon: const Icon(Icons.person_search_rounded, size: 18),
-                      label: const Text('Find a Mentor'),
+                      icon: Icon(Icons.person_search_rounded, size: 18),
+                      label: Text(context.tr('find_a_mentor')),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.accentBlue,
                         foregroundColor: Colors.white,
@@ -261,19 +262,19 @@ class _ChatListScreenState extends State<ChatListScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Center(
                 child: Column(
                   children: [
                     Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48),
-                    const SizedBox(height: 12),
-                    Text('No messages yet', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
+                    SizedBox(height: 12),
+                    Text(context.tr('no_messages_yet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
                   ],
                 ),
               ),
-              const SizedBox(height: 28),
+              SizedBox(height: 28),
               Text(
-                'SUGGESTED CONVERSATIONS',
+                context.tr('suggested_conversations'),
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   fontSize: 12,

@@ -6,6 +6,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/app_button.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class SendFeedbackScreen extends StatefulWidget {
   const SendFeedbackScreen({super.key});
@@ -67,13 +68,13 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
   Future<void> _sendFeedback() async {
     if (_selectedStudentId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a student')),
+        SnackBar(content: Text(context.tr('please_select_a_student'))),
       );
       return;
     }
     if (_titleController.text.trim().isEmpty || _messageController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please provide title and message')),
+        SnackBar(content: Text(context.tr('please_provide_title_and_messa'))),
       );
       return;
     }
@@ -97,10 +98,21 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
         'createdAt': Timestamp.now(),
       });
 
+      // Notify the student about the feedback
+      final mentorName = Provider.of<AuthProvider>(context, listen: false).userModel?.name ?? 'Your Mentor';
+      await _firestore.writeNotification(_selectedStudentId!, {
+        'type': 'feedback',
+        'mentorName': mentorName,
+        'mentorId': uid,
+        'feedbackId': feedbackId,
+        'title': _titleController.text.trim(),
+        'message': _messageController.text.trim(),
+      });
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Feedback sent successfully!'),
+            content: Text(context.tr('feedback_sent_successfully')),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -111,7 +123,7 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending feedback: $e')),
+          SnackBar(content: Text('${context.tr('error_sending_feedback')}: $e')),
         );
       }
     }
@@ -120,22 +132,22 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Send Feedback')),
+      appBar: AppBar(title: Text(context.tr('send_feedback'))),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Select student
-                  _label('Select Student'),
+                  _label(context.tr('select_student')),
                   AppCard(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedStudentId,
-                        hint: Text('Choose a student',
+                        hint: Text(context.tr('choose_a_student'),
                             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                         isExpanded: true,
                         icon: Icon(Icons.keyboard_arrow_down_rounded,
@@ -147,10 +159,10 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Feedback type
-                  _label('Feedback Type'),
+                  _label(context.tr('feedback_type')),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
@@ -172,10 +184,10 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Rating
-                  _label('Overall Rating'),
+                  _label(context.tr('overall_rating')),
                   AppCard(
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -194,24 +206,24 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
                       }),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
                   // Title
-                  _label('Title'),
+                  _label(context.tr('title')),
                   _buildField(_titleController, 'e.g., Great work on Algebra!'),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
 
                   // Message
-                  _label('Detailed Feedback'),
+                  _label(context.tr('detailed_feedback')),
                   _buildField(
                     _messageController,
                     'Write your detailed feedback here...',
                     maxLines: 5,
                   ),
-                  const SizedBox(height: 30),
+                  SizedBox(height: 30),
 
                   AppButton(
-                    text: 'Send Feedback',
+                    text: context.tr('send_feedback'),
                     onPressed: _sendFeedback,
                     icon: Icons.send_rounded,
                   ),

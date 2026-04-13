@@ -8,6 +8,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/theme_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class MentorSettingsScreen extends StatefulWidget {
   const MentorSettingsScreen({super.key});
@@ -62,14 +63,14 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
     final isDark = themeProvider.isDarkMode;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
+      appBar: AppBar(title: Text(context.tr('settings'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // ── Account ──
-            _sectionTitle('ACCOUNT'),
+            _sectionTitle(context.tr('account')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -77,23 +78,23 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                   _navItem(Icons.person_rounded, 'Edit Profile', () {
                     Navigator.pushNamed(context, AppRoutes.mentorProfileScreen);
                   }),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.lock_rounded, 'Change Password', _showChangePasswordDialog),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.verified_rounded, 'Verification Status', _showVerificationDialog),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Availability ──
-            _sectionTitle('AVAILABILITY'),
+            _sectionTitle(context.tr('availability')),
             AppCard(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: SwitchListTile(
-                title: Text('Available for New Students',
+                title: Text(context.tr('available_for_new_students'),
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
-                subtitle: Text('Allow students to send connection requests',
+                subtitle: Text(context.tr('allow_students_to_send_connection_reques'),
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                 value: _availableForNew,
                 activeColor: AppTheme.accentBlue,
@@ -107,33 +108,33 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Notifications ──
-            _sectionTitle('NOTIFICATIONS'),
+            _sectionTitle(context.tr('notifications')),
             AppCard(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
-                  _toggle('New Student Requests', _newRequests, (v) {
+                  _toggle(context.tr('new_student_requests'), _newRequests, (v) {
                     setState(() => _newRequests = v);
-                    _savePref('mentor_notif_requests', v);
+                    _savePref(context.tr('mentornotifrequests'), v);
                   }),
-                  _toggle('Messages', _messageNotif, (v) {
+                  _toggle(context.tr('messages'), _messageNotif, (v) {
                     setState(() => _messageNotif = v);
-                    _savePref('mentor_notif_messages', v);
+                    _savePref(context.tr('mentornotifmessages'), v);
                   }),
-                  _toggle('Student Progress Updates', _studentUpdates, (v) {
+                  _toggle(context.tr('student_progress_updates'), _studentUpdates, (v) {
                     setState(() => _studentUpdates = v);
-                    _savePref('mentor_notif_updates', v);
+                    _savePref(context.tr('mentornotifupdates'), v);
                   }),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Appearance ──
-            _sectionTitle('APPEARANCE'),
+            _sectionTitle(context.tr('appearance')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -154,12 +155,12 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                             size: 24,
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('App Theme', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
+                              Text(context.tr('app_theme'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
                               Text(isDark ? 'Currently using dark theme' : 'Currently using light theme',
                                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                             ],
@@ -173,64 +174,64 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.language_rounded, 'Language', () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('English is currently the only available language')),
+                      SnackBar(content: Text(context.tr('english_is_currently_the_only'))),
                     );
                   }),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Support ──
-            _sectionTitle('SUPPORT'),
+            _sectionTitle(context.tr('support')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   _navItem(Icons.help_outline_rounded, 'Help & FAQ', _showHelpDialog),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.headset_mic_rounded, 'Contact Support', _showContactSupportDialog),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.delete_sweep_rounded, 'Clear Cache', _showClearCacheDialog),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Legal ──
-            _sectionTitle('LEGAL'),
+            _sectionTitle(context.tr('legal')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
                   _navItem(Icons.policy_rounded, 'Privacy Policy', _showPrivacyPolicyDialog),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.description_rounded, 'Terms of Service', _showTermsDialog),
-                  const Divider(height: 1),
+                  Divider(height: 1),
                   _navItem(Icons.info_outline_rounded, 'About VidyaSetu', _showAboutAppDialog),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Logout ──
             AppCard(
               padding: EdgeInsets.zero,
               child: ListTile(
                 leading: Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 22),
-                title: Text('Logout', style: TextStyle(color: AppTheme.errorRed, fontSize: 15, fontWeight: FontWeight.w600)),
+                title: Text(context.tr('logout'), style: TextStyle(color: AppTheme.errorRed, fontSize: 15, fontWeight: FontWeight.w600)),
                 onTap: _showLogoutDialog,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             AppCard(
               padding: EdgeInsets.zero,
               child: ListTile(
                 leading: Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed.withOpacity(0.7), size: 22),
-                title: Text('Delete Account', style: TextStyle(color: AppTheme.errorRed.withOpacity(0.7), fontSize: 15)),
+                title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed.withOpacity(0.7), fontSize: 15)),
                 onTap: _showDeleteAccountDialog,
               ),
             ),
@@ -282,7 +283,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Change Password', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+        title: Text(context.tr('change_password'), style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -290,18 +291,18 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
               controller: currentPassCtrl,
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'Current Password',
+                labelText: context.tr('current_password'),
                 filled: true,
                 fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: newPassCtrl,
               obscureText: true,
               decoration: InputDecoration(
-                labelText: 'New Password',
+                labelText: context.tr('new_password'),
                 filled: true,
                 fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -310,7 +311,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
           ElevatedButton(
             onPressed: () async {
               try {
@@ -322,7 +323,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: const Text('Password updated!'), backgroundColor: AppTheme.successGreen,
+                      SnackBar(content: Text(context.tr('password_updated')), backgroundColor: AppTheme.successGreen,
                           behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                     );
                   }
@@ -331,13 +332,13 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+                    SnackBar(content: Text('${context.tr('error')}: $e'), backgroundColor: AppTheme.errorRed),
                   );
                 }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-            child: const Text('Update'),
+            child: Text(context.tr('update')),
           ),
         ],
       ),
@@ -351,13 +352,13 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [
           Icon(Icons.verified_rounded, color: AppTheme.successGreen, size: 24),
-          const SizedBox(width: 8),
-          const Text('Verification Status'),
+          SizedBox(width: 8),
+          Text(context.tr('verification_status')),
         ]),
-        content: const Text(
-          'Your mentor account is verified.\n\nVerified mentors appear with a badge and are prioritized in student searches.',
+        content: Text(
+          context.tr('your_mentor_account_is_verifiednnverifie'),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('ok')))],
       ),
     );
   }
@@ -367,20 +368,20 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Help & FAQ'),
+        title: Text(context.tr('help__faq')),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _faqItem('How do I connect with students?', 'Go to Browse Students (from Quick Actions) and tap Connect on their profile.'),
-              _faqItem('How do I schedule meetings?', 'Open a chat → tap the ⋮ menu → Schedule Meeting.'),
-              _faqItem('How do I provide feedback?', 'Go to My Students → tap a student → Send Feedback.'),
-              _faqItem('How do I send reminders?', 'Go to Reminders from Quick Actions → Create Reminder.'),
+              _faqItem(context.tr('how_do_i_connect_with_students'), context.tr('how_do_i_connect_with_students_ans')),
+              _faqItem(context.tr('how_do_i_schedule_meetings'), context.tr('how_do_i_schedule_meetings_ans')),
+              _faqItem(context.tr('how_do_i_provide_feedback'), context.tr('how_do_i_provide_feedback_ans')),
+              _faqItem(context.tr('how_do_i_send_reminders'), context.tr('how_do_i_send_reminders_ans')),
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -392,7 +393,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Q: $q', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(a, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13)),
         ],
       ),
@@ -404,7 +405,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Contact Support'),
+        title: Text(context.tr('contact_support')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -412,7 +413,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
             _contactItem(Icons.language_rounded, 'Website', 'vidyasetu.app/help'),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -422,7 +423,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Icon(icon, size: 20, color: AppTheme.accentBlue),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
           Text(value, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w500)),
@@ -436,20 +437,20 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Clear Cache'),
-        content: const Text('This will clear locally cached images and data. Your account data will not be affected.'),
+        title: Text(context.tr('clear_cache')),
+        content: Text(context.tr('this_will_clear_locally_cached')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: const Text('Cache cleared!'), backgroundColor: AppTheme.successGreen,
+                SnackBar(content: Text(context.tr('cache_cleared')), backgroundColor: AppTheme.successGreen,
                     behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
               );
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-            child: const Text('Clear'),
+            child: Text(context.tr('clear')),
           ),
         ],
       ),
@@ -461,18 +462,18 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(
+        title: Text(context.tr('privacy_policy')),
+        content: SingleChildScrollView(
           child: Text(
-            'VidyaSetu respects your privacy.\n\n'
-            '• Your data is stored securely in Firebase.\n'
-            '• We do not share your information with third parties.\n'
-            '• Student data you mentor is kept confidential.\n'
-            '• You can delete your account at any time.\n\n'
+            context.tr('vidyasetu_respects_your_privacy') +
+            '\n• Your data is stored securely in Firebase.\n' +
+            '• We do not share your information with third parties.\n' +
+            '• Student data you mentor is kept confidential.\n' +
+            '• You can delete your account at any time.\n\n' +
             'For full policy: vidyasetu.app/privacy',
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -482,18 +483,18 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Terms of Service'),
-        content: const SingleChildScrollView(
+        title: Text(context.tr('terms_of_service')),
+        content: SingleChildScrollView(
           child: Text(
-            'By using VidyaSetu as a mentor, you agree to:\n\n'
-            '• Provide accurate guidance and feedback.\n'
-            '• Respect student privacy and confidentiality.\n'
-            '• Not share student data outside the platform.\n'
-            '• Maintain professional conduct in all interactions.\n\n'
+            context.tr('by_using_vidyasetu_as_a_mentor_you_agree') +
+            '\n• Provide accurate guidance and feedback.\n' +
+            '• Respect student privacy and confidentiality.\n' +
+            '• Not share student data outside the platform.\n' +
+            '• Maintain professional conduct in all interactions.\n\n' +
             'Full terms: vidyasetu.app/terms',
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -503,7 +504,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('About VidyaSetu'),
+        title: Text(context.tr('about_vidyasetu')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -513,7 +514,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
             _aboutRow(Icons.cloud_rounded, 'Backend', 'Firebase'),
           ],
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -523,9 +524,9 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Icon(icon, size: 18, color: AppTheme.accentBlue),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
-        const Spacer(),
+        Spacer(),
         Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
       ]),
     );
@@ -536,10 +537,10 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(context.tr('logout')),
+        content: Text(context.tr('are_you_sure_you_want_to_logou')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -550,7 +551,7 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: const Text('Logout'),
+            child: Text(context.tr('logout')),
           ),
         ],
       ),
@@ -562,12 +563,12 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Delete Account', style: TextStyle(color: AppTheme.errorRed)),
-        content: const Text(
-          'This action is irreversible. All your data including students, feedback, and messages will be permanently deleted.',
+        title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed)),
+        content: Text(
+          context.tr('this_action_is_irreversible_all_your_dat'),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -579,13 +580,13 @@ class _MentorSettingsScreenState extends State<MentorSettingsScreen> {
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e. Please re-authenticate first.'), backgroundColor: AppTheme.errorRed),
+                    SnackBar(content: Text('${context.tr('error_please_reauth')} $e'), backgroundColor: AppTheme.errorRed),
                   );
                 }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: const Text('Delete Forever'),
+            child: Text(context.tr('delete_forever')),
           ),
         ],
       ),

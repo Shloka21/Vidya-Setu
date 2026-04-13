@@ -1,16 +1,105 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../app/theme.dart';
 import '../../../app/routes.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../services/firestore_service.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
-class StudentProfileMentorView extends StatelessWidget {
+class StudentProfileMentorView extends StatefulWidget {
   const StudentProfileMentorView({super.key});
 
   @override
+  State<StudentProfileMentorView> createState() => _StudentProfileMentorViewState();
+}
+
+class _StudentProfileMentorViewState extends State<StudentProfileMentorView> {
+  Map<String, dynamic>? _studentData;
+  List<Map<String, dynamic>> _recentActivity = [];
+  bool _loading = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    if (args != null && _studentData == null) {
+      _loadStudentData(args);
+    }
+  }
+
+  Future<void> _loadStudentData(Map<String, dynamic> args) async {
+    final studentId = args['studentId'] as String? ?? args['uid'] as String? ?? '';
+    if (studentId.isEmpty) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(studentId).get();
+      final data = doc.data() ?? {};
+      data['uid'] = studentId;
+
+      // Load recent study sessions
+      final sessions = <Map<String, dynamic>>[];
+      try {
+        final plansSnap = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(studentId)
+            .collection('timetable_plans')
+            .orderBy('createdAt', descending: true)
+            .limit(1)
+            .get();
+
+        if (plansSnap.docs.isNotEmpty) {
+          final planDoc = plansSnap.docs.first;
+          final sessionsSnap = await planDoc.reference
+              .collection('sessions')
+              .where('isCompleted', isEqualTo: true)
+              .orderBy('date', descending: true)
+              .limit(5)
+              .get();
+
+          for (var s in sessionsSnap.docs) {
+            sessions.add(s.data());
+          }
+        }
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _studentData = data;
+          _recentActivity = sessions;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading student data: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final data = _studentData ?? {};
+    final name = data['name']?.toString() ?? 'Student';
+    final course = data['course']?.toString() ?? '';
+    final institution = data['institution']?.toString() ?? '';
+    final level = (data['level'] as num?)?.toInt() ?? 1;
+    final points = (data['points'] as num?)?.toInt() ?? 0;
+    final streak = (data['streak'] as num?)?.toInt() ?? 0;
+    final totalHours = (data['totalStudyHours'] as num?)?.toDouble() ?? 0;
+    final tasksCompleted = (data['tasksCompleted'] as num?)?.toInt() ?? 0;
+    final subtitle = [course, institution].where((s) => s.isNotEmpty).join(' • ');
+
     return Scaffold(
-      
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
@@ -38,24 +127,25 @@ class StudentProfileMentorView extends StatelessWidget {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                         ),
-                        child: const Center(
-                          child: Text('A',
+                        child: Center(
+                          child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'S',
                               style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 30,
                                   fontWeight: FontWeight.w700)),
                         ),
                       ),
-                      const SizedBox(height: 10),
-                      const Text('Ananya Kumar',
+                      SizedBox(height: 10),
+                      Text(name,
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 20,
                               fontWeight: FontWeight.w700)),
-                      Text('Class 12 • CBSE',
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 13)),
+                      if (subtitle.isNotEmpty)
+                        Text(subtitle,
+                            style: TextStyle(
+                                color: Colors.white.withOpacity(0.8),
+                                fontSize: 13)),
                     ],
                   ),
                 ),
@@ -71,61 +161,84 @@ class StudentProfileMentorView extends StatelessWidget {
                   // Stats
                   Row(
                     children: [
-                      _stat('Level', '5', AppTheme.accentBlue),
-                      _stat('XP', '1240', AppTheme.accentPurple),
-                      _stat('Streak', '12d', AppTheme.warningAmber),
-                      _stat('Hours', '86', AppTheme.successGreen),
+                      _stat(context.tr('level'), '$level', AppTheme.accentBlue),
+                      _stat(context.tr('xp'), '$points', AppTheme.accentPurple),
+                      _stat(context.tr('streak'), '${streak}d', AppTheme.warningAmber),
+                      _stat(context.tr('hours'), '${totalHours.toInt()}', AppTheme.successGreen),
                     ],
                   ),
                   const SizedBox(height: 24),
 
-                  // Progress overview
-                  _section(context, 'Study Progress'),
+                  // Tasks completed
+                  _section(context, context.tr('achievements') ?? 'Achievements'),
                   AppCard(
-                    child: Column(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _progressRow(context, 'Mathematics', 0.75, AppTheme.accentBlue),
-                        const SizedBox(height: 12),
-                        _progressRow(context, 'Physics', 0.60, AppTheme.accentPurple),
-                        const SizedBox(height: 12),
-                        _progressRow(context, 'Chemistry', 0.45, AppTheme.warningAmber),
-                        const SizedBox(height: 12),
-                        _progressRow(context, 'English', 0.85, AppTheme.successGreen),
+                        _achievementStat('📝', '$tasksCompleted', 'Tasks Done'),
+                        _achievementStat('🔥', '$streak', 'Day Streak'),
+                        _achievementStat('⏰', '${totalHours.toInt()}h', 'Study Time'),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
 
                   // Recent activity
-                  _section(context, 'Recent Activity'),
-                  _activityItem(context, Icons.timer_rounded, 'Completed 2h Math session',
-                      '2 hours ago', AppTheme.accentBlue),
-                  _activityItem(context, Icons.emoji_events_rounded, 'Earned "Math Wizard" badge',
-                      'Yesterday', AppTheme.warningAmber),
-                  _activityItem(context, Icons.check_circle_rounded, 'Finished Algebra chapter',
-                      '2 days ago', AppTheme.successGreen),
-                  const SizedBox(height: 24),
+                  _section(context, context.tr('recent_activity') ?? 'Recent Activity'),
+                  if (_recentActivity.isEmpty)
+                    AppCard(
+                      child: Center(
+                        child: Text('No recent activity.',
+                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
+                      ),
+                    )
+                  else
+                    ..._recentActivity.map((session) {
+                      final subject = session['subject']?.toString() ?? 'Study';
+                      final topic = session['topic']?.toString() ?? '';
+                      return _activityItem(
+                        context,
+                        Icons.check_circle_rounded,
+                        'Completed: $subject${topic.isNotEmpty ? ' - $topic' : ''}',
+                        '',
+                        AppTheme.successGreen,
+                      );
+                    }),
+                  SizedBox(height: 24),
 
                   // Action buttons
                   Row(
                     children: [
                       Expanded(
                         child: AppButton(
-                          text: 'Send Feedback',
+                          text: context.tr('send_feedback'),
                           onPressed: () {
-                            Navigator.pushNamed(context, AppRoutes.sendFeedback);
+                            Navigator.pushNamed(context, AppRoutes.sendFeedback, arguments: _studentData);
                           },
                           icon: Icons.feedback_rounded,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12),
                       Expanded(
                         child: AppButton(
-                          text: 'Message',
+                          text: context.tr('message'),
                           onPressed: () async {
-                             // Will need arguments like roomId, we usually launch chat from MyStudentsScreen which has the student ID readily. 
-                             // We'll leave this empty or route back to chat list for now.
-                             Navigator.pushNamed(context, AppRoutes.chatList);
+                            final studentId = data['uid'] as String? ?? '';
+                            if (studentId.isNotEmpty) {
+                              final roomId = await FirestoreService().getOrCreateChatRoom(
+                                ModalRoute.of(context)?.settings.arguments is Map
+                                    ? ((ModalRoute.of(context)?.settings.arguments as Map)['mentorId'] ?? '')
+                                    : '',
+                                studentId,
+                              );
+                              if (mounted) {
+                                Navigator.pushNamed(context, AppRoutes.chatConversation, arguments: {
+                                  'roomId': roomId,
+                                  'otherUserId': studentId,
+                                  'otherUserName': name,
+                                });
+                              }
+                            }
                           },
                           icon: Icons.chat_rounded,
                           isOutlined: true,
@@ -168,6 +281,17 @@ class StudentProfileMentorView extends StatelessWidget {
     );
   }
 
+  Widget _achievementStat(String emoji, String value, String label) {
+    return Column(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 24)),
+        const SizedBox(height: 4),
+        Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.w700)),
+        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 11)),
+      ],
+    );
+  }
+
   Widget _section(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -176,36 +300,6 @@ class StudentProfileMentorView extends StatelessWidget {
               color: Theme.of(context).colorScheme.onSurface,
               fontSize: 17,
               fontWeight: FontWeight.w700)),
-    );
-  }
-
-  Widget _progressRow(BuildContext context, String label, double value, Color color) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 90,
-          child: Text(label,
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600)),
-        ),
-        Expanded(
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: LinearProgressIndicator(
-              value: value,
-              minHeight: 8,
-              backgroundColor: AppTheme.divider,
-              valueColor: AlwaysStoppedAnimation(color),
-            ),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Text('${(value * 100).toInt()}%',
-            style: TextStyle(
-                color: color, fontSize: 13, fontWeight: FontWeight.w700)),
-      ],
     );
   }
 
@@ -227,19 +321,13 @@ class StudentProfileMentorView extends StatelessWidget {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(text,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600)),
-                  Text(time,
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
-                ],
-              ),
+              child: Text(text,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
@@ -247,4 +335,3 @@ class StudentProfileMentorView extends StatelessWidget {
     );
   }
 }
-

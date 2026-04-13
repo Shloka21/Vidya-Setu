@@ -6,6 +6,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/app_button.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class CreateReminderScreen extends StatefulWidget {
   const CreateReminderScreen({super.key});
@@ -59,7 +60,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   Future<void> _sendReminder() async {
     if (_selectedStudentId == null || _titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a student and provide a title')),
+        SnackBar(content: Text(context.tr('please_select_a_student_and_pr'))),
       );
       return;
     }
@@ -87,7 +88,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Reminder sent successfully!'),
+            content: Text(context.tr('reminder_sent_successfully')),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -98,7 +99,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error sending reminder: $e')),
+          SnackBar(content: Text('${context.tr('error_sending_reminder')}: $e')),
         );
       }
     }
@@ -107,21 +108,21 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Create Reminder')),
+      appBar: AppBar(title: Text(context.tr('create_reminder'))),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _label('Select Student'),
+                  _label(context.tr('select_student')),
                   AppCard(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
                         value: _selectedStudentId,
-                        hint: Text('Choose a student',
+                        hint: Text(context.tr('choose_a_student'),
                             style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
                         isExpanded: true,
                         items: _students
@@ -131,21 +132,21 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
-                  _label('Title'),
+                  _label(context.tr('title')),
                   _buildField(_titleController, 'e.g., Complete Chapter 5'),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16),
 
-                  _label('Message'),
+                  _label(context.tr('message')),
                   _buildField(
                     _messageController,
                     'Detailed instructions for the student...',
                     maxLines: 4,
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
-                  _label('Priority'),
+                  _label(context.tr('priority')),
                   Row(
                     children: ['Low', 'Normal', 'High'].map((p) {
                       final selected = p == _priority;
@@ -172,9 +173,9 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20),
 
-                  _label('Due Date'),
+                  _label(context.tr('due_date')),
                   InkWell(
                     onTap: () async {
                       final picked = await showDatePicker(
@@ -197,16 +198,16 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600),
                           ),
-                          const Spacer(),
+                          Spacer(),
                           Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 30),
+                  SizedBox(height: 30),
 
                   AppButton(
-                    text: 'Send Reminder',
+                    text: context.tr('send_reminder'),
                     onPressed: _sendReminder,
                     icon: Icons.send_rounded,
                   ),

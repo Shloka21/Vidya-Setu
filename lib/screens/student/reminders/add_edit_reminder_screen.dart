@@ -7,6 +7,7 @@ import '../../../services/firestore_service.dart';
 import '../../../services/notification_service.dart';
 import '../../../models/reminder_model.dart';
 import '../../../widgets/common/app_button.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class AddEditReminderScreen extends StatefulWidget {
   const AddEditReminderScreen({super.key});
@@ -27,11 +28,12 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
   bool _popupNotification = true;
   bool _voiceNotification = false;
   String _repeatType = 'once';
-  List<int> _reminderMinutesBefore = [60];
+  List<int> _reminderMinutesBefore = [0];
   bool _saving = false;
 
   ReminderModel? _editingReminder;
   bool _isEditing = false;
+  String? _forStudentId;
 
   final _typeMap = {
     'exam': 'Exam',
@@ -47,19 +49,31 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is ReminderModel && !_isEditing) {
-      _editingReminder = args;
-      _isEditing = true;
-      _titleController.text = args.title;
-      _descriptionController.text = args.description ?? '';
-      _selectedType = args.type.name;
-      _selectedPriority = args.priority.name;
-      _selectedDate = args.dateTime;
-      _selectedTime = TimeOfDay(hour: args.dateTime.hour, minute: args.dateTime.minute);
-      _popupNotification = args.popupNotification;
-      _voiceNotification = args.voiceNotification;
-      _repeatType = args.repeatType;
-      _reminderMinutesBefore = List<int>.from(args.reminderMinutesBefore);
+    if (args != null && !_isEditing) {
+      if (args is Map<String, dynamic>) {
+        if (args.containsKey('studentId')) {
+          _forStudentId = args['studentId'];
+        }
+        if (args.containsKey('reminder')) {
+          _editingReminder = args['reminder'];
+        }
+      } else if (args is ReminderModel) {
+        _editingReminder = args;
+      }
+      
+      if (_editingReminder != null) {
+        _isEditing = true;
+        _titleController.text = _editingReminder!.title;
+        _descriptionController.text = _editingReminder!.description ?? '';
+        _selectedType = _editingReminder!.type.name;
+        _selectedPriority = _editingReminder!.priority.name;
+        _selectedDate = _editingReminder!.dateTime;
+        _selectedTime = TimeOfDay(hour: _editingReminder!.dateTime.hour, minute: _editingReminder!.dateTime.minute);
+        _popupNotification = _editingReminder!.popupNotification;
+        _voiceNotification = _editingReminder!.voiceNotification;
+        _repeatType = _editingReminder!.repeatType;
+        _reminderMinutesBefore = List<int>.from(_editingReminder!.reminderMinutesBefore);
+      }
     }
   }
 
@@ -82,14 +96,17 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
   Future<void> _saveReminder() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a title'), backgroundColor: AppTheme.errorRed),
+        SnackBar(content: Text(context.tr('please_enter_a_title')), backgroundColor: AppTheme.errorRed),
       );
       return;
     }
 
     setState(() => _saving = true);
-    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-    if (uid == null) return;
+    final currentUserUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (currentUserUid == null) return;
+    
+    // Target uid is the student if we're creating for a student, otherwise ourselves
+    final targetUid = _forStudentId ?? currentUserUid;
 
     final dateTime = DateTime(
       _selectedDate.year,
@@ -103,7 +120,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
 
     final data = ReminderModel(
       id: newId,
-      userId: uid,
+      userId: targetUid,
       title: _titleController.text.trim(),
       type: ReminderType.values.firstWhere((e) => e.name == _selectedType,
           orElse: () => ReminderType.custom),
@@ -120,9 +137,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
 
     try {
       if (_isEditing && _editingReminder != null) {
-        await _firestore.updateReminder(uid, _editingReminder!.id, data);
+        await _firestore.updateReminder(targetUid, _editingReminder!.id, data);
       } else {
-        await _firestore.addReminder(uid, data);
+        await _firestore.addReminder(targetUid, data);
       }
       if (mounted) Navigator.pop(context);
 
@@ -138,7 +155,18 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
           eventTime: dateTime,
           reminderMinutesBefore: _reminderMinutesBefore,
           repeatType: _repeatType,
+          priority: _selectedPriority,
+          voiceNotification: _voiceNotification,
         );
+
+        // Schedule motivational pre-notifications for exams, assignments, quizzes
+        if (['exam', 'assignment', 'quiz'].contains(_selectedType)) {
+          await notifService.schedulePreNotifications(
+            reminderId: newId,
+            title: _titleController.text.trim(),
+            eventTime: dateTime,
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -156,21 +184,32 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: Text(_isEditing ? 'Edit Reminder' : 'Add Reminder'),
+        title: Text(_forStudentId != null ? 'Add Reminder for Student' : (_isEditing ? 'Edit Reminder' : 'Add Reminder')),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildLabel('Title'),
+        child: Builder(
+          builder: (context) {
+            final dateTime = DateTime(
+              _selectedDate.year,
+              _selectedDate.month,
+              _selectedDate.day,
+              _selectedTime.hour,
+              _selectedTime.minute,
+            );
+            final minutesUntil = dateTime.difference(DateTime.now()).inMinutes;
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+            _buildLabel(context.tr('title')),
             TextFormField(
               controller: _titleController,
-              decoration: const InputDecoration(hintText: 'Enter reminder title'),
+              decoration: InputDecoration(hintText: context.tr('enter_reminder_title')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
-            _buildLabel('Type'),
+            _buildLabel(context.tr('type')),
             Wrap(
               spacing: 8,
               runSpacing: 8,
@@ -189,7 +228,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             Row(
               children: [
@@ -197,7 +236,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel('Date'),
+                      _buildLabel(context.tr('date')),
                       GestureDetector(
                         onTap: () async {
                           final date = await showDatePicker(
@@ -229,12 +268,12 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildLabel('Time'),
+                      _buildLabel(context.tr('time')),
                       GestureDetector(
                         onTap: () async {
                           final time = await showTimePicker(
@@ -266,9 +305,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
-            _buildLabel('Priority'),
+            _buildLabel(context.tr('priority')),
             Row(
               children: _priorities.map((p) {
                 final isSelected = _selectedPriority == p;
@@ -305,18 +344,18 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
-            _buildLabel('Description'),
+            _buildLabel(context.tr('description')),
             TextFormField(
               controller: _descriptionController,
               maxLines: 3,
-              decoration: const InputDecoration(hintText: 'Add details about this reminder'),
+              decoration: InputDecoration(hintText: context.tr('add_details_about_this_reminde')),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Notification settings
-            _buildLabel('Notifications'),
+            _buildLabel(context.tr('notifications_1')),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -326,20 +365,29 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
               ),
               child: Column(
                 children: [
-                  _buildToggle('Popup Notification', _popupNotification, (v) {
-                    setState(() => _popupNotification = v);
+                  _buildToggle(context.tr('popup_notification'), _popupNotification, (v) {
+                    setState(() {
+                      _popupNotification = v;
+                      if (!v) _voiceNotification = false;
+                    });
                   }),
-                  const Divider(height: 24),
-                  _buildToggle('Voice Notification', _voiceNotification, (v) {
-                    setState(() => _voiceNotification = v);
-                  }),
+                  Divider(height: 24),
+                  Opacity(
+                    opacity: _popupNotification ? 1.0 : 0.5,
+                    child: IgnorePointer(
+                      ignoring: !_popupNotification,
+                      child: _buildToggle(context.tr('voice_notification'), _voiceNotification, (v) {
+                        setState(() => _voiceNotification = v);
+                      }),
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // Remind Before — alarm-like
-            _buildLabel('Remind Before'),
+            _buildLabel(context.tr('remind_before')),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -351,20 +399,31 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _remindChip(5, '5 min'),
-                  _remindChip(15, '15 min'),
-                  _remindChip(30, '30 min'),
-                  _remindChip(60, '1 hour'),
-                  _remindChip(1440, '1 day'),
+                  _remindChip(0, 'At exact time', minutesUntil),
+                  _remindChip(5, '5 min', minutesUntil),
+                  _remindChip(15, '15 min', minutesUntil),
+                  _remindChip(30, '30 min', minutesUntil),
+                  _remindChip(60, '1 hour', minutesUntil),
+                  _remindChip(1440, '1 day', minutesUntil),
                 ],
               ),
             ),
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
-            _buildLabel('Repeat'),
+            _buildLabel(context.tr('repeat')),
             Wrap(
               spacing: 8,
               children: _repeatOptions.map((r) {
+                // Do not show daily/weekly if scheduled in less than a day
+                if (minutesUntil < 1440 && r != 'once') {
+                  if (_repeatType == r) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() => _repeatType = 'once');
+                    });
+                  }
+                  return const SizedBox.shrink();
+                }
+
                 final isSelected = _repeatType == r;
                 final label = r[0].toUpperCase() + r.substring(1);
                 return ChoiceChip(
@@ -389,8 +448,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
             ),
             const SizedBox(height: 20),
           ],
-        ),
-      ),
+        );
+      }),
+    ),
     );
   }
 
@@ -422,7 +482,19 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
     );
   }
 
-  Widget _remindChip(int minutes, String label) {
+  Widget _remindChip(int minutes, String label, int minutesUntil) {
+    if (minutes > minutesUntil) {
+      if (_reminderMinutesBefore.contains(minutes)) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) setState(() {
+            _reminderMinutesBefore.remove(minutes);
+            if (_reminderMinutesBefore.isEmpty) _reminderMinutesBefore = [0];
+          });
+        });
+      }
+      return const SizedBox.shrink();
+    }
+
     final isSelected = _reminderMinutesBefore.contains(minutes);
     return FilterChip(
       label: Text(label),
@@ -433,7 +505,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
             _reminderMinutesBefore.add(minutes);
           } else {
             _reminderMinutesBefore.remove(minutes);
-            if (_reminderMinutesBefore.isEmpty) _reminderMinutesBefore = [60];
+            if (_reminderMinutesBefore.isEmpty) _reminderMinutesBefore = [0];
           }
         });
       },

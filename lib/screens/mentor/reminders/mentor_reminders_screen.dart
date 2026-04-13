@@ -7,29 +7,30 @@ import '../../../app/routes.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class MentorRemindersScreen extends StatelessWidget {
-  const MentorRemindersScreen({super.key});
+  MentorRemindersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final uid = Provider.of<AuthProvider>(context).userModel?.uid;
     if (uid == null) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Student Reminders')),
-        body: const Center(child: Text('Not logged in')),
+        appBar: AppBar(title: Text(context.tr('student_reminders'))),
+        body: Center(child: Text(context.tr('not_logged_in'))),
       );
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Student Reminders'),
+        title: Text(context.tr('student_reminders')),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => Navigator.pushNamed(context, AppRoutes.createReminder),
         backgroundColor: AppTheme.accentBlue,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text('Create Reminder',
+        icon: Icon(Icons.add_rounded, color: Colors.white),
+        label: Text(context.tr('create_reminder'),
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
       body: StreamBuilder<QuerySnapshot>(
@@ -55,8 +56,8 @@ class MentorRemindersScreen extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                    Icon(Icons.notifications_active_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
-                   const SizedBox(height: 16),
-                   Text('No reminders sent yet.', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 16)),
+                   SizedBox(height: 16),
+                   Text(context.tr('no_reminders_sent_yet_1'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 16)),
                 ],
               ),
             );
@@ -108,7 +109,7 @@ class MentorRemindersScreen extends StatelessWidget {
                                         color: Theme.of(context).colorScheme.onSurface,
                                         fontSize: 15,
                                         fontWeight: FontWeight.w700)),
-                                Text('To: $studentName',
+                                Text('${context.tr('to_label')}: $studentName',
                                     style: TextStyle(
                                         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                         fontSize: 12)),
@@ -125,7 +126,7 @@ class MentorRemindersScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              isRead ? 'Done' : 'Sent',
+                              isRead ? context.tr('done') : context.tr('pending'),
                               style: TextStyle(
                                 color: isRead
                                     ? AppTheme.successGreen

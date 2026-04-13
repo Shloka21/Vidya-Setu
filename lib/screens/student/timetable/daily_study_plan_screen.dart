@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../models/timetable_model.dart';
 import '../../../services/pdf_service.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class DailyStudyPlanScreen extends StatefulWidget {
   final StudyPlan? studyPlan;
@@ -81,7 +82,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: Text('Daily Study Plan',
+        title: Text(context.tr('daily_study_plan'),
             style: Theme.of(context).textTheme.headlineSmall),
       ),
       body: Column(
@@ -135,7 +136,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -145,7 +146,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                 ),
                 child: Column(
                   children: [
-                    Text('Goal',
+                    Text(context.tr('goal'),
                         style: Theme.of(context).textTheme.labelSmall),
                     Text(
                       '${totalHours.toStringAsFixed(1)}h',
@@ -209,7 +210,7 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text("Today's Progress",
+              Text(context.tr('todays_progress'),
                   style: Theme.of(context).textTheme.titleMedium),
               Text(
                 '${(progress * 100).toInt()}%',
@@ -252,12 +253,12 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.event_available, size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
-            Text('No sessions today',
+            Icon(Icons.event_available, size: 48, color: Colors.grey),
+            SizedBox(height: 12),
+            Text(context.tr('no_sessions_today'),
                 style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 4),
-            Text('Enjoy your free time! 🎉',
+            SizedBox(height: 4),
+            Text(context.tr('enjoy_your_free_time'),
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
           ],
         ),
@@ -342,13 +343,13 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ],
-                            const SizedBox(height: 8),
+                            SizedBox(height: 8),
                             Row(
                               children: [
                                 Icon(Icons.touch_app,
                                     size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-                                const SizedBox(width: 4),
-                                Text('Tap for resources & quiz',
+                                SizedBox(width: 4),
+                                Text(context.tr('tap_for_resources__quiz'),
                                     style: TextStyle(
                                         fontSize: 11,
                                         color: AppTheme.accentBlue,
@@ -555,7 +556,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            SizedBox(height: 20),
 
             // ─── Resources Section ──────────────────────────────────
             if (_isLoadingResources)
@@ -564,9 +565,9 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                 child: Center(
                   child: Column(
                     children: [
-                      const CircularProgressIndicator(strokeWidth: 3),
-                      const SizedBox(height: 12),
-                      Text('Loading resources & quiz...',
+                      CircularProgressIndicator(strokeWidth: 3),
+                      SizedBox(height: 12),
+                      Text(context.tr('loading_resources__quiz'),
                           style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                     ],
                   ),
@@ -576,18 +577,18 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
               _buildErrorCard()
             else if (_resources != null) ...[
               // Reference Links
-              _buildSectionHeader('📚 Study Resources'),
-              const SizedBox(height: 8),
+              _buildSectionHeader(context.tr('study_resources')),
+              SizedBox(height: 8),
               _buildResourceLinks(),
 
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               // YouTube Videos
-              _buildSectionHeader('🎬 YouTube Videos'),
-              const SizedBox(height: 8),
+              _buildSectionHeader(context.tr('youtube_videos')),
+              SizedBox(height: 8),
               _buildYoutubeLinks(),
 
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
 
               // Mark as Studied
               if (!widget.session.isCompleted)
@@ -595,8 +596,8 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                   padding: const EdgeInsets.only(bottom: 12),
                   child: ElevatedButton.icon(
                     onPressed: widget.onMarkCompleted,
-                    icon: const Icon(Icons.check),
-                    label: const Text('Mark as Studied'),
+                    icon: Icon(Icons.check),
+                    label: Text(context.tr('mark_as_studied')),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.accentBlue,
                       foregroundColor: Colors.white,
@@ -608,7 +609,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
                 ),
 
               // Quiz
-              _buildSectionHeader('🧠 Test Your Knowledge'),
+              _buildSectionHeader(context.tr('test_your_knowledge')),
               const SizedBox(height: 8),
               _buildQuizSection(),
             ],
@@ -622,7 +623,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
 
   Widget _buildSectionHeader(String title) {
     return Text(title,
-        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16));
+        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16));
   }
 
   Widget _buildErrorCard() {
@@ -631,17 +632,17 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Icon(Icons.wifi_off, size: 36, color: Colors.orange),
-            const SizedBox(height: 8),
-            const Text('Could not load resources',
+            Icon(Icons.wifi_off, size: 36, color: Colors.orange),
+            SizedBox(height: 8),
+            Text(context.tr('could_not_load_resources'),
                 style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text('Check your internet connection',
+            SizedBox(height: 4),
+            Text(context.tr('check_your_internet_connection'),
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 12)),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             OutlinedButton(
               onPressed: _loadResources,
-              child: const Text('Retry'),
+              child: Text(context.tr('retry')),
             ),
           ],
         ),
@@ -652,7 +653,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
   Widget _buildResourceLinks() {
     final links = (_resources?['resourceLinks'] as List<dynamic>?) ?? [];
     if (links.isEmpty) {
-      return _buildEmptyState('No resources found');
+      return _buildEmptyState(context.tr('no_resources_found'));
     }
 
     return Column(
@@ -679,7 +680,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
               subtitle: Text(source,
                   style: TextStyle(
                       fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
-              trailing: const Icon(Icons.open_in_new, size: 16),
+              trailing: Icon(Icons.open_in_new, size: 16),
               onTap: () => _launchUrl(url),
             ),
           ),
@@ -691,7 +692,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
   Widget _buildYoutubeLinks() {
     final videos = (_resources?['youtubeVideos'] as List<dynamic>?) ?? [];
     if (videos.isEmpty) {
-      return _buildEmptyState('No videos found');
+      return _buildEmptyState(context.tr('no_videos_found'));
     }
 
     return Column(
@@ -719,7 +720,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
               subtitle: Text(channel,
                   style: TextStyle(
                       fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
-              trailing: const Icon(Icons.open_in_new, size: 16),
+              trailing: Icon(Icons.open_in_new, size: 16),
               onTap: () =>
                   _launchUrl('https://www.youtube.com/watch?v=$videoId'),
             ),
@@ -732,7 +733,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
   Widget _buildQuizSection() {
     final quiz = (_resources?['quiz'] as List<dynamic>?) ?? [];
     if (quiz.isEmpty) {
-      return _buildEmptyState('No quiz available');
+      return _buildEmptyState(context.tr('no_quiz_available'));
     }
 
     if (widget.session.quizCompleted) {
@@ -741,10 +742,10 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              const Icon(Icons.check_circle, color: AppTheme.successGreen),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Text('Quiz completed! Great job! 🎉',
+              Icon(Icons.check_circle, color: AppTheme.successGreen),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(context.tr('quiz_completed_great_job'),
                     style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
@@ -783,7 +784,7 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Could not open link')));
+            .showSnackBar(SnackBar(content: Text(context.tr('could_not_open_link'))));
       }
     }
   }
@@ -831,20 +832,20 @@ class _SessionDetailSheetState extends State<_SessionDetailSheet> {
               '$percentage% correct',
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Text(
               passed
                   ? 'You have a solid understanding of this topic!'
                   : 'Review the resources and try again later.',
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 13),
+              style: TextStyle(fontSize: 13),
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+            child: Text(context.tr('close')),
           ),
         ],
       ),
@@ -1054,7 +1055,7 @@ class _QuizDialogState extends State<_QuizDialog> {
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                       ),
-                      child: const Text('Submit Answer'),
+                      child: Text(context.tr('submit_answer')),
                     ),
                   ),
                 if (_answered)

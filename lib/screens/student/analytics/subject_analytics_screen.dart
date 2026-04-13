@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../app/theme.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class SubjectAnalyticsScreen extends StatelessWidget {
   const SubjectAnalyticsScreen({super.key});
@@ -20,7 +21,7 @@ class SubjectAnalyticsScreen extends StatelessWidget {
 
     return Scaffold(
       
-      appBar: AppBar(title: const Text('Subject Analytics')),
+      appBar: AppBar(title: Text(context.tr('subject_analytics'))),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -37,10 +38,10 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                       color: AppTheme.accentBlue.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(Icons.calculate_rounded,
+                    child: Icon(Icons.calculate_rounded,
                         color: AppTheme.accentBlue, size: 28),
                   ),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -50,8 +51,8 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                                 color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 20,
                                 fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        Text('38 hours studied • 60% complete',
+                        SizedBox(height: 4),
+                        Text(context.tr('38_hours_studied__60_complete'),
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 13)),
                       ],
@@ -60,10 +61,10 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // Study hours chart
-            Text('Study Hours by Topic',
+            Text(context.tr('study_hours_by_topic'),
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,
@@ -125,10 +126,10 @@ class SubjectAnalyticsScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // Topics breakdown
-            Text('Topic Breakdown',
+            Text(context.tr('topic_breakdown'),
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 16,

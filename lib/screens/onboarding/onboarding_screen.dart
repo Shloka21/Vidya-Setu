@@ -4,8 +4,10 @@ import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../widgets/common/app_button.dart';
 
+import 'package:vidyasetu/services/localization_service.dart';
+
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  OnboardingScreen({super.key});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -15,27 +17,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingSlide> _slides = [
+  List<OnboardingSlide> get _slides => [
     OnboardingSlide(
       icon: Icons.notifications_active_rounded,
-      title: 'Smart Reminders',
-      subtitle: 'Never miss deadlines',
+      title: context.tr('smart_reminders'),
+      subtitle: context.tr('never_miss_deadlines'),
       description:
           'Set intelligent reminders for exams, assignments, and study sessions with voice and push notifications.',
       color: AppTheme.accentBlue,
     ),
     OnboardingSlide(
       icon: Icons.calendar_month_rounded,
-      title: 'AI-Powered Timetables',
-      subtitle: 'Study smarter, not harder',
+      title: context.tr('aipowered_timetables'),
+      subtitle: context.tr('study_smarter_not_harder'),
       description:
           'Upload your syllabus and get an optimized study schedule generated automatically. Track your progress daily.',
       color: AppTheme.accentPurple,
     ),
     OnboardingSlide(
       icon: Icons.people_rounded,
-      title: 'Mentor Guidance',
-      subtitle: 'Get expert help anytime',
+      title: context.tr('mentor_guidance'),
+      subtitle: context.tr('get_expert_help_anytime'),
       description:
           'Connect with experienced mentors for personalized guidance, feedback, and video sessions.',
       color: AppTheme.successGreen,
@@ -82,7 +84,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 child: TextButton(
                   onPressed: _completeOnboarding,
                   child: Text(
-                    'Skip',
+                    context.tr('skip'),
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                       fontSize: 15,

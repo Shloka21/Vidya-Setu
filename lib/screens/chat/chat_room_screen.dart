@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,6 +11,10 @@ import '../../app/routes.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/firestore_service.dart';
+import '../../services/security_utils.dart';
+import 'package:vidyasetu/services/localization_service.dart';
+import 'image_preview_screen.dart';
+import 'in_app_pdf_viewer_screen.dart';
 
 class ChatRoomScreen extends StatefulWidget {
   const ChatRoomScreen({super.key});
@@ -28,6 +33,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   String? _otherUserId;
   Stream<QuerySnapshot>? _messagesStream;
   bool _isUploading = false;
+  Timer? _refreshTimer;
 
   @override
   void didChangeDependencies() {
@@ -45,6 +51,10 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       if (_roomId != null && currentUid != null) {
         _firestoreService.markMessagesRead(_roomId!, currentUid);
         _messagesStream ??= _firestoreService.messagesStream(_roomId!);
+        // Periodic timer to refresh UI (makes Join Meeting button activate in real-time)
+        _refreshTimer ??= Timer.periodic(const Duration(seconds: 30), (_) {
+          if (mounted) setState(() {});
+        });
       }
     }
   }
@@ -53,30 +63,49 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _refreshTimer?.cancel();
     super.dispose();
   }
 
   void _sendMessage() {
-    if (_messageController.text.trim().isEmpty || _roomId == null) return;
+    final rawText = _messageController.text.trim();
+    if (rawText.isEmpty || _roomId == null) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final currentUid = authProvider.userModel?.uid ?? '';
+    final currentName = authProvider.userModel?.name ?? 'Someone';
+
+    // Security: sanitize input before storing
+    final sanitized = SecurityUtils.sanitizeInput(rawText, maxLength: 2000);
+    if (sanitized.isEmpty) return;
 
     final msgId = FirebaseFirestore.instance.collection('_').doc().id;
     _firestoreService.sendMessage(_roomId!, {
       'id': msgId,
-      'content': _messageController.text.trim(),
+      'content': sanitized,
       'senderId': currentUid,
       'receiverId': _otherUserId ?? '',
       'timestamp': Timestamp.now(),
       'type': 'text',
     });
+
+    // Write notification to receiver's subcollection
+    if (_otherUserId != null && _otherUserId!.isNotEmpty) {
+      _firestoreService.writeNotification(_otherUserId!, {
+        'type': 'chat',
+        'senderName': currentName,
+        'senderId': currentUid,
+        'message': sanitized.length > 100 ? '${sanitized.substring(0, 100)}...' : sanitized,
+        'roomId': _roomId,
+      });
+    }
+
     _messageController.clear();
   }
 
   Future<void> _uploadFile() async {
     if (_roomId == null) return;
     FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.media, // Allows picking images & videos
+      type: FileType.any, // Allows picking images, videos, and documents
     );
     if (result == null || result.files.single.path == null) return;
 
@@ -87,7 +116,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     setState(() => _isUploading = true);
     try {
       final File file = File(result.files.single.path!);
-      final fileName = result.files.single.name;
+      final fileName = SecurityUtils.sanitizeFileName(result.files.single.name);
       
       final url = await _firestoreService.uploadChatFile(_roomId!, msgId, file);
 
@@ -105,7 +134,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to upload file')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('failed_to_upload_file'))));
       }
     } finally {
       if (mounted) setState(() => _isUploading = false);
@@ -113,9 +142,9 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
   }
 
   void _showScheduleMeetingDialog() {
-    DateTime selectedDate = DateTime.now().add(const Duration(days: 1));
-    TimeOfDay selectedTime = const TimeOfDay(hour: 10, minute: 0);
-    final titleController = TextEditingController(text: 'Study Session');
+    DateTime selectedDate = DateTime.now().add(Duration(days: 1));
+    TimeOfDay selectedTime = TimeOfDay(hour: 10, minute: 0);
+    final titleController = TextEditingController(text: context.tr('study_session'));
 
     showDialog(
       context: context,
@@ -123,14 +152,14 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: AppTheme.surface,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Schedule Meeting', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+          title: Text(context.tr('schedule_meeting'), style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               TextField(
                 controller: titleController,
                 decoration: InputDecoration(
-                  labelText: 'Meeting Title',
+                  labelText: context.tr('meeting_title'),
                   filled: true,
                   fillColor: AppTheme.background,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -165,7 +194,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
             ElevatedButton(
               onPressed: () async {
                 final auth = Provider.of<AuthProvider>(ctx, listen: false);
@@ -197,7 +226,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: const Text('Meeting scheduled!'),
+                      content: Text(context.tr('meeting_scheduled')),
                       backgroundColor: AppTheme.successGreen,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -206,13 +235,35 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-              child: const Text('Schedule'),
+              child: Text(context.tr('schedule')),
             ),
           ],
         ),
       ),
     );
     titleController.dispose;
+  }
+
+  Future<void> _showUserProfileInfo() async {
+    if (_otherUserId == null) return;
+    
+    // We fetch full user data directly to pass to profile screens
+    final userData = await _firestoreService.getUser(_otherUserId!);
+    if (!mounted || userData == null) return;
+    userData['uid'] = _otherUserId; // Ensure uid is present
+
+    final role = userData['role'] as String? ?? 'student';
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final myRole = authProvider.userModel?.role ?? 'student';
+
+    if (role == 'mentor') {
+        Navigator.pushNamed(context, AppRoutes.mentorProfile, arguments: userData);
+    } else if (role == 'student' && myRole == 'mentor') {
+        Navigator.pushNamed(context, AppRoutes.studentProfileMentorView, arguments: userData);
+    } else {
+        // Fallback for student viewing another student profile (if ever allowed)
+        Navigator.pushNamed(context, AppRoutes.studentProfileMentorView, arguments: userData);
+    }
   }
 
   @override
@@ -249,7 +300,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                 ),
               ],
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -258,7 +309,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w600)),
-                Text('Tap for info',
+                Text(context.tr('tap_for_info'),
                     style:
                         TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
               ],
@@ -266,29 +317,47 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
           ],
         ),
         actions: [
-          if ((Provider.of<AuthProvider>(context, listen: false).userModel?.role ?? 'student') == 'mentor')
+          if ((Provider.of<AuthProvider>(context, listen: false).userModel?.role ?? 'student') == 'mentor') ...[
             IconButton(
-              icon:
-                  const Icon(Icons.videocam_rounded, color: AppTheme.accentBlue),
+              icon: const Icon(Icons.phone_rounded, color: AppTheme.accentPurple),
+              iconSize: 22,
               onPressed: () {
                 Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
                   'roomId': _roomId ?? 'default',
                   'otherUserName': _otherUserName ?? 'User',
+                  'otherUserId': _otherUserId,
+                  'autoStart': true,
+                  'audioOnly': true,
                 });
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.videocam_rounded, color: AppTheme.accentBlue),
+              iconSize: 26,
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
+                  'roomId': _roomId ?? 'default',
+                  'otherUserName': _otherUserName ?? 'User',
+                  'otherUserId': _otherUserId,
+                  'autoStart': true,
+                  'audioOnly': false,
+                });
+              },
+            ),
+          ],
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert_rounded),
+            icon: Icon(Icons.more_vert_rounded),
             onSelected: (value) {
               if (value == 'schedule') _showScheduleMeetingDialog();
+              if (value == 'info') _showUserProfileInfo();
             },
             itemBuilder: (context) {
               final auth = Provider.of<AuthProvider>(context, listen: false);
               final role = auth.userModel?.role ?? 'student';
               return [
                 if (role == 'mentor')
-                  const PopupMenuItem(value: 'schedule', child: Text('Schedule Meeting')),
-                const PopupMenuItem(value: 'info', child: Text('Contact Info')),
+                  PopupMenuItem(value: 'schedule', child: Text(context.tr('schedule_meeting'))),
+                PopupMenuItem(value: 'info', child: Text(context.tr('contact_info'))),
               ];
             },
           ),
@@ -296,15 +365,76 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       ),
       body: Column(
         children: [
+          // Incoming call banner
+          StreamBuilder<QuerySnapshot>(
+            stream: _firestoreService.incomingCallsStream(currentUid),
+            builder: (context, callSnapshot) {
+              if (callSnapshot.hasData && callSnapshot.data!.docs.isNotEmpty) {
+                final callData = callSnapshot.data!.docs.first.data() as Map<String, dynamic>;
+                final callerName = callData['callerName'] ?? 'Someone';
+                final callRoomId = callData['roomId'] ?? '';
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [AppTheme.successGreen, AppTheme.successGreen.withOpacity(0.8)],
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.videocam_rounded, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('$callerName is calling you',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 15)),
+                            Text(context.tr('incoming_video_call'),
+                                style: TextStyle(color: Colors.white70, fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      // Decline
+                      IconButton(
+                        onPressed: () {
+                          _firestoreService.updateCallStatus(callRoomId, 'declined');
+                        },
+                        icon: const Icon(Icons.call_end, color: Colors.red, size: 28),
+                        style: IconButton.styleFrom(backgroundColor: Colors.white),
+                      ),
+                      const SizedBox(width: 8),
+                      // Accept
+                      IconButton(
+                        onPressed: () {
+                          _firestoreService.updateCallStatus(callRoomId, 'accepted');
+                          Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
+                            'roomId': callRoomId,
+                            'otherUserName': callerName,
+                            'autoStart': true,
+                            'audioOnly': false,
+                          });
+                        },
+                        icon: Icon(Icons.videocam, color: AppTheme.successGreen, size: 28),
+                        style: IconButton.styleFrom(backgroundColor: Colors.white),
+                      ),
+                    ],
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
           // Messages from Firestore
           Expanded(
             child: _roomId == null || _messagesStream == null
-                ? const Center(child: Text('No chat room selected'))
+                ? Center(child: Text(context.tr('no_chat_room_selected')))
                 : StreamBuilder<QuerySnapshot>(
                     stream: _messagesStream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
+                        return Center(
                             child: CircularProgressIndicator());
                       }
 
@@ -317,13 +447,13 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                             children: [
                               Icon(Icons.chat_bubble_outline_rounded,
                                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48),
-                              const SizedBox(height: 12),
-                              Text('No messages yet',
+                              SizedBox(height: 12),
+                              Text(context.tr('no_messages_yet'),
                                   style: TextStyle(
                                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                       fontSize: 16)),
-                              const SizedBox(height: 4),
-                              Text('Say hello! 👋',
+                              SizedBox(height: 4),
+                              Text(context.tr('say_hello'),
                                   style: TextStyle(
                                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                                       fontSize: 14)),
@@ -390,19 +520,19 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       shape: BoxShape.circle,
                     ),
                     child: _isUploading 
-                        ? const Padding(padding: EdgeInsets.all(12.0), child: CircularProgressIndicator(strokeWidth: 2))
+                        ? Padding(padding: EdgeInsets.all(12.0), child: CircularProgressIndicator(strokeWidth: 2))
                         : IconButton(
                             icon: Icon(Icons.attach_file_rounded,
                                 color: AppTheme.accentBlue, size: 20),
                             onPressed: _uploadFile,
                           ),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Expanded(
                     child: TextField(
                       controller: _messageController,
                       decoration: InputDecoration(
-                        hintText: 'Type a message...',
+                        hintText: context.tr('type_a_message'),
                         hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                         filled: true,
                         fillColor: AppTheme.background,
@@ -447,26 +577,50 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
     Widget messageContent;
 
     if (type == 'image') {
-      messageContent = ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: content,
-          width: 200,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => const SizedBox(width: 50, height: 50, child: Center(child: CircularProgressIndicator())),
-          errorWidget: (context, url, error) => const Icon(Icons.error),
+      messageContent = GestureDetector(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ImagePreviewScreen(imageUrl: content),
+            ),
+          );
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: CachedNetworkImage(
+            imageUrl: content,
+            width: 200,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => const SizedBox(width: 50, height: 50, child: Center(child: CircularProgressIndicator())),
+            errorWidget: (context, url, error) => const Icon(Icons.error),
+          ),
         ),
       );
     } else if (type == 'file') {
+      final isPdf = fileName?.toLowerCase().endsWith('.pdf') ?? false;
       messageContent = InkWell(
-        onTap: () => launchUrl(Uri.parse(content), mode: LaunchMode.externalApplication),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.insert_drive_file, color: isMe ? Colors.white : AppTheme.primaryNavy),
-            const SizedBox(width: 8),
-            Flexible(child: Text(fileName ?? 'File', style: TextStyle(color: isMe ? Colors.white : AppTheme.primaryNavy, decoration: TextDecoration.underline))),
-          ],
+        onTap: () {
+          if (isPdf) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => InAppPdfViewerScreen(pdfUrl: content, title: fileName ?? 'PDF Viewer')));
+          } else {
+            launchUrl(Uri.parse(content), mode: LaunchMode.externalApplication);
+          }
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: isMe ? Colors.white.withOpacity(0.1) : Colors.black.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(isPdf ? Icons.picture_as_pdf_rounded : Icons.insert_drive_file, color: isMe ? Colors.white : (isPdf ? Colors.red : AppTheme.primaryNavy)),
+              const SizedBox(width: 8),
+              Flexible(child: Text(fileName ?? 'Document', style: TextStyle(color: isMe ? Colors.white : AppTheme.primaryNavy, fontWeight: FontWeight.w500))),
+            ],
+          ),
         ),
       );
     } else if (type == 'meeting' || type == 'system') {

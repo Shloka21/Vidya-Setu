@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -6,8 +7,11 @@ import '../../../app/routes.dart';
 import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../services/firestore_service.dart';
+import '../../../services/notification_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/stat_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
+import '../../../widgets/common/translated_text.dart';
 
 class MentorDashboard extends StatefulWidget {
   const MentorDashboard({super.key});
@@ -21,15 +25,71 @@ class _MentorDashboardState extends State<MentorDashboard> {
   List<Map<String, dynamic>> _students = [];
   int _pendingRequests = 0;
   bool _loading = true;
+  StreamSubscription? _notifSubscription;
+  final Set<String> _processedNotifIds = {};
+  Timer? _activeHeartbeatTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _setupNotificationListener();
+
+    // Setup WhatsApp-style lastActive heartbeat
+    _activeHeartbeatTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null && mounted) {
+        _firestore.updateUser(uid, {'lastActive': Timestamp.now()});
+      }
+    });
+
+    // Set initial heartbeat immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null && mounted) {
+        _firestore.updateUser(uid, {'lastActive': Timestamp.now()});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _notifSubscription?.cancel();
+    _activeHeartbeatTimer?.cancel();
+    super.dispose();
+  }
+
+  void _setupNotificationListener() {
+    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (uid == null) return;
+
+    _notifSubscription = _firestore.unreadNotificationsStream(uid).listen((snapshot) {
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final id = data['id'] as String? ?? doc.id;
+        if (_processedNotifIds.contains(id)) continue;
+        _processedNotifIds.add(id);
+
+        final type = data['type'] as String? ?? '';
+        final notifService = NotificationService();
+
+        if (type == 'chat') {
+          notifService.showChatNotification(
+            senderName: data['senderName'] ?? 'Student',
+            message: data['message'] ?? 'New message',
+            roomId: data['roomId'] ?? '',
+            senderId: data['senderId'] ?? '',
+          );
+        }
+
+        _firestore.markNotificationRead(uid, id);
+      }
+    });
   }
 
   Future<void> _loadData() async {
-    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final uid = auth.userModel?.uid;
     if (uid == null) { setState(() => _loading = false); return; }
     try {
       final students = await _firestore.getConnectedStudents(uid);
@@ -41,9 +101,125 @@ class _MentorDashboardState extends State<MentorDashboard> {
           _loading = false;
         });
       }
+
+      // Check if mentor has completed profile setup
+      final user = auth.userModel;
+      if (user != null && (user.bio == null || user.bio!.isEmpty)) {
+        _showOnboardingDialog(uid);
+      }
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _showOnboardingDialog(String uid) {
+    final bioCtrl = TextEditingController();
+    final expCtrl = TextEditingController();
+    final langCtrl = TextEditingController(text: 'English, Hindi');
+    final availCtrl = TextEditingController(text: 'Mon-Fri, 4:00 PM - 8:00 PM');
+    final specCtrl = TextEditingController();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Row(
+            children: [
+              Icon(Icons.waving_hand_rounded, color: AppTheme.warningAmber, size: 28),
+              const SizedBox(width: 10),
+              Expanded(child: Text('Welcome, Mentor!', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20))),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Complete your profile so students can find you.', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14)),
+                const SizedBox(height: 16),
+                _onboardField(bioCtrl, 'Bio', 'Tell students about yourself...', maxLines: 3),
+                const SizedBox(height: 12),
+                _onboardField(expCtrl, 'Years of Experience', 'e.g. 5'),
+                const SizedBox(height: 12),
+                _onboardField(langCtrl, 'Languages', 'e.g. English, Hindi, Marathi'),
+                const SizedBox(height: 12),
+                _onboardField(availCtrl, 'Availability', 'e.g. Mon-Fri, 4-8 PM'),
+                const SizedBox(height: 12),
+                _onboardField(specCtrl, 'Specialization', 'e.g. Mathematics, Physics'),
+              ],
+            ),
+          ),
+          actions: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () async {
+                  final bio = bioCtrl.text.trim();
+                  final exp = int.tryParse(expCtrl.text.trim()) ?? 0;
+                  final langs = langCtrl.text.trim();
+                  final avail = availCtrl.text.trim();
+                  final specs = specCtrl.text.trim().split(',').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+
+                  await _firestore.updateUser(uid, {
+                    'bio': bio,
+                    'experienceYears': exp,
+                    'languages': langs,
+                    'availability': avail,
+                    if (specs.isNotEmpty) 'subjectsTaught': specs,
+                    'profileCompleted': true,
+                  });
+
+                  // Refresh auth provider
+                  final auth = Provider.of<AuthProvider>(context, listen: false);
+                  await auth.refreshUser();
+
+                  if (ctx.mounted) Navigator.pop(ctx);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Profile setup complete! 🎉'),
+                        backgroundColor: AppTheme.successGreen,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.accentBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Save & Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _onboardField(TextEditingController ctrl, String label, String hint, {int maxLines = 1}) {
+    return TextField(
+      controller: ctrl,
+      maxLines: maxLines,
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surface,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+    );
   }
 
   String _lastActiveLabel(Map<String, dynamic> student) {
@@ -133,15 +309,15 @@ class _MentorDashboardState extends State<MentorDashboard> {
                       color: AppTheme.primaryNavy,
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.school_rounded, size: 20, color: Colors.white),
+                    child: Icon(Icons.school_rounded, size: 20, color: Colors.white),
                   ),
-                  const SizedBox(width: 10),
+                  SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('VidyaSetu', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w700)),
+                      Text(context.tr('vidyasetu'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w700)),
                       Text(
-                        DateFormat('EEEE, MMM d').format(now).toUpperCase(),
+                        DateFormat('EEEE, MMM d', Provider.of<LocalizationService>(context).locale).format(now).toUpperCase(),
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1),
                       ),
                     ],
@@ -150,7 +326,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Welcome back,\n${user?.name ?? "Mentor"}!',
+                '${context.tr('welcome_back')},\n${user?.name ?? "Mentor"}!',
                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 28, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.5),
               ),
             ],
@@ -228,16 +404,16 @@ class _MentorDashboardState extends State<MentorDashboard> {
         children: [
           Expanded(
             child: StatCard(
-              label: 'Students',
+              label: context.tr('students'),
               value: '${_students.length}',
               icon: Icons.people_rounded,
               isDark: true,
             ),
           ),
-          const SizedBox(width: 14),
+          SizedBox(width: 14),
           Expanded(
             child: StatCard(
-              label: 'Pending\nRequests',
+              label: context.tr('pending_requests_1'),
               value: '$_pendingRequests',
               icon: Icons.person_add_rounded,
               isDark: true,
@@ -255,26 +431,26 @@ class _MentorDashboardState extends State<MentorDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Student Activity', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(context.tr('student_activity'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.myStudents),
-              child: Text('View All', style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w600)),
+              child: Text(context.tr('view_all'), style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w600)),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12),
         if (_loading)
-          const Center(child: CircularProgressIndicator())
+          Center(child: CircularProgressIndicator())
         else if (_students.isEmpty)
           AppCard(
             padding: const EdgeInsets.all(20),
             child: Row(
               children: [
                 Icon(Icons.people_outline_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 28),
-                const SizedBox(width: 14),
+                SizedBox(width: 14),
                 Expanded(
                   child: Text(
-                    'No connected students yet. Students can find and connect with you from the Mentors screen.',
+                    context.tr('no_connected_students_yet_students_can_f'),
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13),
                   ),
                 ),
@@ -361,26 +537,31 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Pending Requests', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 12),
+        Text(context.tr('pending_requests'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+        SizedBox(height: 12),
         StreamBuilder<QuerySnapshot>(
           stream: _firestore.mentorRequestsStream(uid),
           builder: (context, snapshot) {
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            final incomingDocs = snapshot.data!.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['requestedBy'] != uid;
+            }).toList();
+
+            if (incomingDocs.isEmpty) {
               return AppCard(
                 padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
                     Icon(Icons.check_circle_outline_rounded, color: AppTheme.successGreen, size: 28),
-                    const SizedBox(width: 14),
-                    Text('No pending requests', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
+                    SizedBox(width: 14),
+                    Text(context.tr('no_pending_requests'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
                   ],
                 ),
               );
             }
 
             return Column(
-              children: snapshot.data!.docs.map((doc) {
+              children: incomingDocs.map((doc) {
                 final data = doc.data() as Map<String, dynamic>;
                 final name = data['studentName'] ?? 'Student';
                 return Padding(
@@ -395,15 +576,15 @@ class _MentorDashboardState extends State<MentorDashboard> {
                             color: AppTheme.accentBlue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.person_add_rounded, color: AppTheme.accentBlue, size: 22),
+                          child: Icon(Icons.person_add_rounded, color: AppTheme.accentBlue, size: 22),
                         ),
-                        const SizedBox(width: 14),
+                        SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(name, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w600)),
-                              Text('Wants to connect', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
+                              Text(context.tr('wants_to_connect'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
                             ],
                           ),
                         ),
@@ -441,36 +622,169 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Quick Actions', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text(context.tr('quick_actions'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _buildPremiumCard(
+                title: context.tr('guidance'),
+                subtitle: context.tr('send_feedback') ?? 'Send feedback',
+                icon: Icons.rate_review_rounded,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.feedbackHistory),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPremiumCard(
+                title: context.tr('analytics'),
+                subtitle: context.tr('student_progress') ?? 'Student progress',
+                icon: Icons.analytics_rounded,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.studentAnalyticsMentor),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
-            _actionCard('Guidance', Icons.rate_review_rounded, AppTheme.warningAmber, () => Navigator.pushNamed(context, AppRoutes.feedbackHistory)),
-            const SizedBox(width: 12),         
-            _actionCard('Analytics', Icons.analytics_rounded, AppTheme.accentPurple, () => Navigator.pushNamed(context, AppRoutes.studentAnalyticsMentor)),
+            Expanded(
+              child: _buildPremiumCard(
+                title: context.tr('my_students'),
+                subtitle: context.tr('manage_students') ?? 'Manage students',
+                icon: Icons.groups_rounded,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF0acffe), Color(0xFF495aff)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.myStudents),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildPremiumCard(
+                title: context.tr('settings'),
+                subtitle: context.tr('preferences') ?? 'Preferences',
+                icon: Icons.settings_rounded,
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFfa709a), Color(0xFFfee140)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                onTap: () => Navigator.pushNamed(context, AppRoutes.mentorSettings),
+              ),
+            ),
           ],
         ),
       ],
     );
   }
 
-  Widget _actionCard(String label, IconData icon, Color color, VoidCallback onTap) {
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: AppCard(
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
-          child: Column(
-            children: [
-              Container(
-                width: 50, height: 50,
-                decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(14)),
-                child: Icon(icon, color: color, size: 26),
+  Widget _buildPremiumCard({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Gradient gradient,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          gradient: gradient,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: (gradient as LinearGradient).colors.first.withOpacity(0.35),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Stack(
+          children: [
+            Positioned(
+              right: -12,
+              top: -12,
+              child: Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.12),
+                  shape: BoxShape.circle,
+                ),
               ),
-              const SizedBox(height: 10),
-              Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
+            ),
+            Positioned(
+              right: 8,
+              bottom: -8,
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(icon, color: Colors.white, size: 20),
+                  ),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          height: 1.1,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

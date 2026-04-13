@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../app/theme.dart';
 import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
 
 class EditTimetableSlotScreen extends StatefulWidget {
   const EditTimetableSlotScreen({super.key});
@@ -48,7 +49,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: Text('Edit Slot', style: Theme.of(context).textTheme.headlineSmall),
+        title: Text(context.tr('edit_slot'), style: Theme.of(context).textTheme.headlineSmall),
         actions: [
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppTheme.errorRed),
@@ -67,36 +68,36 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildSubjectDropdown(),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildTextField(
                 controller: _topicController,
-                label: 'Topic / Chapter',
+                label: context.tr('topic__chapter'),
                 hint: 'e.g. Integration',
                 icon: Icons.topic_outlined,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildDaySelector(),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Row(
                 children: [
                   Expanded(child: _buildTimePicker(isStart: true)),
-                  const SizedBox(width: 16),
+                  SizedBox(width: 16),
                   Expanded(child: _buildTimePicker(isStart: false)),
                 ],
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildTextField(
                 controller: _locationController,
-                label: 'Location (Optional)',
+                label: context.tr('location_optional'),
                 hint: 'e.g. Room 101 or Online',
                 icon: Icons.location_on_outlined,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildColorPicker(),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               _buildTextField(
                 controller: _notesController,
-                label: 'Notes',
+                label: context.tr('notes'),
                 hint: 'Add any specific instructions...',
                 icon: Icons.notes_outlined,
                 maxLines: 3,
@@ -109,7 +110,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
         padding: const EdgeInsets.all(24),
         child: ElevatedButton(
           onPressed: _saveSlot,
-          child: const Text('Save Changes'),
+          child: Text(context.tr('save_changes')),
         ),
       ),
     );
@@ -119,7 +120,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Subject', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(context.tr('subject'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           value: _selectedSubject,
@@ -179,7 +180,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Day', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(context.tr('day'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -244,7 +245,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
                 const SizedBox(width: 8),
                 Text(
                   time.format(context),
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: TextStyle(fontWeight: FontWeight.w600),
                 ),
               ],
             ),
@@ -258,7 +259,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Color', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+        Text(context.tr('color'), style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 12,
@@ -282,7 +283,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
                     ),
                   ],
                 ),
-                child: isSelected ? const Icon(Icons.check, color: Colors.white) : null,
+                child: isSelected ? Icon(Icons.check, color: Colors.white) : null,
               ),
             );
           }).toList(),
@@ -296,7 +297,7 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
       // Save logic (mock)
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Slot Saved Successfully')),
+        SnackBar(content: Text(context.tr('slot_saved_successfully'))),
       );
     }
   }
@@ -305,23 +306,23 @@ class _EditTimetableSlotScreenState extends State<EditTimetableSlotScreen> {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Slot?'),
-        content: const Text('Are you sure you want to delete this timetable slot?'),
+        title: Text(context.tr('delete_slot')),
+        content: Text(context.tr('are_you_sure_you_want_to_delet')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+            child: Text(context.tr('cancel')),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(ctx); // Close dialog
               Navigator.pop(context); // Close screen
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Slot Deleted')),
+                SnackBar(content: Text(context.tr('slot_deleted'))),
               );
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.errorRed),
-            child: const Text('Delete'),
+            child: Text(context.tr('delete')),
           ),
         ],
       ),

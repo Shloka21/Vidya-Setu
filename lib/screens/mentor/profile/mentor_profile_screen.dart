@@ -8,6 +8,7 @@ import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/theme_provider.dart';
 import '../../../services/firestore_service.dart';
+import '../../../services/localization_service.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/animated_theme_toggle.dart';
 
@@ -62,75 +63,82 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
     final user = authProvider.userModel;
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final loc = Provider.of<LocalizationService>(context);
+    final isTranslating = loc.isTranslating;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Profile & Settings'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.edit_rounded),
-            onPressed: () => _showEditProfileDialog(context),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Profile Header ──
-            Center(
-              child: Column(
-                children: [
-                  Container(
-                    width: 90,
-                    height: 90,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [AppTheme.accentPurple, AppTheme.accentBlue],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      shape: BoxShape.circle,
-                    ),
-                    child: user?.profileImageUrl != null
-                        ? ClipOval(child: Image.network(user!.profileImageUrl!, fit: BoxFit.cover, width: 90, height: 90))
-                        : Center(
-                            child: Text(
-                              user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'M',
-                              style: const TextStyle(color: Colors.white, fontSize: 36, fontWeight: FontWeight.w700),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120,
+                pinned: true,
+                elevation: 0,
+                backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                flexibleSpace: FlexibleSpaceBar(
+                  background: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 60, height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(colors: [AppTheme.accentPurple, AppTheme.accentBlue]),
+                              border: Border.all(color: Theme.of(context).colorScheme.surface, width: 3),
+                              boxShadow: [BoxShadow(color: AppTheme.accentPurple.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                            ),
+                            child: user?.profileImageUrl != null
+                                ? ClipOval(child: Image.network(user!.profileImageUrl!, fit: BoxFit.cover))
+                                : Center(child: Text(user?.name.isNotEmpty == true ? user!.name[0].toUpperCase() : 'M', style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold))),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(user?.name ?? 'Mentor', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w800)),
+                                SizedBox(height: 2),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(color: AppTheme.accentPurple.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.verified_rounded, size: 12, color: AppTheme.accentPurple),
+                                      SizedBox(width: 4),
+                                      Text(context.tr('verified_mentor'), style: TextStyle(color: AppTheme.accentPurple, fontSize: 10, fontWeight: FontWeight.w700)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(user?.name ?? 'Mentor',
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 4),
-                  Text(user?.email ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14)),
-                  const SizedBox(height: 6),
-                  if (user?.bio != null && user!.bio!.isNotEmpty) ...[
-                    Text(user.bio!, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13), textAlign: TextAlign.center),
-                    const SizedBox(height: 6),
-                  ],
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppTheme.accentPurple.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.verified_rounded, size: 14, color: AppTheme.accentPurple),
-                        const SizedBox(width: 4),
-                        Text('Mentor', style: TextStyle(color: AppTheme.accentPurple, fontSize: 13, fontWeight: FontWeight.w600)),
-                      ],
+                          IconButton(
+                            icon: Icon(Icons.edit_rounded, color: Theme.of(context).colorScheme.onSurface),
+                            onPressed: () => _showEditProfileDialog(context),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ],
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (user?.bio != null && user!.bio!.isNotEmpty) ...[
+                        _sectionTitle(context.tr('about_me')),
+                        AppCard(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(user.bio!, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13), textAlign: TextAlign.center),
+                        ),
+                        SizedBox(height: 24),
+                      ],
 
             // ── Stats ──
             FutureBuilder<List<Map<String, dynamic>>>(
@@ -139,39 +147,39 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                 final studentCount = snap.data?.length ?? 0;
                 return Row(
                   children: [
-                    _buildStat('Students', '$studentCount', AppTheme.accentBlue),
-                    _buildStat('Rating', '${(user?.rating ?? 4.9).toStringAsFixed(1)}', AppTheme.warningAmber),
-                    _buildStat('Sessions', '${user?.sessionsCompleted ?? 0}', AppTheme.successGreen),
+                    _buildStat(context.tr('students'), '$studentCount', AppTheme.accentBlue),
+                    _buildStat(context.tr('rating'), '${(user?.rating ?? 4.9).toStringAsFixed(1)}', AppTheme.warningAmber),
+                    _buildStat(context.tr('sessions'), '${user?.sessionsCompleted ?? 0}', AppTheme.successGreen),
                   ],
                 );
               },
             ),
-            const SizedBox(height: 28),
+            SizedBox(height: 28),
 
             // ── Account ──
-            _sectionTitle('ACCOUNT'),
+            _sectionTitle(context.tr('account')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _navItem(Icons.people_outline_rounded, 'My Students', () => Navigator.pushNamed(context, AppRoutes.myStudents)),
-                  const Divider(height: 1),
-                  _navItem(Icons.lock_rounded, 'Change Password', _showChangePasswordDialog),
-                  const Divider(height: 1),
-                  _navItem(Icons.verified_rounded, 'Verification Status', _showVerificationDialog),
+                  _navItem(Icons.people_outline_rounded, context.tr('my_students'), () => Navigator.pushNamed(context, AppRoutes.myStudents)),
+                  Divider(height: 1),
+                  _navItem(Icons.lock_rounded, context.tr('change_password'), _showChangePasswordDialog),
+                  Divider(height: 1),
+                  _navItem(Icons.verified_rounded, context.tr('verification_status'), _showVerificationDialog),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Availability ──
-            _sectionTitle('AVAILABILITY'),
+            _sectionTitle(context.tr('availability')),
             AppCard(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: SwitchListTile(
-                title: Text('Available for New Students',
+                title: Text(context.tr('available_for_new'),
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15)),
-                subtitle: Text('Allow students to send connection requests',
+                subtitle: Text(context.tr('allow_students_requests'),
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                 value: _availableForNew,
                 activeColor: AppTheme.accentBlue,
@@ -185,33 +193,33 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 20),
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Notifications ──
-            _sectionTitle('NOTIFICATIONS'),
+            _sectionTitle(context.tr('notifications')),
             AppCard(
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
-                  _toggle('New Student Requests', _newRequests, (v) {
+                  _toggle(context.tr('new_requests'), _newRequests, (v) {
                     setState(() => _newRequests = v);
-                    _savePref('mentor_notif_requests', v);
+                    _savePref(context.tr('mentornotifrequests'), v);
                   }),
-                  _toggle('Messages', _messageNotif, (v) {
+                  _toggle(context.tr('messages'), _messageNotif, (v) {
                     setState(() => _messageNotif = v);
-                    _savePref('mentor_notif_messages', v);
+                    _savePref(context.tr('mentornotifmessages'), v);
                   }),
-                  _toggle('Student Progress Updates', _studentUpdates, (v) {
+                  _toggle(context.tr('student_updates'), _studentUpdates, (v) {
                     setState(() => _studentUpdates = v);
-                    _savePref('mentor_notif_updates', v);
+                    _savePref(context.tr('mentornotifupdates'), v);
                   }),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Appearance ──
-            _sectionTitle('APPEARANCE'),
+            _sectionTitle(context.tr('appearance')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -231,12 +239,12 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                             size: 24,
                           ),
                         ),
-                        const SizedBox(width: 14),
+                        SizedBox(width: 14),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('App Theme', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
+                              Text(context.tr('theme'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
                               Text(isDark ? 'Currently using dark theme' : 'Currently using light theme',
                                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                             ],
@@ -249,47 +257,76 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                       ],
                     ),
                   ),
-                  const Divider(height: 1),
-                  _navItem(Icons.language_rounded, 'Language', () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('English is currently the only available language')),
-                    );
-                  }),
+                  Divider(height: 1),
+                  ListTile(
+                    leading: Icon(Icons.language_rounded, color: AppTheme.accentBlue),
+                    title: Text(context.tr('language'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
+                    trailing: DropdownButton<String>(
+                      value: loc.locale,
+                      underline: const SizedBox(),
+                      dropdownColor: Theme.of(context).colorScheme.surface,
+                      items: const [
+                        DropdownMenuItem(value: 'en', child: Text('English')),
+                        DropdownMenuItem(value: 'hi', child: Text('Hindi (हिन्दी)')),
+                        DropdownMenuItem(value: 'bn', child: Text('Bengali (বাংলা)')),
+                        DropdownMenuItem(value: 'mr', child: Text('Marathi (मराठी)')),
+                        DropdownMenuItem(value: 'te', child: Text('Telugu (తెలుగు)')),
+                        DropdownMenuItem(value: 'ta', child: Text('Tamil (தமிழ்)')),
+                        DropdownMenuItem(value: 'gu', child: Text('Gujarati (ગુજરાતી)')),
+                        DropdownMenuItem(value: 'kn', child: Text('Kannada (ಕನ್ನಡ)')),
+                        DropdownMenuItem(value: 'ur', child: Text('Urdu (اردو)')),
+                      ],
+                      onChanged: (val) {
+                        if (val != null) {
+                          Provider.of<LocalizationService>(context, listen: false).setLocale(val);
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${context.tr('language_updated')} $val')));
+                        }
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
             // ── Support ──
-            _sectionTitle('SUPPORT'),
+            _sectionTitle(context.tr('support')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
                 children: [
-                  _navItem(Icons.help_outline_rounded, 'Help & FAQ', _showHelpDialog),
-                  const Divider(height: 1),
-                  _navItem(Icons.headset_mic_rounded, 'Contact Support', _showContactSupportDialog),
-                  const Divider(height: 1),
-                  _navItem(Icons.policy_rounded, 'Privacy Policy', _showPrivacyPolicyDialog),
-                  const Divider(height: 1),
-                  _navItem(Icons.info_outline_rounded, 'About VidyaSetu', _showAboutAppDialog),
+                  _navItem(Icons.help_outline_rounded, context.tr('help_faq'), _showHelpDialog),
+                  Divider(height: 1),
+                  _navItem(Icons.headset_mic_rounded, context.tr('contact_support'), _showContactSupportDialog),
+                  Divider(height: 1),
+                  _navItem(Icons.policy_rounded, context.tr('privacy_policy'), _showPrivacyPolicyDialog),
+                  Divider(height: 1),
+                  _navItem(Icons.info_outline_rounded, context.tr('about_app'), _showAboutAppDialog),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24),
 
-            // ── Logout ──
+            // ── Danger Zone ──
+            _sectionTitle(context.tr('danger_zone')),
             AppCard(
               padding: EdgeInsets.zero,
-              child: ListTile(
-                leading: Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 22),
-                title: Text('Logout', style: TextStyle(color: AppTheme.errorRed, fontSize: 15, fontWeight: FontWeight.w600)),
-                onTap: _showLogoutDialog,
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 20)),
+                    title: Text(context.tr('logout'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
+                    onTap: _showLogoutDialog,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 30),
-          ],
-        ),
+            const SizedBox(height: 40),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -357,25 +394,25 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Edit Profile', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+        title: Text(context.tr('edit_profile'), style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
               controller: nameCtrl,
               decoration: InputDecoration(
-                labelText: 'Name',
+                labelText: context.tr('name'),
                 filled: true,
                 fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             TextField(
               controller: bioCtrl,
               maxLines: 3,
               decoration: InputDecoration(
-                labelText: 'Bio',
+                labelText: context.tr('bio'),
                 filled: true,
                 fillColor: Theme.of(context).colorScheme.surface,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
@@ -384,7 +421,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)))),
           ElevatedButton(
             onPressed: () async {
               final uid = user?.uid;
@@ -397,7 +434,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               if (ctx.mounted) Navigator.pop(ctx);
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-            child: const Text('Save'),
+            child: Text(context.tr('save')),
           ),
         ],
       ),
@@ -411,17 +448,17 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Change Password', style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
+        title: Text(context.tr('change_password'), style: TextStyle(color: AppTheme.primaryNavy, fontWeight: FontWeight.w700)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(controller: currentPassCtrl, obscureText: true, decoration: InputDecoration(labelText: 'Current Password', filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
-            const SizedBox(height: 12),
-            TextField(controller: newPassCtrl, obscureText: true, decoration: InputDecoration(labelText: 'New Password', filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            TextField(controller: currentPassCtrl, obscureText: true, decoration: InputDecoration(labelText: context.tr('current_password'), filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
+            SizedBox(height: 12),
+            TextField(controller: newPassCtrl, obscureText: true, decoration: InputDecoration(labelText: context.tr('new_password'), filled: true, fillColor: Theme.of(context).colorScheme.surface, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none))),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               try {
@@ -431,7 +468,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                   await user.reauthenticateWithCredential(cred);
                   await user.updatePassword(newPassCtrl.text);
                   if (ctx.mounted) Navigator.pop(ctx);
-                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Password updated!'), backgroundColor: AppTheme.successGreen));
+                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(context.tr('password_updated')), backgroundColor: AppTheme.successGreen));
                 }
               } catch (e) {
                 if (ctx.mounted) Navigator.pop(ctx);
@@ -439,7 +476,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
-            child: const Text('Update'),
+            child: Text(context.tr('update')),
           ),
         ],
       ),
@@ -451,9 +488,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(children: [Icon(Icons.verified_rounded, color: AppTheme.successGreen, size: 24), const SizedBox(width: 8), const Text('Verification')]),
-        content: const Text('Your mentor account is verified.\n\nVerified mentors appear with a badge and are prioritized in student searches.'),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+        title: Row(children: [Icon(Icons.verified_rounded, color: AppTheme.successGreen, size: 24), SizedBox(width: 8), Text(context.tr('verification'))]),
+        content: Text(context.tr('your_mentor_account_is_verifiednnverifie')),
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('ok')))],
       ),
     );
   }
@@ -463,20 +500,20 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Help & FAQ'),
+        title: Text(context.tr('help__faq')),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _faq('How do I connect with students?', 'Go to Browse Students (Find Students button on Dashboard) and tap Connect.'),
-              _faq('How do I schedule meetings?', 'Open a chat → tap the ⋮ menu → Schedule Meeting.'),
-              _faq('How do I provide feedback?', 'Go to My Students → tap a student → Send Feedback.'),
-              _faq('How do I send reminders?', 'Go to Reminders from Quick Actions → Create Reminder.'),
+              _faq(context.tr('how_do_i_connect_with_students'), 'Go to Browse Students (Find Students button on Dashboard) and tap Connect.'),
+              _faq(context.tr('how_do_i_schedule_meetings'), 'Open a chat → tap the ⋮ menu → Schedule Meeting.'),
+              _faq(context.tr('how_do_i_provide_feedback'), 'Go to My Students → tap a student → Send Feedback.'),
+              _faq(context.tr('how_do_i_send_reminders'), 'Go to Reminders from Quick Actions → Create Reminder.'),
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -488,7 +525,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Q: $q', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface, fontSize: 14)),
-          const SizedBox(height: 4),
+          SizedBox(height: 4),
           Text(a, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13)),
         ],
       ),
@@ -500,12 +537,12 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Contact Support'),
+        title: Text(context.tr('contact_support')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _contactRow(Icons.email_rounded, 'Email', 'support@vidyasetu.app'),
           _contactRow(Icons.language_rounded, 'Website', 'vidyasetu.app/help'),
         ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -515,7 +552,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Icon(icon, size: 20, color: AppTheme.accentBlue),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text(label, style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5))),
           Text(value, style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w500)),
@@ -529,16 +566,16 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Privacy Policy'),
-        content: const SingleChildScrollView(child: Text(
-          'VidyaSetu respects your privacy.\n\n'
-          '• Your data is stored securely in Firebase.\n'
-          '• We do not share your information with third parties.\n'
-          '• Student data you mentor is kept confidential.\n'
-          '• You can delete your account at any time.\n\n'
+        title: Text(context.tr('privacy_policy')),
+        content: SingleChildScrollView(child: Text(
+          context.tr('vidyasetu_respects_your_privacy') +
+          '\n• Your data is stored securely in Firebase.\n' +
+          '• We do not share your information with third parties.\n' +
+          '• Student data you mentor is kept confidential.\n' +
+          '• You can delete your account at any time.\n\n' +
           'For full policy: vidyasetu.app/privacy',
         )),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -548,14 +585,14 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('About VidyaSetu'),
+        title: Text(context.tr('about_vidyasetu')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           _aboutRow(Icons.apps_rounded, 'Version', '1.0.0'),
           _aboutRow(Icons.build_rounded, 'Build', '2026.03.07'),
           _aboutRow(Icons.code_rounded, 'Framework', 'Flutter'),
           _aboutRow(Icons.cloud_rounded, 'Backend', 'Firebase'),
         ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
     );
   }
@@ -565,9 +602,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(children: [
         Icon(icon, size: 18, color: AppTheme.accentBlue),
-        const SizedBox(width: 12),
+        SizedBox(width: 12),
         Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 13)),
-        const Spacer(),
+        Spacer(),
         Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 13)),
       ]),
     );
@@ -578,10 +615,10 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
+        title: Text(context.tr('logout')),
+        content: Text(context.tr('are_you_sure_you_want_to_logout')),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
@@ -592,7 +629,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
-            child: const Text('Logout'),
+            child: Text(context.tr('logout')),
           ),
         ],
       ),

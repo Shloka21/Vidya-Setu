@@ -174,4 +174,17 @@ class UserModel {
 
   bool get isStudent => role == 'student';
   bool get isMentor => role == 'mentor';
+
+  static Map<String, dynamic> calculateLevel(int points) {
+    if (points < 100) return {'level': 1, 'title': 'Beginner', 'nextXp': 100, 'prevXp': 0};
+    if (points < 300) return {'level': 2, 'title': 'Learner', 'nextXp': 300, 'prevXp': 100};
+    if (points < 600) return {'level': 3, 'title': 'Explorer', 'nextXp': 600, 'prevXp': 300};
+    if (points < 1000) return {'level': 4, 'title': 'Achiever', 'nextXp': 1000, 'prevXp': 600};
+    if (points < 1500) return {'level': 5, 'title': 'Scholar', 'nextXp': 1500, 'prevXp': 1000};
+    if (points < 2200) return {'level': 6, 'title': 'Expert', 'nextXp': 2200, 'prevXp': 1500};
+    if (points < 3000) return {'level': 7, 'title': 'Master', 'nextXp': 3000, 'prevXp': 2200};
+    if (points < 4000) return {'level': 8, 'title': 'Champion', 'nextXp': 4000, 'prevXp': 3000};
+    if (points < 5500) return {'level': 9, 'title': 'Legend', 'nextXp': 5500, 'prevXp': 4000};
+    return {'level': 10, 'title': 'Guru', 'nextXp': 10000, 'prevXp': 5500};
+  }
 }
