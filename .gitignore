@@ -51,6 +51,9 @@ ios/Runner/GoogleService-Info.plist
 *.jks
 *.keystore
 key.properties
+firestore.rules
+/scripts/
+lib/firebase_options.dart
 
 # Dev Screenshots (Root)
 flutter_*.png
