@@ -85,3 +85,6 @@ flutter:
     - assets/images/
     - assets/animations/
     - assets/ringtone/
+
+dependency_overrides:
+  sqflite_android: ">=2.3.0 <2.4.2"
