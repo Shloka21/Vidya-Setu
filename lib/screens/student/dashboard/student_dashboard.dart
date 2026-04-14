@@ -517,7 +517,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                             context.tr('analytics_snapshot').toUpperCase(),
                             style: GoogleFonts.inter(
                               color: Theme.of(context).colorScheme.onSurface,
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.w900,
                               letterSpacing: 0,
                             ),
