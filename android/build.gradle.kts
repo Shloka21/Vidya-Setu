@@ -15,12 +15,23 @@ subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
     
-    // Auto namespace assignment for older plugins to satisfy AGP 8
+    // Auto configuration for older plugins to satisfy AGP 8 and resolve SDK compatibility issues
     afterEvaluate {
         val androidExt = project.extensions.findByName("android")
         if (androidExt != null) {
             try {
                 val clazz = androidExt.javaClass
+                
+                // 1. Force SDK 34 to resolve lStar resource errors
+                val setCompileSdkVersion = clazz.getMethod("compileSdkVersion", Int::class.javaPrimitiveType)
+                setCompileSdkVersion.invoke(androidExt, 34)
+
+                val getDefaultConfig = clazz.getMethod("getDefaultConfig")
+                val defaultConfig = getDefaultConfig.invoke(androidExt)
+                val setTargetSdkVersion = defaultConfig.javaClass.getMethod("targetSdkVersion", Int::class.javaPrimitiveType)
+                setTargetSdkVersion.invoke(defaultConfig, 34)
+
+                // 2. Auto namespace assignment
                 val getNamespace = clazz.getMethod("getNamespace")
                 if (getNamespace.invoke(androidExt) == null) {
                     val manifest = project.file("src/main/AndroidManifest.xml")
