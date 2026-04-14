@@ -174,7 +174,17 @@ class _AlarmScreenState extends State<AlarmScreen> with TickerProviderStateMixin
     _exitOrPop();
   }
 
-  void _exitOrPop() {
+  Future<void> _exitOrPop() async {
+    try {
+      // Security fix: move the task to background so it doesn't reveal 
+      // the app context if dismissed from a locked screen.
+      const platform = MethodChannel('com.example.vidyasetu/app_blocker');
+      await platform.invokeMethod('minimizeApp');
+    } catch (e) {
+      debugPrint('Error minimizing app: $e');
+    }
+
+    if (!mounted) return;
     final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final killed = args?['launchedFromColdStart'] ?? false;
     if (killed) {
@@ -352,25 +362,23 @@ class _AlarmScreenState extends State<AlarmScreen> with TickerProviderStateMixin
                             // Time display
                             Text(
                               _currentTime,
-                              style: TextStyle(
-                                color: _accentColor,
-                                fontSize: 48,
-                                fontWeight: FontWeight.w200,
-                                letterSpacing: 4,
-                              ),
+                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                    color: _accentColor,
+                                    fontSize: 48,
+                                    fontWeight: FontWeight.w200,
+                                    letterSpacing: 4,
+                                  ),
                             ),
                             const SizedBox(height: 16),
 
                             // Title
                             Text(
                               _title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w800,
-                                height: 1.2,
-                                letterSpacing: -0.5,
-                              ),
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
                               textAlign: TextAlign.center,
                             ),
                             if (_description.isNotEmpty) ...[

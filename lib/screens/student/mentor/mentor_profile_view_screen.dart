@@ -248,20 +248,20 @@ class _MentorProfileViewScreenState extends State<MentorProfileViewScreen> {
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
-            actions: [
-              if (_connectionStatus == 'approved')
-                Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: IconButton(
-                    icon: const Icon(Icons.chat_rounded, color: Colors.white),
-                    onPressed: () {
-                      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-                      if (args != null) _openChat(args);
-                    },
-                    tooltip: context.tr('message'),
-                  ),
-                ),
-            ],
+            // actions: [
+            //   if (_connectionStatus == 'approved')
+            //     Padding(
+            //       padding: const EdgeInsets.only(right: 8),
+            //       child: IconButton(
+            //         icon: const Icon(Icons.chat_rounded, color: Colors.white),
+            //         onPressed: () {
+            //           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+            //           if (args != null) _openChat(args);
+            //         },
+            //         tooltip: context.tr('message'),
+            //       ),
+            //     ),
+            // ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(

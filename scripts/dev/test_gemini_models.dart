@@ -2,7 +2,7 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import 'dart:io';
 
 void main() async {
-  final apiKey = 'AIzaSyDsMVRO78QN8nzblS97H5vHib7UcFh5p_c'; // DO NOT COMMIT
+  final apiKey = Platform.environment['GEMINI_API_KEY'] ?? ''; // Read from shell environment
   final models = [
     'gemini-1.5-flash',
     'gemini-1.5-pro',

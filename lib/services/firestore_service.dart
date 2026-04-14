@@ -302,6 +302,14 @@ class FirestoreService {
         .get();
   }
 
+  Stream<QuerySnapshot> leaderboardStream({int limit = 50}) {
+    return usersCollection
+        .where('role', isEqualTo: 'student')
+        .orderBy('points', descending: true)
+        .limit(limit)
+        .snapshots();
+  }
+
   // ─── Study Plans (Smart Timetable) ────────────────────────
   CollectionReference studyPlansCollection(String userId) =>
       usersCollection.doc(userId).collection('studyPlans');

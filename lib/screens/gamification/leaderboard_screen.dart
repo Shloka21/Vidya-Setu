@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../../app/theme.dart';
 import '../../providers/auth_provider.dart';
@@ -35,74 +36,24 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
-    _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) _loadLeaderboard();
-    });
     _loadLeaderboard();
   }
 
   Future<void> _loadLeaderboard() async {
-    setState(() => _loading = true);
+    final currentUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (currentUid == null) return;
+
     try {
-      final currentUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-      final snapshot = await _firestore.getLeaderboard(limit: 50);
-      final data = snapshot.docs.asMap().entries.map((e) {
-        final d = e.value.data() as Map<String, dynamic>;
-        d['rank'] = e.key + 1;
-        return d;
-      }).toList();
-
-      // Find current user's index
-      int userIdx = -1;
-      if (currentUid != null) {
-        userIdx = data.indexWhere((d) => d['uid'] == currentUid);
-      }
-
-      // If user isn't in top 50, fetch their rank separately
-      Map<String, dynamic>? userRank;
-      if (userIdx == -1 && currentUid != null) {
-        userRank = await _firestore.getUserRankData(currentUid);
-      }
-
+      final userRank = await _firestore.getUserRankData(currentUid);
       if (mounted) {
         setState(() {
-          _leaderboardData = data;
-          _userIndexInList = userIdx;
           _currentUserRank = userRank;
-          _usingMockData = data.isEmpty;
-          
-          if (_usingMockData) {
-            // Apply mock data and append current user at the end
-            _leaderboardData = List.from(_mockChampions);
-            if (userRank != null) {
-              _leaderboardData.add(userRank);
-            }
-            // Sort merged list
-            _leaderboardData.sort((a, b) => (b['points'] ?? 0).compareTo(a['points'] ?? 0));
-            // Recalculate ranks
-            for (int i = 0; i < _leaderboardData.length; i++) {
-              _leaderboardData[i]['rank'] = i + 1;
-            }
-            _userIndexInList = _leaderboardData.indexWhere((d) => d['uid'] == currentUid);
-          }
-          
           _loading = false;
         });
       }
     } catch (e) {
-      debugPrint('Error loading leaderboard: $e');
-      if (mounted) {
-        setState(() {
-          _loading = false;
-          // You could add an _errorMessage state here if needed
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load leaderboard. If you are the first user, start studying to appear here!'),
-            action: SnackBarAction(label: 'Retry', onPressed: _loadLeaderboard),
-          ),
-        );
-      }
+      debugPrint('Error fetching user rank: $e');
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -163,7 +114,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           : null,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _leaderboardData.isEmpty
+          : _leaderboardData.isEmpty && !_usingMockData
               ? _buildEmpty()
               : TabBarView(
                   controller: _tabController,
@@ -212,51 +163,79 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
   Widget _buildLeaderboard() {
     final currentUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-    final listItems = _leaderboardData.length > 3
-        ? _leaderboardData.sublist(3)
-        : <Map<String, dynamic>>[];
 
-    return RefreshIndicator(
-      onRefresh: _loadLeaderboard,
-      child: ListView.builder(
-        controller: _scrollController,
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-        itemCount: listItems.length + 2, // +1 for podium + 1 for pinned user card
-        itemBuilder: (context, index) {
-          if (index == 0) {
-            // Top 3 podium
-            if (_leaderboardData.length >= 3) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: SizedBox(
-                  height: 220,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      _podiumItem(_leaderboardData[1], 2, 150, currentUid),
-                      _podiumItem(_leaderboardData[0], 1, 200, currentUid),
-                      _podiumItem(_leaderboardData[2], 3, 120, currentUid),
-                    ],
-                  ),
-                ),
-              );
+    return StreamBuilder<QuerySnapshot>(
+      stream: _firestore.leaderboardStream(limit: 50),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting && _leaderboardData.isEmpty) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (snapshot.hasData) {
+          final data = snapshot.data!.docs.asMap().entries.map((e) {
+            final d = e.value.data() as Map<String, dynamic>;
+            d['rank'] = e.key + 1;
+            return d;
+          }).toList();
+          
+          _leaderboardData = data;
+          _userIndexInList = _leaderboardData.indexWhere((d) => d['uid'] == currentUid);
+          _usingMockData = _leaderboardData.isEmpty;
+        }
+
+        final listItems = _leaderboardData.length > 3
+            ? _leaderboardData.sublist(3)
+            : <Map<String, dynamic>>[];
+
+        return RefreshIndicator(
+          onRefresh: () async {
+            // Streams refresh automatically, but we can re-sync My Rank if needed
+            if (currentUid != null && _userIndexInList == -1) {
+              final userRank = await _firestore.getUserRankData(currentUid);
+              if (mounted) setState(() => _currentUserRank = userRank);
             }
-            return const SizedBox.shrink();
-          }
+          },
+          child: ListView.builder(
+            controller: _scrollController,
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            itemCount: listItems.length + 2, // +1 for podium + 1 for pinned user card
+            itemBuilder: (context, index) {
+              if (index == 0) {
+                // Top 3 podium
+                if (_leaderboardData.length >= 3) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: SizedBox(
+                      height: 220,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          _podiumItem(_leaderboardData[1], 2, 150, currentUid),
+                          _podiumItem(_leaderboardData[0], 1, 200, currentUid),
+                          _podiumItem(_leaderboardData[2], 3, 120, currentUid),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              }
 
-          if (index == listItems.length + 1) {
-            // Pinned current user card (if not in top 50)
-            if (_currentUserRank != null) {
-              return _buildPinnedUserCard(_currentUserRank!, currentUid);
-            }
-            return const SizedBox.shrink();
-          }
+              if (index == listItems.length + 1) {
+                // Pinned current user card (if not in top 50)
+                if (_userIndexInList == -1 && _currentUserRank != null) {
+                  return _buildPinnedUserCard(_currentUserRank!, currentUid);
+                }
+                return const SizedBox.shrink();
+              }
 
-          final listIdx = index - 1;
-          return _rankItem(listItems[listIdx], currentUid);
-        },
-      ),
+              final listIdx = index - 1;
+              return _rankItem(listItems[listIdx], currentUid);
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -313,7 +292,7 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
               child: Text(
                 name.isNotEmpty ? name[0].toUpperCase() : '?',
                 style: TextStyle(
-                  color: colors[position],
+                  color: isCurrentUser ? AppTheme.accentBlue : colors[position],
                   fontSize: position == 1 ? 26 : 22,
                   fontWeight: FontWeight.w700,
                 ),
@@ -323,12 +302,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           const SizedBox(height: 6),
           // Name + "You" label
           Text(
-            isCurrentUser ? 'You' : name.split(' ')[0],
-            style: TextStyle(
-              color: isCurrentUser ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-            ),
+            isCurrentUser ? context.tr('you') : name.split(' ')[0],
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: isCurrentUser ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
             textAlign: TextAlign.center,
             overflow: TextOverflow.ellipsis,
           ),
@@ -385,66 +365,76 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     final rank = user['rank'] ?? 0;
     final isCurrentUser = user['uid'] == currentUid;
 
+    // Rank display: Emoji for Top 3, #Rank for others
+    Widget rankWidget;
+    if (rank == 1) rankWidget = const Text('🥇', style: TextStyle(fontSize: 22));
+    else if (rank == 2) rankWidget = const Text('🥈', style: TextStyle(fontSize: 22));
+    else if (rank == 3) rankWidget = const Text('🥉', style: TextStyle(fontSize: 22));
+    else {
+      rankWidget = Text(
+        '#$rank',
+        style: TextStyle(
+          color: isCurrentUser
+              ? AppTheme.accentBlue
+              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isCurrentUser
-              ? AppTheme.accentBlue.withOpacity(0.08)
+              ? AppTheme.accentBlue.withOpacity(0.12)
               : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(16),
           border: isCurrentUser
-              ? Border.all(color: AppTheme.accentBlue.withOpacity(0.4), width: 2)
-              : null,
+              ? Border.all(color: AppTheme.accentBlue.withOpacity(0.5), width: 2.5)
+              : Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05)),
           boxShadow: [
             BoxShadow(
               color: isCurrentUser
-                  ? AppTheme.accentBlue.withOpacity(0.1)
+                  ? AppTheme.accentBlue.withOpacity(0.15)
                   : Colors.black.withOpacity(0.04),
-              blurRadius: isCurrentUser ? 12 : 8,
-              offset: const Offset(0, 2),
+              blurRadius: isCurrentUser ? 15 : 8,
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Row(
           children: [
-            // Rank number
+            // Rank number/emoji
             SizedBox(
-              width: 36,
-              child: Text(
-                '#$rank',
-                style: TextStyle(
-                  color: isCurrentUser
-                      ? AppTheme.accentBlue
-                      : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
+              width: 40,
+              child: Center(child: rankWidget),
             ),
             // Avatar
             Container(
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 gradient: isCurrentUser
                     ? LinearGradient(
                         colors: [
-                          AppTheme.accentBlue.withOpacity(0.3),
-                          AppTheme.accentPurple.withOpacity(0.2),
+                          AppTheme.accentBlue,
+                          AppTheme.accentBlue.withOpacity(0.7),
                         ],
                       )
                     : null,
                 color: isCurrentUser ? null : AppTheme.accentBlue.withOpacity(0.1),
                 shape: BoxShape.circle,
+                border: isCurrentUser ? Border.all(color: Colors.white, width: 2) : null,
               ),
               child: Center(
                 child: Text(
                   name.isNotEmpty ? name[0].toUpperCase() : '?',
                   style: TextStyle(
-                    color: AppTheme.accentBlue,
-                    fontSize: 16,
+                    color: isCurrentUser ? Colors.white : AppTheme.accentBlue,
+                    fontSize: 17,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -465,37 +455,43 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
                             color: isCurrentUser
                                 ? AppTheme.accentBlue
                                 : Theme.of(context).colorScheme.onSurface,
-                            fontSize: 15,
-                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
                           ),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isCurrentUser) ...[
-                        SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
                           decoration: BoxDecoration(
                             color: AppTheme.accentBlue,
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(10),
+                            boxShadow: [
+                              BoxShadow(color: AppTheme.accentBlue.withOpacity(0.3), blurRadius: 4),
+                            ],
                           ),
                           child: Text(
-                            context.tr('you'),
-                            style: TextStyle(
+                            context.tr('you').toUpperCase(),
+                            style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
                             ),
                           ),
                         ),
                       ],
                     ],
                   ),
+                  const SizedBox(height: 2),
                   Text(
                     'Level $level • 🔥 ${streak}d streak',
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                       fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -503,25 +499,25 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             ),
             // Points badge
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
                 gradient: isCurrentUser
-                    ? LinearGradient(
-                        colors: [
-                          AppTheme.accentBlue.withOpacity(0.15),
-                          AppTheme.accentPurple.withOpacity(0.1),
-                        ],
+                    ? const LinearGradient(
+                        colors: [AppTheme.accentBlue, AppTheme.accentPurple],
                       )
                     : null,
-                color: isCurrentUser ? null : AppTheme.accentPurple.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
+                color: isCurrentUser ? null : AppTheme.accentPurple.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: isCurrentUser ? [
+                   BoxShadow(color: AppTheme.accentBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2)),
+                ] : [],
               ),
               child: Text(
                 '$points XP',
                 style: TextStyle(
-                  color: isCurrentUser ? AppTheme.accentBlue : AppTheme.accentPurple,
+                  color: isCurrentUser ? Colors.white : AppTheme.accentPurple,
                   fontSize: 13,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ),
@@ -540,130 +536,109 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     final streak = user['streak'] ?? 0;
 
     return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(top: 16, bottom: 20),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.accentBlue.withOpacity(0.1),
-            AppTheme.accentPurple.withOpacity(0.08),
-          ],
+        gradient: const LinearGradient(
+          colors: [AppTheme.primaryNavy, Color(0xFF1E293B)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentBlue.withOpacity(0.3), width: 2),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.accentBlue.withOpacity(0.5), width: 2),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.accentBlue.withOpacity(0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: AppTheme.primaryNavy.withOpacity(0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.accentBlue,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Text(
-              '#$rank',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  AppTheme.accentBlue.withOpacity(0.3),
-                  AppTheme.accentPurple.withOpacity(0.2),
-                ],
-              ),
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.accentBlue, width: 2),
-            ),
-            child: Center(
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: const TextStyle(
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
                   color: AppTheme.accentBlue,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(color: AppTheme.accentBlue.withOpacity(0.4), blurRadius: 8),
+                  ],
+                ),
+                child: Text(
+                  '#$rank',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Flexible(
-                      child: Text(
-                        name,
-                        style: const TextStyle(
-                          color: AppTheme.accentBlue,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                    Text(
+                      context.tr('your_current_placement'),
+                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.w600),
                     ),
-                    SizedBox(width: 6),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: AppTheme.accentBlue,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        context.tr('you'),
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    const SizedBox(height: 2),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ],
                 ),
-                Text(
-                  'Level $level • 🔥 ${streak}d streak',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                    fontSize: 12,
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Text(
+                  '$points XP',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppTheme.accentBlue.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              '$points XP',
-              style: const TextStyle(
-                color: AppTheme.accentBlue,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
               ),
-            ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Divider(color: Colors.white.withOpacity(0.1), height: 1),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _statItem(Icons.trending_up_rounded, 'Level $level', 'Progression'),
+              _statItem(Icons.local_fire_department_rounded, '$streak Days', 'Streak'),
+              _statItem(Icons.emoji_events_rounded, 'Rank #$rank', 'Global'),
+            ],
           ),
         ],
       ),
+    );
+  }
+
+  Widget _statItem(IconData icon, String value, String label) {
+    return Column(
+      children: [
+        Icon(icon, color: AppTheme.accentBlue, size: 24),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
+        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10)),
+      ],
     );
   }
 }

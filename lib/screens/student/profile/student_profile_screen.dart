@@ -223,7 +223,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           children: [
                             Text(
                               user?.name ?? 'Student',
-                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w800, letterSpacing: -0.5),
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: -0.5,
+                                  ),
                             ),
                             const SizedBox(height: 4),
                             Text(
@@ -287,7 +290,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   SizedBox(height: 28),
 
                   // ── Recent Mentor Feedback ──
-                  _sectionTitle('Recent Mentor Feedback'),
+                  _sectionTitle(context.tr('recent_mentor_feedback')),
                   StreamBuilder<cloud_firestore.QuerySnapshot>(
                     stream: FirestoreService().getFeedbackStream(user?.uid ?? ''),
                     builder: (context, snapshot) {
@@ -300,7 +303,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                           padding: const EdgeInsets.all(16),
                           child: Center(
                             child: Text(
-                              'No recent feedback from your mentors.',
+                               context.tr('no_recent_feedback_from_your_mentors'),
                               style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13),
                             ),
                           ),
@@ -933,12 +936,12 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
 
     // Hardcode some display values dynamically based on default badges
     final List<Map<String, dynamic>> badges = [
-      {'name': 'Week Warrior', 'icon': Icons.local_fire_department, 'color': AppTheme.warningAmber, 'unlocked': streak >= 7},
-      {'name': 'Getting Started', 'icon': Icons.check_circle, 'color': AppTheme.successGreen, 'unlocked': tasks >= 10},
-      {'name': 'Point Master', 'icon': Icons.military_tech, 'color': AppTheme.accentPurple, 'unlocked': points >= 1000},
-      {'name': 'Monthly Master', 'icon': Icons.whatshot, 'color': AppTheme.errorRed, 'unlocked': streak >= 30},
-      {'name': 'Task Master', 'icon': Icons.verified, 'color': AppTheme.accentBlue, 'unlocked': tasks >= 50},
-      {'name': 'Centurion', 'icon': Icons.star, 'color': Color(0xFFFFD700), 'unlocked': tasks >= 100},
+      {'key': 'week_warrior', 'name': context.tr('week_warrior'), 'icon': Icons.local_fire_department, 'color': AppTheme.warningAmber, 'unlocked': streak >= 7},
+      {'key': 'getting_started', 'name': context.tr('getting_started'), 'icon': Icons.check_circle, 'color': AppTheme.successGreen, 'unlocked': tasks >= 10},
+      {'key': 'point_master', 'name': context.tr('point_master'), 'icon': Icons.military_tech, 'color': AppTheme.accentPurple, 'unlocked': points >= 1000},
+      {'key': 'monthly_master', 'name': context.tr('monthly_master'), 'icon': Icons.whatshot, 'color': AppTheme.errorRed, 'unlocked': streak >= 30},
+      {'key': 'task_master', 'name': context.tr('task_master'), 'icon': Icons.verified, 'color': AppTheme.accentBlue, 'unlocked': tasks >= 50},
+      {'key': 'centurion', 'name': context.tr('centurion'), 'icon': Icons.star, 'color': Color(0xFFFFD700), 'unlocked': tasks >= 100},
     ];
 
     return AppCard(
@@ -949,10 +952,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${badges.where((b) => b['unlocked']).length} / ${badges.length} Unlocked', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600)),
+              Text('${badges.where((b) => b['unlocked']).length} / ${badges.length} ${context.tr('unlocked')}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600)),
               TextButton(
                 onPressed: () => Navigator.pushNamed(context, AppRoutes.achievements),
-                child: Text('View All', style: TextStyle(color: AppTheme.accentBlue, fontSize: 13, fontWeight: FontWeight.w700)),
+                child: Text(context.tr('view_all'), style: TextStyle(color: AppTheme.accentBlue, fontSize: 13, fontWeight: FontWeight.w700)),
               )
             ],
           ),

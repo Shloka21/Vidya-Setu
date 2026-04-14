@@ -19,20 +19,20 @@ class RemindersListScreen extends StatefulWidget {
 
 class _RemindersListScreenState extends State<RemindersListScreen> {
   final FirestoreService _firestore = FirestoreService();
-  String _selectedFilter = 'All';
+  String _selectedFilter = 'all';
 
-  final _filters = ['All', 'Today', 'Upcoming', 'Completed'];
+  final _filters = ['all', 'today', 'upcoming', 'completed'];
 
   bool _matchesFilter(ReminderModel r) {
     final now = DateTime.now();
     switch (_selectedFilter) {
-      case 'Today':
+      case 'today':
         return r.dateTime.year == now.year &&
             r.dateTime.month == now.month &&
             r.dateTime.day == now.day;
-      case 'Upcoming':
+      case 'upcoming':
         return r.status != ReminderStatus.completed && r.dateTime.isAfter(now);
-      case 'Completed':
+      case 'completed':
         return r.status == ReminderStatus.completed;
       default:
         return true;
@@ -41,24 +41,24 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
 
   Map<String, int> _categoryCounts(List<ReminderModel> all) {
     final counts = <String, int>{
-      'Exams': 0,
-      'Assignments': 0,
-      'Quizzes': 0,
-      'Study': 0,
+      'exams': 0,
+      'assignments': 0,
+      'quizzes': 0,
+      'study': 0,
     };
     for (var r in all) {
       switch (r.type) {
         case ReminderType.exam:
-          counts['Exams'] = counts['Exams']! + 1;
+          counts['exams'] = counts['exams']! + 1;
           break;
         case ReminderType.assignment:
-          counts['Assignments'] = counts['Assignments']! + 1;
+          counts['assignments'] = counts['assignments']! + 1;
           break;
         case ReminderType.quiz:
-          counts['Quizzes'] = counts['Quizzes']! + 1;
+          counts['quizzes'] = counts['quizzes']! + 1;
           break;
         case ReminderType.studySession:
-          counts['Study'] = counts['Study']! + 1;
+          counts['study'] = counts['study']! + 1;
           break;
         default:
           break;
@@ -145,7 +145,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                             border: isSelected ? null : Border.all(color: AppTheme.divider),
                           ),
                           child: Text(
-                            filter,
+                            context.tr(filter),
                             style: TextStyle(
                               color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
@@ -209,10 +209,10 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
 
   Widget _buildCategoryBadge(String label, int count) {
     final colors = {
-      'Exams': AppTheme.errorRed,
-      'Assignments': AppTheme.accentBlue,
-      'Quizzes': AppTheme.accentPurple,
-      'Study': AppTheme.successGreen,
+      'exams': AppTheme.errorRed,
+      'assignments': AppTheme.accentBlue,
+      'quizzes': AppTheme.accentPurple,
+      'study': AppTheme.successGreen,
     };
     final color = colors[label] ?? Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
 
@@ -232,7 +232,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
             ),
             const SizedBox(height: 2),
             Text(
-              label,
+              context.tr(label),
               style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.w600),
             ),
           ],
@@ -373,7 +373,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                           isDone ? Icons.undo_rounded : Icons.check_circle_outline_rounded,
                           size: 18,
                         ),
-                        label: Text(isDone ? 'Undo' : 'Done', style: const TextStyle(fontSize: 13)),
+                        label: Text(isDone ? context.tr('undo') : context.tr('done'), style: const TextStyle(fontSize: 13)),
                         style: TextButton.styleFrom(
                           foregroundColor: isDone ? AppTheme.warningAmber : AppTheme.successGreen,
                           padding: EdgeInsets.zero,

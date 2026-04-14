@@ -175,10 +175,11 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: GoogleFonts.playfairDisplay(
           color: textPrimary,
-          fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
         ),
         iconTheme: const IconThemeData(color: textPrimary),
       ),
@@ -313,6 +314,9 @@ class AppTheme {
       textTheme: textTheme.copyWith(
         displayLarge: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 57, fontWeight: FontWeight.w800),
         displayMedium: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 45, fontWeight: FontWeight.w700),
+        displaySmall: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 36, fontWeight: FontWeight.w700),
+        headlineLarge: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 32, fontWeight: FontWeight.w700),
+        headlineMedium: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 28, fontWeight: FontWeight.w600),
         headlineSmall: GoogleFonts.playfairDisplay(color: darkTextPrimary, fontSize: 24, fontWeight: FontWeight.w600),
         titleLarge: GoogleFonts.inter(color: darkTextPrimary, fontSize: 22, fontWeight: FontWeight.w600),
         bodyLarge: GoogleFonts.inter(color: darkTextPrimary, fontSize: 16),
@@ -325,7 +329,12 @@ class AppTheme {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.inter(color: darkTextPrimary, fontSize: 20, fontWeight: FontWeight.w600),
+        titleTextStyle: GoogleFonts.playfairDisplay(
+          color: darkTextPrimary,
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
         iconTheme: const IconThemeData(color: darkTextPrimary),
       ),
       cardTheme: CardThemeData(

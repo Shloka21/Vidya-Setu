@@ -315,7 +315,12 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(context.tr('vidyasetu'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w700)),
+                      Text(context.tr('vidyasetu'), 
+                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              letterSpacing: -0.5,
+                            )),
                       Text(
                         DateFormat('EEEE, MMM d', Provider.of<LocalizationService>(context).locale).format(now).toUpperCase(),
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w600, letterSpacing: 1),
@@ -327,7 +332,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
               const SizedBox(height: 20),
               Text(
                 '${context.tr('welcome_back')},\n${user?.name ?? "Mentor"}!',
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 28, fontWeight: FontWeight.w800, height: 1.2, letterSpacing: -0.5),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  letterSpacing: -0.5,
+                ),
               ),
             ],
           ),
@@ -431,7 +440,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(context.tr('student_activity'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+            Text(context.tr('student_activity'), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 20)),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.myStudents),
               child: Text(context.tr('view_all'), style: TextStyle(color: AppTheme.accentBlue, fontWeight: FontWeight.w600)),
@@ -537,7 +546,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(context.tr('pending_requests'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text(context.tr('pending_requests'), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 20)),
         SizedBox(height: 12),
         StreamBuilder<QuerySnapshot>(
           stream: _firestore.mentorRequestsStream(uid),
@@ -622,7 +631,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(context.tr('quick_actions'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 20, fontWeight: FontWeight.w700)),
+        Text(context.tr('quick_actions'), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 20)),
         const SizedBox(height: 14),
         Row(
           children: [

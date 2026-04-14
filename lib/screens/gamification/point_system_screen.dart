@@ -23,27 +23,27 @@ class PointSystemScreen extends StatelessWidget {
 
     final activities = [
 
-      {'icon': Icons.timer_rounded, 'label': 'Complete study session', 'xp': 20, 'color': AppTheme.accentBlue},
-      {'icon': Icons.check_circle_rounded, 'label': 'Finish a topic', 'xp': 50, 'color': AppTheme.successGreen},
-      {'icon': Icons.local_fire_department_rounded, 'label': 'Maintain daily streak', 'xp': 10, 'color': AppTheme.warningAmber},
-      {'icon': Icons.quiz_rounded, 'label': 'Score 80%+ on quiz', 'xp': 30, 'color': AppTheme.accentPurple},
-      {'icon': Icons.emoji_events_rounded, 'label': 'Earn an achievement', 'xp': 100, 'color': Color(0xFFFFD700)},
-      {'icon': Icons.people_rounded, 'label': 'Connect with mentor', 'xp': 40, 'color': AppTheme.accentBlue},
-      {'icon': Icons.chat_rounded, 'label': 'Active chat participation', 'xp': 15, 'color': AppTheme.successGreen},
-      {'icon': Icons.calendar_month_rounded, 'label': '7-day streak bonus', 'xp': 75, 'color': AppTheme.errorRed},
+      {'icon': Icons.timer_rounded, 'label': 'complete_study_session', 'xp': 20, 'color': AppTheme.accentBlue},
+      {'icon': Icons.check_circle_rounded, 'label': 'finish_a_topic', 'xp': 50, 'color': AppTheme.successGreen},
+      {'icon': Icons.local_fire_department_rounded, 'label': 'maintain_daily_streak', 'xp': 10, 'color': AppTheme.warningAmber},
+      {'icon': Icons.quiz_rounded, 'label': 'score_80_plus_on_quiz', 'xp': 30, 'color': AppTheme.accentPurple},
+      {'icon': Icons.emoji_events_rounded, 'label': 'earn_an_achievement', 'xp': 100, 'color': Color(0xFFFFD700)},
+      {'icon': Icons.people_rounded, 'label': 'connect_with_mentor', 'xp': 40, 'color': AppTheme.accentBlue},
+      {'icon': Icons.chat_rounded, 'label': 'active_chat_participation', 'xp': 15, 'color': AppTheme.successGreen},
+      {'icon': Icons.calendar_month_rounded, 'label': '7_day_streak_bonus', 'xp': 75, 'color': AppTheme.errorRed},
     ];
 
     final levels = [
-      {'level': 1, 'xp': 0, 'title': 'Beginner'},
-      {'level': 2, 'xp': 100, 'title': 'Learner'},
-      {'level': 3, 'xp': 300, 'title': 'Explorer'},
-      {'level': 4, 'xp': 600, 'title': 'Achiever'},
-      {'level': 5, 'xp': 1000, 'title': 'Scholar'},
-      {'level': 6, 'xp': 1500, 'title': 'Expert'},
-      {'level': 7, 'xp': 2200, 'title': 'Master'},
-      {'level': 8, 'xp': 3000, 'title': 'Champion'},
-      {'level': 9, 'xp': 4000, 'title': 'Legend'},
-      {'level': 10, 'xp': 5500, 'title': 'Guru'},
+      {'level': 1, 'xp': 0, 'title': 'beginner'},
+      {'level': 2, 'xp': 100, 'title': 'learner'},
+      {'level': 3, 'xp': 300, 'title': 'explorer'},
+      {'level': 4, 'xp': 600, 'title': 'achiever'},
+      {'level': 5, 'xp': 1000, 'title': 'scholar'},
+      {'level': 6, 'xp': 1500, 'title': 'expert'},
+      {'level': 7, 'xp': 2200, 'title': 'master'},
+      {'level': 8, 'xp': 3000, 'title': 'champion'},
+      {'level': 9, 'xp': 4000, 'title': 'legend'},
+      {'level': 10, 'xp': 5500, 'title': 'guru'},
     ];
 
     return Scaffold(
@@ -73,10 +73,11 @@ class PointSystemScreen extends StatelessWidget {
                           fontWeight: FontWeight.w600)),
                   const SizedBox(height: 4),
                   Text('$points XP',
-                      style: const TextStyle(
+                      style: Theme.of(context).textTheme.displayMedium?.copyWith(
                           color: Colors.white,
-                          fontSize: 36,
-                          fontWeight: FontWeight.w800)),
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -1,
+                        )),
                   const SizedBox(height: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -85,7 +86,7 @@ class PointSystemScreen extends StatelessWidget {
                       color: Colors.white.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Text('Level $level: $levelTitle',
+                    child: Text('${context.tr('level')} $level: ${context.tr(levelTitle)}',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
@@ -102,7 +103,7 @@ class PointSystemScreen extends StatelessWidget {
                               style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 12)),
-                          Text('Level ${level + 1}',
+                          Text('${context.tr('level')} ${level + 1}',
                               style: TextStyle(
                                   color: Colors.white.withOpacity(0.8),
                                   fontSize: 12)),
@@ -128,10 +129,7 @@ class PointSystemScreen extends StatelessWidget {
 
             // How to earn XP
             Text(context.tr('how_to_earn_xp'),
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700)),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
             const SizedBox(height: 12),
             ...activities.map((a) => Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -150,7 +148,7 @@ class PointSystemScreen extends StatelessWidget {
                         ),
                         const SizedBox(width: 14),
                         Expanded(
-                          child: Text(a['label'] as String,
+                          child: Text(context.tr(a['label'] as String),
                               style: TextStyle(
                                   color: Theme.of(context).colorScheme.onSurface,
                                   fontSize: 14,
@@ -177,10 +175,7 @@ class PointSystemScreen extends StatelessWidget {
 
             // Level chart
             Text(context.tr('level_progression'),
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700)),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 18)),
             const SizedBox(height: 12),
             AppCard(
               padding: EdgeInsets.zero,
@@ -212,7 +207,7 @@ class PointSystemScreen extends StatelessWidget {
                                   fontWeight: FontWeight.w700)),
                         ),
                         Expanded(
-                          child: Text(l['title'] as String,
+                          child: Text(context.tr(l['title'] as String),
                               style: TextStyle(
                                   color: isCurrent
                                       ? AppTheme.accentBlue
@@ -234,7 +229,7 @@ class PointSystemScreen extends StatelessWidget {
                               color: AppTheme.accentBlue,
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            child: const Text('YOU',
+                            child: Text(context.tr('you_1'),
                                 style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 10,

@@ -133,7 +133,7 @@ class _SplashScreenState extends State<SplashScreen>
                     const SizedBox(height: 28),
                     // App Name
                     Text(
-                      'VidyaSetu',
+                      context.tr('vidyasetu'),
                       style: Theme.of(context)
                           .textTheme
                           .displayMedium

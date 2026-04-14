@@ -78,7 +78,7 @@ class _VidyaSetuAppState extends State<VidyaSetuApp> {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, _) => MaterialApp(
         navigatorKey: navigatorKey,
-        title: 'VidyaSetu',
+        onGenerateTitle: (context) => context.tr('vidyasetu'),
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

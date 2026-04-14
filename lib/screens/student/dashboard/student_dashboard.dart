@@ -205,11 +205,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     children: [
                       Text(
                         context.tr('vidyasetu'),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18,
+                              letterSpacing: -0.5,
+                            ),
                       ),
                       Text(
                         DateFormat('EEEE, MMM d', Provider.of<LocalizationService>(context).locale).format(now).toUpperCase(),
@@ -227,13 +227,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
               const SizedBox(height: 20),
               Text(
                 '$greeting,\n${user?.name ?? "Student"}!',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 28,
-                  fontWeight: FontWeight.w800,
-                  height: 1.2,
-                  letterSpacing: -0.5,
-                ),
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
+                      letterSpacing: -1,
+                    ),
               ),
             ],
           ),
@@ -430,11 +428,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
           children: [
             Text(
               context.tr('todays_study_plan'),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
             ),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.timetableOverview),
@@ -724,11 +721,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
           children: [
             Text(
               context.tr('upcoming_reminders'),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
             ),
             TextButton(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.remindersList),
@@ -1045,11 +1041,10 @@ class _StudentDashboardState extends State<StudentDashboard> {
       children: [
         Text(
           context.tr('quick_actions'),
-          style: TextStyle(
-            color: cs.onSurface,
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-          ),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
         ),
         const SizedBox(height: 14),
 

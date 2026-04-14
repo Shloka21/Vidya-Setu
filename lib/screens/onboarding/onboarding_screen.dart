@@ -199,13 +199,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           Text(
             slide.title,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppTheme.primaryNavy,
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-              height: 1.2,
-            ),
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  color: Theme.of(context).colorScheme.primary, // Ensure standard primary color
+                ),
           ),
           const SizedBox(height: 16),
 

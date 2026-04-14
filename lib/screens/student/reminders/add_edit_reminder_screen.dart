@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../app/theme.dart';
 import '../../../providers/auth_provider.dart';
@@ -34,13 +35,14 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
   ReminderModel? _editingReminder;
   bool _isEditing = false;
   String? _forStudentId;
+  String? _parentName;
 
   final _typeMap = {
-    'exam': 'Exam',
-    'assignment': 'Assignment',
-    'quiz': 'Quiz',
-    'studySession': 'Study Session',
-    'custom': 'Custom',
+    'exam': 'exam',
+    'assignment': 'assignment',
+    'quiz': 'quiz',
+    'studySession': 'study_session',
+    'custom': 'custom',
   };
   final _priorities = ['high', 'medium', 'low'];
   final _repeatOptions = ['once', 'daily', 'weekly'];
@@ -171,7 +173,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: AppTheme.errorRed),
+          SnackBar(content: Text('${context.tr('error')}: $e'), backgroundColor: AppTheme.errorRed),
         );
       }
     } finally {
@@ -184,7 +186,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
     return Scaffold(
       
       appBar: AppBar(
-        title: Text(_forStudentId != null ? 'Add Reminder for Student' : (_isEditing ? 'Edit Reminder' : 'Add Reminder')),
+        title: Text(_forStudentId != null ? context.tr('add_reminder_for_student') : (_isEditing ? context.tr('edit_reminder') : context.tr('add_reminder'))),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -216,7 +218,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
               children: _typeMap.entries.map((entry) {
                 final isSelected = _selectedType == entry.key;
                 return ChoiceChip(
-                  label: Text(entry.value),
+                  label: Text(context.tr(entry.value)),
                   selected: isSelected,
                   onSelected: (_) => setState(() => _selectedType = entry.key),
                   selectedColor: AppTheme.primaryNavy,
@@ -258,7 +260,8 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                               Icon(Icons.calendar_today, size: 18, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
                               const SizedBox(width: 10),
                               Text(
-                                '${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+                                // Use DateFormat for localized dates
+                                DateFormat('dd/MM/yyyy', Provider.of<LocalizationService>(context).locale).format(_selectedDate),
                                 style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
                               ),
                             ],
@@ -330,7 +333,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            label,
+                            context.tr(p),
                             style: TextStyle(
                               color: isSelected ? color : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
@@ -399,12 +402,12 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                 spacing: 8,
                 runSpacing: 8,
                 children: [
-                  _remindChip(0, 'At exact time', minutesUntil),
-                  _remindChip(5, '5 min', minutesUntil),
-                  _remindChip(15, '15 min', minutesUntil),
-                  _remindChip(30, '30 min', minutesUntil),
-                  _remindChip(60, '1 hour', minutesUntil),
-                  _remindChip(1440, '1 day', minutesUntil),
+                  _remindChip(0, context.tr('at_exact_time'), minutesUntil),
+                  _remindChip(5, context.tr('5_min'), minutesUntil),
+                  _remindChip(15, context.tr('15_min'), minutesUntil),
+                  _remindChip(30, context.tr('30_min'), minutesUntil),
+                  _remindChip(60, context.tr('1_hour'), minutesUntil),
+                  _remindChip(1440, context.tr('1_day'), minutesUntil),
                 ],
               ),
             ),
@@ -425,9 +428,9 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
                 }
 
                 final isSelected = _repeatType == r;
-                final label = r[0].toUpperCase() + r.substring(1);
+                final labelKey = r == 'once' ? 'one_time' : r;
                 return ChoiceChip(
-                  label: Text(label == 'Once' ? 'One-time' : label),
+                  label: Text(context.tr(labelKey)),
                   selected: isSelected,
                   onSelected: (_) => setState(() => _repeatType = r),
                   selectedColor: AppTheme.primaryNavy,
@@ -442,7 +445,7 @@ class _AddEditReminderScreenState extends State<AddEditReminderScreen> {
             const SizedBox(height: 32),
 
             AppButton(
-              text: _saving ? 'Saving...' : (_isEditing ? 'Update Reminder' : 'Save Reminder'),
+              text: _saving ? context.tr('saving') : (_isEditing ? context.tr('update_reminder') : context.tr('save_reminder')),
               onPressed: _saving ? () {} : _saveReminder,
               icon: Icons.check_rounded,
             ),

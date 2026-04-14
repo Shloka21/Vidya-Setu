@@ -373,12 +373,11 @@ class _AchievementsScreenState extends State<AchievementsScreen> {
                                         children: [
                                           Text(
                                             '$_totalXPEarned XP',
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 28,
-                                              fontWeight: FontWeight.w800,
-                                              letterSpacing: -1,
-                                            ),
+                                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w800,
+                                                  letterSpacing: -1,
+                                                ),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(

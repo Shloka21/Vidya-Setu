@@ -277,44 +277,91 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.surface,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            Stack(
+        title: InkWell(
+          onTap: _showUserProfileInfo,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            child: Row(
               children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentBlue.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      displayName.isNotEmpty ? displayName[0] : 'U',
-                      style: TextStyle(
-                          color: AppTheme.accentBlue,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700),
+                StreamBuilder<DocumentSnapshot>(
+                  stream: _firestoreService.userStream(_otherUserId ?? ''),
+                  builder: (context, snapshot) {
+                    final data = snapshot.data?.data() as Map<String, dynamic>?;
+                    final lastActive = data?['lastActive'] as Timestamp?;
+                    final isOnline = lastActive != null &&
+                        DateTime.now().difference(lastActive.toDate()).inMinutes < 5;
+
+                    return Stack(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppTheme.accentBlue.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Center(
+                            child: Text(
+                              displayName.isNotEmpty ? displayName[0] : 'U',
+                              style: TextStyle(
+                                  color: AppTheme.accentBlue,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ),
+                        if (isOnline)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              width: 12,
+                              height: 12,
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: AppTheme.surface, width: 2),
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  }
+                ),
+                SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(displayName,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600)),
+                    StreamBuilder<DocumentSnapshot>(
+                      stream: _firestoreService.userStream(_otherUserId ?? ''),
+                      builder: (context, snapshot) {
+                        final data = snapshot.data?.data() as Map<String, dynamic>?;
+                        final lastActive = data?['lastActive'] as Timestamp?;
+                        final status = _formatActiveStatus(lastActive?.toDate());
+                        
+                        return Text(
+                          status,
+                          style: TextStyle(
+                            color: status == context.tr('active_now') 
+                                ? Colors.green 
+                                : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                            fontSize: 11,
+                            fontWeight: status == context.tr('active_now') ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        );
+                      },
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
-            SizedBox(width: 12),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(displayName,
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600)),
-                Text(context.tr('tap_for_info'),
-                    style:
-                        TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
-              ],
-            ),
-          ],
+          ),
         ),
         actions: [
           if ((Provider.of<AuthProvider>(context, listen: false).userModel?.role ?? 'student') == 'mentor') ...[
@@ -567,6 +614,21 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
         ],
       ),
     );
+  }
+
+  String _formatActiveStatus(DateTime? lastActive) {
+    if (lastActive == null) return context.tr('tap_for_info');
+    
+    final diff = DateTime.now().difference(lastActive);
+    
+    if (diff.inMinutes < 2) return context.tr('active_now');
+    if (diff.inMinutes < 60) {
+        if (diff.inMinutes == 1) return context.tr('active_min_ago');
+        return context.tr('active_mins_ago').replaceFirst('{}', '${diff.inMinutes}');
+    }
+    if (diff.inHours < 24) return context.tr('active_hours_ago').replaceFirst('{}', '${diff.inHours}');
+    
+    return context.tr('active_days_ago').replaceFirst('{}', '${diff.inDays}');
   }
 
   Widget _buildMessageBubble(Map<String, dynamic> msg, bool isMe, String time) {
