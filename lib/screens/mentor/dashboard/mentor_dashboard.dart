@@ -657,7 +657,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
             border: Border.all(color: AppTheme.divider),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

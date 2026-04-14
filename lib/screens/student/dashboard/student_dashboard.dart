@@ -109,7 +109,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
               'Your mentor assigned you a task for ${DateFormat('MMM d, h:mm a').format(scheduledDate)}',
               payload: '{"type": "reminder"}',
             );
-          } else {
+          } else if (type != 'acknowledgement' && !type.startsWith('reminder_')) {
+            // If it's not a technical token, it's real feedback (Progress Update, Encouragement, etc.)
             notifService.showFeedbackNotification(
               mentorName: data['mentorName'] ?? 'Your Mentor',
               feedbackTitle: data['title'] ?? 'New Feedback',
@@ -1210,7 +1211,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
             border: Border.all(color: AppTheme.divider),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

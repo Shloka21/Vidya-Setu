@@ -24,6 +24,7 @@ class ReminderModel {
   final String? createdByMentorId; // if mentor created it
   final String? mentorMessage;
   final DateTime createdAt;
+  final DateTime? completedAt;
 
   ReminderModel({
     required this.id,
@@ -42,6 +43,7 @@ class ReminderModel {
     this.createdByMentorId,
     this.mentorMessage,
     DateTime? createdAt,
+    this.completedAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
   factory ReminderModel.fromMap(Map<String, dynamic> map) {
@@ -74,6 +76,11 @@ class ReminderModel {
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
+      completedAt: map['completedAt'] != null
+          ? (map['completedAt'] is String 
+              ? DateTime.tryParse(map['completedAt']) 
+              : (map['completedAt'] as Timestamp).toDate())
+          : null,
     );
   }
 
@@ -95,6 +102,7 @@ class ReminderModel {
       'createdByMentorId': createdByMentorId,
       'mentorMessage': mentorMessage,
       'createdAt': Timestamp.fromDate(createdAt),
+      'completedAt': completedAt != null ? Timestamp.fromDate(completedAt!) : null,
     };
   }
 
@@ -115,6 +123,7 @@ class ReminderModel {
     String? createdByMentorId,
     String? mentorMessage,
     DateTime? createdAt,
+    DateTime? completedAt,
   }) {
     return ReminderModel(
       id: id ?? this.id,
@@ -134,6 +143,7 @@ class ReminderModel {
       createdByMentorId: createdByMentorId ?? this.createdByMentorId,
       mentorMessage: mentorMessage ?? this.mentorMessage,
       createdAt: createdAt ?? this.createdAt,
+      completedAt: completedAt ?? this.completedAt,
     );
   }
 

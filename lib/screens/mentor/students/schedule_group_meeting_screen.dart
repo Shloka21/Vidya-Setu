@@ -61,10 +61,12 @@ class _ScheduleGroupMeetingScreenState extends State<ScheduleGroupMeetingScreen>
         'status': 'scheduled',
       });
 
-      // Send a system message to each student's chat
+      // Send a system message to each student's chat AND trigger popup
       for (final studentId in _selectedStudentIds) {
         final roomId = await firestore.getOrCreateChatRoom(uid, studentId);
         final msgId = FirebaseFirestore.instance.collection('_').doc().id;
+        
+        // 1. Send chat notification
         await firestore.sendMessage(roomId, {
           'id': msgId,
           'content': '📅 Group Meeting Scheduled: ${_titleController.text.trim()} on ${DateFormat('MMM d').format(scheduledAt)} at ${_selectedTime.format(context)}',
@@ -76,6 +78,14 @@ class _ScheduleGroupMeetingScreenState extends State<ScheduleGroupMeetingScreen>
           'meetingTitle': _titleController.text.trim(),
           'meetingId': meetingId,
         });
+
+        // 2. Trigger Instant Popup Signaling
+        await firestore.startCall(
+          roomId: meetingId,
+          callerId: uid,
+          callerName: auth.userModel?.name ?? 'Mentor',
+          receiverId: studentId,
+        );
       }
 
       if (mounted) {

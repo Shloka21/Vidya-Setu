@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../app/theme.dart';
 import '../../../app/routes.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/app_button.dart';
+import '../../../widgets/common/stat_card.dart';
 import '../../../services/firestore_service.dart';
 import 'package:vidyasetu/services/localization_service.dart';
 
@@ -103,49 +105,76 @@ class _StudentProfileMentorViewState extends State<StudentProfileMentorView> {
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 220,
             pinned: true,
+            backgroundColor: AppTheme.accentPurple,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppTheme.accentPurple, AppTheme.accentBlue],
+                    colors: [
+                      const Color(0xFF6A11CB),
+                      const Color(0xFF2575FC),
+                    ],
                   ),
                 ),
                 child: SafeArea(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                       Container(
-                        width: 72,
-                        height: 72,
+                        padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.3),
+                              blurRadius: 20,
+                              spreadRadius: 2,
+                            ),
+                          ],
                         ),
-                        child: Center(
-                          child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'S',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 30,
-                                  fontWeight: FontWeight.w700)),
+                        child: Container(
+                          width: 84,
+                          height: 84,
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 3),
+                          ),
+                          child: Center(
+                            child: Text(name.isNotEmpty ? name[0].toUpperCase() : 'S',
+                                style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.w800)),
+                          ),
                         ),
                       ),
-                      SizedBox(height: 10),
+                      const SizedBox(height: 12),
                       Text(name,
-                          style: TextStyle(
+                          style: GoogleFonts.inter(
                               color: Colors.white,
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700)),
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5)),
                       if (subtitle.isNotEmpty)
-                        Text(subtitle,
-                            style: TextStyle(
-                                color: Colors.white.withOpacity(0.8),
-                                fontSize: 13)),
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(subtitle,
+                              style: GoogleFonts.inter(
+                                  color: Colors.white.withOpacity(0.95),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600)),
+                        ),
                     ],
                   ),
                 ),
@@ -159,12 +188,38 @@ class _StudentProfileMentorViewState extends State<StudentProfileMentorView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Stats
-                  Row(
+                  GridView.count(
+                    crossAxisCount: 2,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    mainAxisSpacing: 12,
+                    crossAxisSpacing: 12,
+                    childAspectRatio: 1.6,
                     children: [
-                      _stat(context.tr('level'), '$level', AppTheme.accentBlue),
-                      _stat(context.tr('xp'), '$points', AppTheme.accentPurple),
-                      _stat(context.tr('streak'), '${streak}d', AppTheme.warningAmber),
-                      _stat(context.tr('hours'), '${totalHours.toInt()}', AppTheme.successGreen),
+                      StatCard(
+                        label: context.tr('level'),
+                        value: '$level',
+                        icon: Icons.auto_awesome_rounded,
+                        iconColor: AppTheme.accentBlue,
+                      ),
+                      StatCard(
+                        label: context.tr('xp'),
+                        value: '$points',
+                        icon: Icons.bolt_rounded,
+                        iconColor: AppTheme.accentPurple,
+                      ),
+                      StatCard(
+                        label: context.tr('streak'),
+                        value: '${streak}d',
+                        icon: Icons.local_fire_department_rounded,
+                        iconColor: AppTheme.warningAmber,
+                      ),
+                      StatCard(
+                        label: context.tr('hours'),
+                        value: '${totalHours.toInt()}h',
+                        icon: Icons.timer_rounded,
+                        iconColor: AppTheme.successGreen,
+                      ),
                     ],
                   ),
                   const SizedBox(height: 24),
@@ -175,9 +230,9 @@ class _StudentProfileMentorViewState extends State<StudentProfileMentorView> {
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _achievementStat('📝', '$tasksCompleted', 'Tasks Done'),
-                        _achievementStat('🔥', '$streak', 'Day Streak'),
-                        _achievementStat('⏰', '${totalHours.toInt()}h', 'Study Time'),
+                        _achievementStat(context, '📝', '$tasksCompleted', 'Tasks Done'),
+                        _achievementStat(context, '🔥', '$streak', 'Day Streak'),
+                        _achievementStat(context, '⏰', '${totalHours.toInt()}h', 'Study Time'),
                       ],
                     ),
                   ),
@@ -218,32 +273,6 @@ class _StudentProfileMentorViewState extends State<StudentProfileMentorView> {
                           icon: Icons.feedback_rounded,
                         ),
                       ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: AppButton(
-                          text: context.tr('message'),
-                          onPressed: () async {
-                            final studentId = data['uid'] as String? ?? '';
-                            if (studentId.isNotEmpty) {
-                              final roomId = await FirestoreService().getOrCreateChatRoom(
-                                ModalRoute.of(context)?.settings.arguments is Map
-                                    ? ((ModalRoute.of(context)?.settings.arguments as Map)['mentorId'] ?? '')
-                                    : '',
-                                studentId,
-                              );
-                              if (mounted) {
-                                Navigator.pushNamed(context, AppRoutes.chatConversation, arguments: {
-                                  'roomId': roomId,
-                                  'otherUserId': studentId,
-                                  'otherUserName': name,
-                                });
-                              }
-                            }
-                          },
-                          icon: Icons.chat_rounded,
-                          isOutlined: true,
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
@@ -256,32 +285,7 @@ class _StudentProfileMentorViewState extends State<StudentProfileMentorView> {
     );
   }
 
-  Widget _stat(String label, String value, Color color) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Column(
-          children: [
-            Text(value,
-                style: TextStyle(
-                    color: color, fontSize: 20, fontWeight: FontWeight.w700)),
-            Text(label,
-                style: TextStyle(
-                    color: color.withOpacity(0.7),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _achievementStat(String emoji, String value, String label) {
+  Widget _achievementStat(BuildContext context, String emoji, String value, String label) {
     return Column(
       children: [
         Text(emoji, style: const TextStyle(fontSize: 24)),

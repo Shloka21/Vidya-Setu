@@ -342,7 +342,26 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         return Center(child: CircularProgressIndicator());
                       }
                       final docs = (snapshot.data?.docs ?? [])
-                          .where((doc) => (doc.data() as Map<String, dynamic>)['type'] != 'mentor_reminder')
+                          .where((doc) {
+                            final data = doc.data() as Map<String, dynamic>;
+                            final type = data['type'] as String? ?? '';
+                            final title = data['title'] as String? ?? '';
+                            
+                            // Exclude all technical signaling types
+                            if (type == 'mentor_reminder' || 
+                                type.startsWith('reminder_') || 
+                                type == 'acknowledgement' ||
+                                type == 'connection_request') {
+                              return false;
+                            }
+                            
+                            // Also double check title as a fallback
+                            if (title.startsWith('Reminder ')) {
+                              return false;
+                            }
+
+                            return true;
+                          })
                           .toList();
                       if (docs.isEmpty) {
                         return AppCard(

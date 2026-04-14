@@ -110,8 +110,14 @@ class FirestoreService {
     await remindersCollection(userId).doc(reminderId).delete();
     
     // Also try deleting from feedback collection (no-op if not there)
-    // Mentors/Students can delete their own feedback/reminders depending on rules
-    await feedbackCollection.doc(reminderId).delete();
+    // Wrap in try-catch to avoid permission errors if student tries to delete
+    // something they don't have access to in the feedback collection.
+    try {
+      await feedbackCollection.doc(reminderId).delete();
+    } catch (_) {
+      // Silently fail for feedback deletion if no permission - 
+      // the mentor side will handle cleanup of theirs.
+    }
   }
 
   Stream<QuerySnapshot> remindersStream(String userId) {
@@ -126,10 +132,24 @@ class FirestoreService {
     final Map<String, List<Map<String, dynamic>>> studentReminders = {};
     StreamSubscription? sentRemindersSub;
     List<Map<String, dynamic>> sentList = [];
+    final Map<String, bool> completedReceipts = {};
+    StreamSubscription? receiptsSub;
 
     void updateEmit() {
       if (controller.isClosed) return;
-      final all = [...studentReminders.values.expand((element) => element), ...sentList];
+      
+      final List<Map<String, dynamic>> all = [
+        ...studentReminders.values.expand((element) => element),
+        ...sentList
+      ];
+      
+      // Apply completion shortcuts from receipts
+      for (var reminder in all) {
+        if (completedReceipts.containsKey(reminder['id'])) {
+          reminder['status'] = 'completed';
+        }
+      }
+
       // Sort by dateTime descending
       all.sort((a, b) {
         final aTime = (a['dateTime'] is Timestamp) ? (a['dateTime'] as Timestamp).toDate() : DateTime.tryParse(a['dateTime']?.toString() ?? '') ?? DateTime.now();
@@ -139,7 +159,7 @@ class FirestoreService {
       controller.add(all);
     }
 
-    // Listen to reminders assigned via feedback collection (new model)
+    // 1. Listen to the original reminders
     sentRemindersSub = feedbackCollection
         .where('mentorId', isEqualTo: mentorId)
         .where('type', isEqualTo: 'mentor_reminder')
@@ -149,6 +169,38 @@ class FirestoreService {
         final data = doc.data() as Map<String, dynamic>;
         return {...data, 'id': doc.id};
       }).toList();
+      updateEmit();
+    });
+
+    // 2. Listen to status receipts (to bridge the permission gap)
+    receiptsSub = feedbackCollection
+        .where('mentorId', isEqualTo: mentorId)
+        .where('type', whereIn: ['reminder_completed', 'reminder_pending'])
+        .snapshots()
+        .listen((snapshot) {
+      // Group receipts by originalReminderId and find the latest one
+      final Map<String, Timestamp> latestTimestamps = {};
+      final Map<String, String> latestStatuses = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final originalId = data['originalReminderId'] as String?;
+        final createdAt = data['createdAt'] as Timestamp?;
+        final type = data['type'] as String?;
+
+        if (originalId != null && createdAt != null) {
+          if (latestTimestamps[originalId] == null || createdAt.compareTo(latestTimestamps[originalId]!) > 0) {
+            latestTimestamps[originalId] = createdAt;
+            latestStatuses[originalId] = type == 'reminder_completed' ? 'completed' : 'pending';
+          }
+        }
+      }
+
+      completedReceipts.clear();
+      latestStatuses.forEach((id, status) {
+        if (status == 'completed') completedReceipts[id] = true;
+      });
+      
       updateEmit();
     });
 
@@ -204,13 +256,24 @@ class FirestoreService {
     
     StreamSubscription? personalSub;
     StreamSubscription? mentorSub;
+    StreamSubscription? receiptsSub;
     
     List<ReminderModel> personalList = [];
     List<ReminderModel> mentorList = [];
+    final Map<String, bool> completedReceipts = {};
 
     void emit() {
       if (controller.isClosed) return;
-      final combined = [...personalList, ...mentorList];
+      
+      // Apply receipts to mentor list
+      final mergedMentorList = mentorList.map((reminder) {
+        if (completedReceipts.containsKey(reminder.id)) {
+          return reminder.copyWith(status: ReminderStatus.completed);
+        }
+        return reminder;
+      }).toList();
+
+      final combined = [...personalList, ...mergedMentorList];
       combined.sort((a, b) => a.dateTime.compareTo(b.dateTime));
       controller.add(combined);
     }
@@ -223,6 +286,7 @@ class FirestoreService {
       emit();
     }, onError: (e) => controller.addError(e));
 
+    // Listen to mentor reminders
     mentorSub = feedbackForStudentStream(userId).listen((snapshot) {
       mentorList = snapshot.docs
           .where((doc) => (doc.data() as Map<String, dynamic>)['type'] == 'mentor_reminder')
@@ -232,16 +296,47 @@ class FirestoreService {
               ...data,
               'id': doc.id,
               'userId': userId,
-              'type': ReminderType.custom.name, // Will be displayed as mentor assigned
+              'type': ReminderType.custom.name,
               'createdByMentorId': data['mentorId'],
             });
           }).toList();
       emit();
     }, onError: (e) => controller.addError(e));
 
+    // Listen to own status receipts (AOES)
+    receiptsSub = feedbackCollection
+        .where('studentId', isEqualTo: userId)
+        .where('type', whereIn: ['reminder_completed', 'reminder_pending'])
+        .snapshots()
+        .listen((snapshot) {
+      final Map<String, Timestamp> latestTimestamps = {};
+      final Map<String, String> latestStatuses = {};
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final originalId = data['originalReminderId'] as String?;
+        final createdAt = data['createdAt'] as Timestamp?;
+        final type = data['type'] as String?;
+
+        if (originalId != null && createdAt != null) {
+          if (latestTimestamps[originalId] == null || createdAt.compareTo(latestTimestamps[originalId]!) > 0) {
+            latestTimestamps[originalId] = createdAt;
+            latestStatuses[originalId] = type == 'reminder_completed' ? 'completed' : 'pending';
+          }
+        }
+      }
+
+      completedReceipts.clear();
+      latestStatuses.forEach((id, status) {
+        if (status == 'completed') completedReceipts[id] = true;
+      });
+      emit();
+    });
+
     controller.onCancel = () {
       personalSub?.cancel();
       mentorSub?.cancel();
+      receiptsSub?.cancel();
     };
 
     return controller.stream;
@@ -713,7 +808,9 @@ class FirestoreService {
     required String callerName,
     required String receiverId,
   }) async {
-    await activeCallsCollection.doc(roomId).set({
+    // Unique ID for this specific invite to allow multiple students in one room
+    final inviteId = "${roomId}_${receiverId}";
+    await activeCallsCollection.doc(inviteId).set({
       'roomId': roomId,
       'callerId': callerId,
       'callerName': callerName,
@@ -721,18 +818,32 @@ class FirestoreService {
       'status': 'ringing', // ringing, accepted, declined, ended
       'startedAt': Timestamp.now(),
     });
+
+    // Also update/ensure a room master record exists if needed
+    // (Optional, currentlyroomId_receiverId handles most things)
   }
 
-  Future<void> updateCallStatus(String roomId, String status) async {
-    await activeCallsCollection.doc(roomId).update({'status': status});
+  Future<void> updateCallStatus(String roomId, String receiverId, String status) async {
+    final inviteId = "${roomId}_${receiverId}";
+    await activeCallsCollection.doc(inviteId).update({'status': status});
   }
 
-  Future<void> endCall(String roomId) async {
-    await activeCallsCollection.doc(roomId).delete();
+  Future<void> endCall(String roomId, {String? userId}) async {
+    if (userId != null) {
+      // Individual leaving
+      final inviteId = "${roomId}_${userId}";
+      await activeCallsCollection.doc(inviteId).delete();
+    } else {
+      // End for all (mentor ends session)
+      final snapshot = await activeCallsCollection.where('roomId', isEqualTo: roomId).get();
+      for (var doc in snapshot.docs) {
+        await doc.reference.delete();
+      }
+    }
   }
 
-  Stream<DocumentSnapshot> activeCallStream(String roomId) {
-    return activeCallsCollection.doc(roomId).snapshots();
+  Stream<DocumentSnapshot> activeCallStream(String roomId, String userId) {
+    return activeCallsCollection.doc("${roomId}_${userId}").snapshots();
   }
 
   /// Stream for a user to know if they are being called
@@ -740,6 +851,13 @@ class FirestoreService {
     return activeCallsCollection
         .where('receiverId', isEqualTo: userId)
         .where('status', isEqualTo: 'ringing')
+        .snapshots();
+  }
+
+  /// Stream to see statuses of all participants in a call
+  Stream<QuerySnapshot> roomParticipantsStream(String roomId) {
+    return activeCallsCollection
+        .where('roomId', isEqualTo: roomId)
         .snapshots();
   }
 
@@ -753,28 +871,90 @@ class FirestoreService {
       await feedbackCollection.doc(feedbackId).update({
         'acknowledged': true,
         'acknowledgedAt': Timestamp.now(),
+        'status': 'acknowledged',
       });
     } catch (e) {
       debugPrint('Warning: Could not update feedback doc status: $e');
-      // If update fails (permission), we still proceed to notify the mentor via a new doc
     }
 
-    // Notify mentor - creating a document in their requests/notifs area
-    // Since mentors have a dedicated connection area, we'll put it there or a shared notifs collection
-    // For now, satisfy the "notify mentor" requirement by adding to a shared notifications system
-    // or updating the connection status. We'll add a 'feedback_acknowledged' document to the 
-    // root 'feedback' collection specifically formatted for the mentor to see.
-    
-    await feedbackCollection.add({
-      'mentorId': mentorId,
-      'type': 'acknowledgement',
-      'title': 'Feedback Acknowledged',
-      'content': '$studentName has acknowledged your feedback.',
-      'studentName': studentName,
-      'createdAt': Timestamp.now(),
-      'isPositive': true,
-    });
+    await notifyMentor(
+      mentorId: mentorId,
+      type: 'acknowledgement',
+      title: 'Feedback Acknowledged',
+      content: '$studentName has acknowledged your feedback.',
+      studentName: studentName,
+    );
   }
+
+  /// Generic helper to send notifications/alerts to a mentor
+  Future<void> notifyMentor({
+    required String mentorId,
+    required String type,
+    required String title,
+    required String content,
+    String? studentName,
+    String? studentId,
+    Map<String, dynamic>? extraData,
+  }) async {
+    try {
+      await feedbackCollection.add({
+        'mentorId': mentorId,
+        'type': type,
+        'title': title,
+        'content': content,
+        if (studentName != null) 'studentName': studentName,
+        if (studentId != null) 'studentId': studentId,
+        'createdAt': Timestamp.now(),
+        if (extraData != null) ...extraData,
+      });
+    } catch (e) {
+      debugPrint('Silent error in notifyMentor: $e');
+      // We catch this to ensure that student-side operations (like completing a reminder)
+      // are not blocked by mentor-side logging/notification permission issues.
+    }
+  }
+
+  /// Notify mentor when a reminder status changes (AOES)
+  Future<void> sendReminderStatusReceipt({
+    required String mentorId,
+    required String studentId,
+    required String studentName,
+    required String reminderTitle,
+    required String originalReminderId,
+    required ReminderStatus status,
+  }) async {
+    final type = status == ReminderStatus.completed ? 'reminder_completed' : 'reminder_pending';
+    final statusText = status == ReminderStatus.completed ? 'completed' : 'undone';
+
+    await notifyMentor(
+      mentorId: mentorId,
+      studentId: studentId,
+      type: type,
+      title: 'Reminder ${status.name[0].toUpperCase()}${status.name.substring(1)}',
+      content: '$studentName has $statusText your reminder: $reminderTitle',
+      studentName: studentName,
+      extraData: {
+        'isPositive': status == ReminderStatus.completed,
+        'originalReminderId': originalReminderId,
+      },
+    );
+  }
+
+  /// (Legacy) Kept for backward compatibility
+  Future<void> sendReminderCompletionNotification({
+    required String mentorId,
+    required String studentId,
+    required String studentName,
+    required String reminderTitle,
+    required String originalReminderId,
+  }) => sendReminderStatusReceipt(
+    mentorId: mentorId,
+    studentId: studentId,
+    studentName: studentName,
+    reminderTitle: reminderTitle,
+    originalReminderId: originalReminderId,
+    status: ReminderStatus.completed,
+  );
 
   // ─── Leaderboard (extended) ───────────────────────────────
   /// Get user's rank even if they're not in the top N
@@ -801,6 +981,52 @@ class FirestoreService {
       debugPrint('Error fetching rank data: $e');
       return null;
     }
+  }
+
+  /// Synchronize reminder status between student subcollection and shared feedback record
+  Future<void> updateReminderStatusGlobal({
+    required String studentId,
+    required String reminderId,
+    required String status,
+    DateTime? completedAt,
+  }) async {
+    final updates = {
+      'status': status,
+      if (completedAt != null) 'completedAt': completedAt.toIso8601String(),
+    };
+
+    // 1. Update student's local copy (only if it exists)
+    try {
+      final docId = await remindersCollection(studentId).doc(reminderId).get();
+      if (docId.exists) {
+        await remindersCollection(studentId).doc(reminderId).update(updates);
+      }
+    } catch (e) {
+      debugPrint('Silent skip local reminder update (likely mentor reminder): $e');
+    }
+
+    // 2. We NO LONGER attempt to update the feedback record directly because of permissions.
+    // Instead, the UI calls sendReminderCompletionNotification which creates a receipt doc.
+  }
+
+  /// Undo a reminder completion by deleting the receipt document (URBS)
+  Future<void> deleteReminderCompletionReceipt({
+    required String mentorId,
+    required String studentId,
+    required String originalReminderId,
+  }) async {
+    final snapshot = await feedbackCollection
+        .where('mentorId', isEqualTo: mentorId)
+        .where('studentId', isEqualTo: studentId)
+        .where('type', isEqualTo: 'reminder_completed')
+        .where('originalReminderId', isEqualTo: originalReminderId)
+        .get();
+
+    final batch = _firestore.batch();
+    for (var doc in snapshot.docs) {
+      batch.delete(doc.reference);
+    }
+    await batch.commit();
   }
 }
 

@@ -437,7 +437,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       // Decline
                       IconButton(
                         onPressed: () {
-                          _firestoreService.updateCallStatus(callRoomId, 'declined');
+                          _firestoreService.updateCallStatus(callRoomId, currentUid, 'declined');
                         },
                         icon: const Icon(Icons.call_end, color: Colors.red, size: 28),
                         style: IconButton.styleFrom(backgroundColor: Colors.white),
@@ -446,7 +446,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
                       // Accept
                       IconButton(
                         onPressed: () {
-                          _firestoreService.updateCallStatus(callRoomId, 'accepted');
+                          _firestoreService.updateCallStatus(callRoomId, currentUid, 'accepted');
                           Navigator.pushNamed(context, AppRoutes.videoCall, arguments: {
                             'roomId': callRoomId,
                             'otherUserName': callerName,

@@ -54,7 +54,35 @@ class _FeedbackTab extends StatelessWidget {
           return Center(child: CircularProgressIndicator());
         }
         final docs = snapshot.data?.docs ?? [];
-        if (docs.isEmpty) {
+        
+        // Filter out reminders, acknowledgements, and old acknowledged feedback
+        final filteredDocs = docs.where((doc) {
+          final data = doc.data() as Map<String, dynamic>;
+          final type = data['type'] as String? ?? '';
+          
+          // 1. Hide mentor_reminder, acknowledgement, and reminder status types
+          if (type == 'mentor_reminder' || 
+              type == 'acknowledgement' || 
+              type == 'reminder_completed' || 
+              type == 'reminder_pending') {
+            return false;
+          }
+
+          // 2. Hide acknowledged feedback after 5 minutes
+          if (data['status'] == 'acknowledged' || data['acknowledged'] == true) {
+            final acknowledgedAt = data['acknowledgedAt'] as Timestamp?;
+            if (acknowledgedAt != null) {
+              final diff = DateTime.now().difference(acknowledgedAt.toDate());
+              if (diff.inMinutes > 5) {
+                return false;
+              }
+            }
+          }
+          
+          return true;
+        }).toList();
+
+        if (filteredDocs.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -70,9 +98,9 @@ class _FeedbackTab extends StatelessWidget {
         }
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(20, 16, 20, 80),
-          itemCount: docs.length,
+          itemCount: filteredDocs.length,
           itemBuilder: (context, index) {
-            final fb = docs[index].data() as Map<String, dynamic>;
+            final fb = filteredDocs[index].data() as Map<String, dynamic>;
             final dateStr = fb['createdAt'] != null
                 ? DateFormat('MMM d, yyyy').format((fb['createdAt'] as Timestamp).toDate())
                 : 'Unknown Date';

@@ -40,7 +40,49 @@ class MentorRemindersScreen extends StatelessWidget {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final reminders = snapshot.data ?? [];
+          final allReminders = snapshot.data ?? [];
+          
+          final now = DateTime.now();
+          final expiredIds = <String>[];
+          
+          final reminders = allReminders.where((r) {
+            DateTime? dt;
+            if (r['dateTime'] is Timestamp) dt = (r['dateTime'] as Timestamp).toDate();
+            else if (r['dateTime'] is String) dt = DateTime.tryParse(r['dateTime']);
+
+            DateTime? cat;
+            if (r['completedAt'] is Timestamp) cat = (r['completedAt'] as Timestamp).toDate();
+            else if (r['completedAt'] is String) cat = DateTime.tryParse(r['completedAt']);
+
+            final isDone = r['isCompleted'] == true || r['status'] == 'completed';
+
+            bool isExpired = false;
+            if (isDone && cat != null) {
+              if (now.difference(cat).inMinutes > 5) isExpired = true;
+            } else if (!isDone && dt != null) {
+              if (now.difference(dt).inMinutes > 5) isExpired = true;
+            }
+
+            if (isExpired) {
+              expiredIds.add(r['id'] as String);
+              return false;
+            }
+            return true;
+          }).toList();
+
+          if (expiredIds.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              final fs = FirestoreService();
+              for (final id in expiredIds) {
+                // Since these are for mentor view, they could be in 'feedback' (mentor_reminder)
+                // or student's personal reminders. deleteReminder handles both.
+                // We need the studentId to delete from personal though.
+                // Fortunately, mentor_reminders_stream includes 'studentId' in each map.
+                final sid = allReminders.firstWhere((x) => x['id'] == id)['studentId'] ?? '';
+                fs.deleteReminder(sid, id);
+              }
+            });
+          }
 
           if (reminders.isEmpty) {
             return Center(
@@ -60,7 +102,7 @@ class MentorRemindersScreen extends StatelessWidget {
             itemCount: reminders.length,
             itemBuilder: (context, index) {
               final r = reminders[index];
-              final isRead = r['isCompleted'] == true;
+              final isRead = r['isCompleted'] == true || r['status'] == 'completed';
               String dateStr = 'Unknown';
               try {
                 if (r['dateTime'] is Timestamp) {
@@ -115,7 +157,7 @@ class MentorRemindersScreen extends StatelessWidget {
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
+                                horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: isRead
                                   ? AppTheme.successGreen.withOpacity(0.1)
@@ -123,13 +165,13 @@ class MentorRemindersScreen extends StatelessWidget {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              isRead ? context.tr('done') : context.tr('pending'),
+                              isRead ? 'Completed' : context.tr('pending'),
                               style: TextStyle(
                                 color: isRead
                                     ? AppTheme.successGreen
                                     : AppTheme.warningAmber,
                                 fontSize: 11,
-                                fontWeight: FontWeight.w600,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ),

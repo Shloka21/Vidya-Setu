@@ -31,10 +31,23 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
             r.dateTime.month == now.month &&
             r.dateTime.day == now.day;
       case 'upcoming':
-        return r.status != ReminderStatus.completed && r.dateTime.isAfter(now);
+        if (r.status == ReminderStatus.completed) return false;
+        if (r.dateTime.isBefore(now.subtract(const Duration(minutes: 5)))) return false;
+        return r.dateTime.isAfter(now);
       case 'completed':
-        return r.status == ReminderStatus.completed;
+        if (r.status != ReminderStatus.completed) return false;
+        if (r.completedAt != null) {
+          final diff = DateTime.now().difference(r.completedAt!);
+          if (diff.inMinutes > 5) return false;
+        }
+        return true;
       default:
+        // For 'all' or other filters, still hide if expired
+        if (r.dateTime.isBefore(now.subtract(const Duration(minutes: 5))) && r.status != ReminderStatus.completed) return false;
+        if (r.status == ReminderStatus.completed && r.completedAt != null) {
+          final diff = DateTime.now().difference(r.completedAt!);
+          if (diff.inMinutes > 5) return false;
+        }
         return true;
     }
   }
@@ -93,25 +106,40 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
 
           final allReminders = snapshot.data ?? [];
 
-          // Auto-delete expired one-time reminders (5+ min past their time)
+          // Auto-delete reminders (5+ min past completion OR schedule)
           final now = DateTime.now();
           final expiredIds = <String>[];
           for (final r in allReminders) {
-            if (r.repeatType == 'once' &&
-                r.status != ReminderStatus.completed &&
-                r.dateTime.isBefore(now.subtract(const Duration(minutes: 5)))) {
+            bool isExpired = false;
+            
+            // Case 1: Completed for more than 5 minutes
+            if (r.status == ReminderStatus.completed && r.completedAt != null) {
+              if (r.completedAt!.isBefore(now.subtract(const Duration(minutes: 5)))) {
+                isExpired = true;
+              }
+            } 
+            // Case 2: Pending/Missed for more than 5 minutes
+            else if (r.status != ReminderStatus.completed) {
+              if (r.dateTime.isBefore(now.subtract(const Duration(minutes: 5)))) {
+                isExpired = true;
+              }
+            }
+
+            if (isExpired) {
               expiredIds.add(r.id);
             }
           }
           if (expiredIds.isNotEmpty) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              for (final id in expiredIds) {
-                _firestore.deleteReminder(uid, id);
+              for (final r in allReminders) {
+                 if (expiredIds.contains(r.id) && r.createdByMentorId == null) {
+                   _firestore.deleteReminder(uid, r.id);
+                 }
               }
             });
           }
 
-          // Remove expired from local list so they vanish immediately
+          // Filter out expired items from the local list immediately
           allReminders.removeWhere((r) => expiredIds.contains(r.id));
 
           allReminders.sort((a, b) => a.dateTime.compareTo(b.dateTime));
@@ -257,6 +285,7 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
           child: Icon(Icons.delete_outline_rounded, color: AppTheme.errorRed, size: 28),
         ),
         confirmDismiss: (direction) async {
+          if (reminder.createdByMentorId != null) return false; // Prevent swipe delete for mentor reminders
           return await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -378,38 +407,40 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
                       ),
                     ),
                   ),
-                  Expanded(
-                    child: SizedBox(
-                      height: 36,
-                      child: TextButton.icon(
-                        onPressed: () => Navigator.pushNamed(
-                          context,
-                          AppRoutes.editReminder,
-                          arguments: reminder,
-                        ),
-                        icon: Icon(Icons.edit_outlined, size: 18),
-                        label: Text(context.tr('edit'), style: TextStyle(fontSize: 13)),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.accentBlue,
-                          padding: EdgeInsets.zero,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: SizedBox(
-                      height: 36,
-                      child: TextButton.icon(
-                        onPressed: () => _deleteReminder(uid, reminder),
-                        icon: Icon(Icons.delete_outline_rounded, size: 18),
-                        label: Text(context.tr('delete'), style: TextStyle(fontSize: 13)),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppTheme.errorRed,
-                          padding: EdgeInsets.zero,
+                  if (reminder.createdByMentorId == null)
+                    Expanded(
+                      child: SizedBox(
+                        height: 36,
+                        child: TextButton.icon(
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.editReminder,
+                            arguments: reminder,
+                          ),
+                          icon: Icon(Icons.edit_outlined, size: 18),
+                          label: Text(context.tr('edit'), style: TextStyle(fontSize: 13)),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.accentBlue,
+                            padding: EdgeInsets.zero,
+                          ),
                         ),
                       ),
                     ),
-                  ),
+                  if (reminder.createdByMentorId == null)
+                    Expanded(
+                      child: SizedBox(
+                        height: 36,
+                        child: TextButton.icon(
+                          onPressed: () => _deleteReminder(uid, reminder),
+                          icon: Icon(Icons.delete_outline_rounded, size: 18),
+                          label: Text(context.tr('delete'), style: TextStyle(fontSize: 13)),
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppTheme.errorRed,
+                            padding: EdgeInsets.zero,
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ],
@@ -434,23 +465,48 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
         ? ReminderStatus.pending
         : ReminderStatus.completed;
 
-    final updates = <String, dynamic>{'status': newStatus.name};
-
+    DateTime? completionTime;
     if (newStatus == ReminderStatus.completed) {
-      // Store when it was completed for auto-delete
-      updates['completedAt'] = DateTime.now().toIso8601String();
-
-      // Auto-delete after 10 minutes
-      Future.delayed(const Duration(minutes: 10), () async {
-        try {
-          await _firestore.deleteReminder(uid, reminder.id);
-        } catch (_) {}
-      });
-    } else {
-      updates['completedAt'] = null;
+      completionTime = DateTime.now();
     }
 
-    await _firestore.updateReminder(uid, reminder.id, updates);
+    // AOES: Send status receipt for mentor-assigned tasks (bypasses permission walls)
+    if (reminder.createdByMentorId != null) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final studentName = auth.userModel?.name ?? 'Student';
+      try {
+        await _firestore.sendReminderStatusReceipt(
+          mentorId: reminder.createdByMentorId!,
+          studentId: uid,
+          studentName: studentName,
+          reminderTitle: reminder.title,
+          originalReminderId: reminder.id,
+          status: newStatus,
+        );
+      } catch (e) {
+        debugPrint('Status update signal failed: $e');
+      }
+    }
+
+    // Auto-delete personal reminders after 5 mins if completed
+    if (newStatus == ReminderStatus.completed && reminder.createdByMentorId == null) {
+      Future.delayed(const Duration(minutes: 5), () async {
+        try {
+          final doc = await FirebaseFirestore.instance.collection('users').doc(uid).collection('reminders').doc(reminder.id).get();
+          if (doc.exists && doc.data()?['status'] == 'completed') {
+            await _firestore.deleteReminder(uid, reminder.id);
+          }
+        } catch (_) {}
+      });
+    }
+
+    // Always update local student-created reminders if applicable
+    await _firestore.updateReminderStatusGlobal(
+      studentId: uid,
+      reminderId: reminder.id,
+      status: newStatus.name,
+      completedAt: completionTime,
+    );
   }
 
   Future<void> _deleteReminder(String uid, ReminderModel reminder) async {

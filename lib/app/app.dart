@@ -53,6 +53,7 @@ import '../services/notification_service.dart';
 import '../services/localization_service.dart';
 import '../widgets/common/app_card.dart';
 import '../widgets/common/translation_loader.dart';
+import '../widgets/common/global_call_listener.dart';
 
 class VidyaSetuApp extends StatefulWidget {
   const VidyaSetuApp({super.key});
@@ -86,11 +87,13 @@ class _VidyaSetuAppState extends State<VidyaSetuApp> {
         themeMode: themeProvider.themeMode,
         builder: (context, child) {
           final isTranslating = Provider.of<LocalizationService>(context).isTranslating;
-          return Stack(
-            children: [
-              if (child != null) child,
-              if (isTranslating) const PremiumTranslationLoader(),
-            ],
+          return GlobalCallListener(
+            child: Stack(
+              children: [
+                if (child != null) child,
+                if (isTranslating) const PremiumTranslationLoader(),
+              ],
+            ),
           );
         },
         initialRoute: AppRoutes.splash,
