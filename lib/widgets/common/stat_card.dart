@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../app/theme.dart';
 
 class StatCard extends StatelessWidget {
@@ -24,61 +25,90 @@ class StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool currentThemeDark = Theme.of(context).brightness == Brightness.dark;
+    final Color accentColor = iconColor ?? (isDark ? AppTheme.warningAmber : AppTheme.accentBlue);
+    final Color cardBg = currentThemeDark ? AppTheme.darkSurface : AppTheme.surface;
 
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(18),
+        height: 120, // Consistent height with profile stat items
         decoration: BoxDecoration(
-          color: currentThemeDark ? AppTheme.primaryNavy : Theme.of(context).colorScheme.surface,
-          gradient: currentThemeDark ? AppTheme.navyGradient : null,
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          boxShadow: currentThemeDark ? [] : AppTheme.cardBoxShadow,
-          border: currentThemeDark ? Border.all(color: Colors.white12) : null,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: currentThemeDark
-                    ? Colors.white.withOpacity(0.15)
-                    : (iconBgColor ?? AppTheme.accentBlue.withOpacity(0.1)),
-                borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-              ),
-              child: Icon(
-                icon,
-                color: currentThemeDark
-                    ? Colors.white
-                    : (iconColor ?? AppTheme.accentBlue),
-                size: 24,
-              ),
-            ),
-            const Spacer(),
-            Text(
-              label.toUpperCase(),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 1.0,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 26,
-                fontWeight: FontWeight.w700,
-              ),
+          color: cardBg,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: accentColor.withOpacity(0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+              spreadRadius: 0,
             ),
           ],
+          border: Border.all(
+            color: accentColor.withOpacity(0.1),
+            width: 1.5,
+          ),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Large Ghost Icon in Background
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Icon(
+                  icon,
+                  size: 80,
+                  color: accentColor.withOpacity(0.10),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Small Icon Container
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: accentColor.withOpacity(0),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      // child: Icon(
+                      //   icon,
+                      //   color: accentColor,
+                      //   size: 20,
+                      // ),
+                    ),
+                    const Spacer(),
+                    // Value
+                    Text(
+                      value,
+                      style: GoogleFonts.inter(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    // Label
+                    Text(
+                      label.toUpperCase(),
+                      style: GoogleFonts.inter(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
-

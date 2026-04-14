@@ -136,6 +136,21 @@ class LocalizationService extends ChangeNotifier {
     return text;
   }
 
+  /// Returns full English name of the language for Gemini prompts
+  String getLanguageName(String code) {
+    switch (code) {
+      case 'hi': return 'Hindi';
+      case 'bn': return 'Bengali';
+      case 'mr': return 'Marathi';
+      case 'te': return 'Telugu';
+      case 'ta': return 'Tamil';
+      case 'gu': return 'Gujarati';
+      case 'kn': return 'Kannada';
+      case 'ur': return 'Urdu';
+      default: return 'English';
+    }
+  }
+
   TranslateLanguage? _getLanguageEnum(String code) {
     switch (code) {
       case 'hi': return TranslateLanguage.hindi;
@@ -212,6 +227,83 @@ class LocalizationService extends ChangeNotifier {
       'level': 'स्तर',
       'points': 'अंक',
       'streak': 'चील',
+      'focus_complete': 'फोकस मोड सफलतापूर्वक पूरा हुआ!',
+      'great_work_focus_session': 'शानदार काम! आपने {} मिनट का फोकस सत्र सफलतापूर्वक पूरा किया।',
+      'get_in_the_zone': 'ज़ोन में आएं',
+      'focus_mode_desc': 'सूचनाओं को मौन करें, ध्यान भटकाने वाली चीज़ों को कम करें और पूर्ण एकाग्रता के साथ अध्ययन करें।',
+      'select_duration': 'अवधि चुनें',
+      'apps_to_block': 'ध्यान भटकाने वाले ऐप्स',
+      'what_happens': 'क्या होता है?',
+      'dnd_enabled': 'डू नॉट डिस्टर्ब सक्षम (Silent)',
+      'countdown_timer': 'स्क्रीन पर काउंटडाउन टाइमर',
+      'breathing_guide': 'शांत श्वास मार्गदर्शिका',
+      'focus_points': 'पूरा होने पर अंक अर्जित करें',
+      'start_focus': 'फोकस शुरू करें',
+      'stay_focused': 'ध्यान केंद्रित रखें',
+      'focus_complete_yay': '🎉 बहुत बढ़िया!',
+      'topic_quiz': 'विषय प्रश्नोत्तरी',
+      'quiz_results': 'प्रश्नोत्तरी परिणाम',
+      'retry_with_new_questions': 'नए प्रश्नों के साथ पुनः प्रयास करें',
+      'review_notes__study_materials': 'नोट्स और अध्ययन सामग्री की समीक्षा करें',
+      'score': 'स्कोर',
+      'percentage': 'प्रतिशत',
+      'status': 'स्थिति',
+      'correct_answer': 'सही उत्तर',
+      'your_answer': 'आपका उत्तर',
+      'yayyy_you_did_it': '🎉 शाबाश! आपने कर दिखाया!',
+      'keep_going': '💪 कोशिश जारी रखें!',
+      'passed': 'उत्तीर्ण',
+      'acknowledge': 'स्वीकार करें',
+      'acknowledged': 'स्वीकार किया गया',
+      'feedback_acknowledged_notified': 'फीडबैक स्वीकार किया! आपके मेंटर को सूचित कर दिया गया है।',
+      'retry': 'पुनः प्रयास करें',
+      'active_now': 'अभी सक्रिय',
+      'active_mins_ago': '{} मिनट पहले सक्रिय',
+      'active_hours_ago': '{} घंटे पहले सक्रिय',
+      'active_days_ago': '{} दिन पहले सक्रिय',
+      'inactive_days': '{} दिनों से निष्क्रिय',
+      'student_analytics': 'छात्र विश्लेषण',
+      'welcome_mentor': 'स्वागत है, मेंटर!',
+      'complete_profile_desc': 'अपनी प्रोफ़ाइल पूरी करें ताकि छात्र आपको ढूंढ सकें।',
+      'years_of_experience': 'अनुभव के वर्ष',
+      'specialization': 'विशेषज्ञता',
+      'profile_setup_complete': 'प्रोफ़ाइल सेटअप पूरा हुआ! 🎉',
+      'save_continue': 'सहेजें और जारी रखें',
+      'how_do_i_connect_with_students': 'मैं छात्रों के साथ कैसे जुड़ूँ?',
+      'how_do_i_schedule_meetings': 'मैं मीटिंग कैसे शेड्यूल करूँ?',
+      'how_do_i_provide_feedback': 'मैं फीडबैक कैसे दूँ?',
+      'how_do_i_send_reminders': 'मैं रिमाइंडर कैसे भेजूं?',
+      'about_vidyasetu': 'विद्यासेतु के बारे में',
+      'vidyasetu_respects_your_privacy': 'विद्यासेतु आपकी गोपनीयता का सम्मान करता है।',
+      'verified_mentor_desc': 'सत्यापित मेंटर एक बैज के साथ दिखाई देते हैं और छात्र खोजों में उन्हें प्राथमिकता दी जाती है।',
+      'generating_quiz_questions': 'प्रश्नोत्तरी प्रश्न तैयार किए जा रहे हैं...',
+      'generating_notes': 'नोट्स तैयार किए जा रहे हैं...',
+      'accessibility_service': 'एक्सेसिबिलिटी सेवा',
+      'overlay_permission': 'ओवरले अनुमति',
+      'usage_access': 'उपयोग एक्सेस',
+      'accessibility_service_desc': 'ध्यान भटकाने वाले ऐप्स खुलने पर उनका पता लगाता है।',
+      'overlay_permission_desc': 'ब्लॉकिंग स्क्रीन दिखाने के लिए आवश्यक।',
+      'usage_access_desc': 'ऐप उपयोग आंकड़ों की निगरानी करता है।',
+      'focus_mode_enforced': 'फोकस मोड लागू है! 🛡️',
+      'return_to_vidyasetu_immediately': 'एकाग्रता बनाए रखने के लिए तुरंत विद्यासेतु पर लौटें।',
+      'great_work': 'शानदार काम!',
+      'back_to_timetable': 'टाइमटेबल पर वापस जाएं',
+      'done': 'हो गया',
+      'to_block_distracting_apps_desc': 'ध्यान भटकाने वाले ऐप्स को सख्ती से ब्लॉक करने के लिए, हमें इन अनुमतियों की आवश्यकता है:',
+      'select_apps_to_restrict': 'सत्र के दौरान सख्ती से प्रतिबंधित करने के लिए ऐप्स चुनें।',
+      'setup_focus_enforcer': 'फोकस एनफोर्सर सेटअप करें',
+      'all_set': 'सब तैयार!',
+      'check_status': 'स्थिति जांचें',
+      'available_for_new': 'नए छात्रों के लिए उपलब्ध',
+      'allow_students_requests': 'छात्रों को अनुरोध भेजने की अनुमति दें',
+      'new_requests': 'नए अनुरोध',
+      'student_updates': 'छात्र अपडेट',
+      'help_faq': 'सहायता और अक्सर पूछे जाने वाले प्रश्न',
+      'about_app': 'ऐप के बारे में',
+      'are_you_sure_you_want_to_delete_account': 'क्या आप वाकई अपना खाता हटाना चाहते हैं?',
+      'delete_account_desc': 'यह क्रिया अपरिवर्तनीय है। छात्र, फीडबैक और संदेशों सहित आपका सारा डेटा स्थायी रूप से हटा दिया जाएगा।',
+      'scheduled_deletion_msg': 'आपका खाता 30 दिनों में हटाने के लिए शेड्यूल किया जाएगा।',
+      'delete_forever': 'स्थायी रूप से हटाएं',
     },
     'mr': {
       'vidyasetu': 'विद्यासेतु',
@@ -577,7 +669,6 @@ class LocalizationService extends ChangeNotifier {
     'resend_otp': 'Resend OTP',
     'reset_password': 'Reset Password',
     'restore_account': 'Restore Account',
-    'retry': 'Retry',
     'retry_with_new_questions': 'Retry with New Questions',
     'review_answers': 'REVIEW ANSWERS',
     'review_before_generating': 'Review before generating',
@@ -780,9 +871,8 @@ class LocalizationService extends ChangeNotifier {
     'for': 'For',
     'using_dark_theme': 'Currently using dark theme',
     'using_light_theme': 'Currently using light theme',
-    'h': 'h',
-    'studied': 'studied',
-    'complete': 'complete',
+    'studied': 'Studied',
+    'complete': 'Complete',
     'streak_master': 'Streak Master',
     'rising_star': 'Rising Star',
     'bookworm': 'Bookworm',
@@ -797,11 +887,8 @@ class LocalizationService extends ChangeNotifier {
     'language_updated': 'Language updated:',
     'ringtone_set': 'Ringtone set:',
     'alarm_ringtone': 'Alarm Ringtone',
-
     'question_of': 'Question',
     'of': 'of',
-    'your_answer': 'Your answer',
-    'correct_answer': 'Correct',
     'take_quiz': 'Take Quiz',
     'questions': 'questions',
     'size': 'Size',
@@ -848,14 +935,68 @@ class LocalizationService extends ChangeNotifier {
     'complete_25_tasks': 'Complete 25 tasks',
     'unstoppable': 'Unstoppable',
     'complete_100_tasks': 'Complete 100 tasks',
+    'focus_complete': 'Focus Complete!',
+    'great_work_focus_session': 'Great work! You completed a {} minute focus session.',
+    'get_in_the_zone': 'Get in the Zone',
+    'focus_mode_desc': 'Silence notifications, minimize distractions, and study with full concentration.',
+    'select_duration': 'Select Duration',
+    'apps_to_block': 'Distracting Apps',
+    'what_happens': 'What happens?',
+    'dnd_enabled': 'Do Not Disturb enabled',
+    'countdown_timer': 'Countdown timer on screen',
+    'breathing_guide': 'Calm breathing guide',
+    'focus_points': 'Earn points on completion',
+    'start_focus': 'Start Focus',
+    'stay_focused': 'Stay Focused',
+    'focus_complete_yay': '🎉 Yayyy!',
+    'topic_quiz': 'Topic Quiz',
+    'quiz_results': 'Quiz Results',
+    'correct_answer': 'Correct Answer',
+    'your_answer': 'Your Answer',
+    'yayyy_you_did_it': '🎉 Yayyy! You did it!',
+    'keep_going': '💪 Keep Going!',
+    'passed': 'Passed',
+    'acknowledge': 'Acknowledge',
+    'acknowledged': 'Acknowledged',
+    'feedback_acknowledged_notified': 'Feedback acknowledged! Your mentor has been notified.',
+    'retry': 'Retry',
+    'to_block_distracting_apps_desc': 'To strictly block distracting apps, we need these permissions:',
+    'select_apps_to_restrict': 'Select apps to strictly restrict during session.',
+    'setup_focus_enforcer': 'Setup Focus Enforcer',
+    'check_status': 'Check Status',
+    'welcome_mentor': 'Welcome, Mentor!',
+    'complete_profile_desc': 'Complete your profile so students can find you.',
+    'years_of_experience': 'Years of Experience',
+    'specialization': 'Specialization',
+    'profile_setup_complete': 'Profile setup complete! 🎉',
+    'save_continue': 'Save & Continue',
+    'framework': 'Framework',
+    'backend': 'Backend',
+    'available_for_new': 'Available for New',
+    'allow_students_requests': 'Allow student requests',
+    'new_requests': 'New Requests',
+    'student_updates': 'Student Updates',
+    'help_faq': 'Help & FAQ',
+    'about_app': 'About App',
   };
 }
+
 // Global build context extension for easy translation: context.tr('key')
 extension LocalizationExtension on BuildContext {
   String tr(String key) {
-    // We don't listen here to avoid massive rebuilds if not needed,
-    // or we CAN listen via Provider.of<LocalizationService>(this).
-    final service = Provider.of<LocalizationService>(this, listen: true);
-    return service.translate(key);
+    try {
+      // Find service without explicitly throwing if not found
+      // Also check if owner is null (context is unmounted) to avoid AssertionError
+      if (!debugCheckHasDirectionality(this)) return _fallback(key);
+      
+      final service = Provider.of<LocalizationService>(this, listen: false);
+      return service.translate(key);
+    } catch (_) {
+      return _fallback(key);
+    }
+  }
+
+  String _fallback(String key) {
+    return key.replaceAll('_', ' ').split(' ').map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '').join(' ');
   }
 }

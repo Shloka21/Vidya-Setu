@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
 import '../../../models/timetable_model.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../services/firestore_service.dart';
 import '../../../services/pdf_service.dart';
 import '../../../widgets/common/app_card.dart';
 import 'package:vidyasetu/services/localization_service.dart';
@@ -16,6 +19,7 @@ class DailyStudyPlanScreen extends StatefulWidget {
 }
 
 class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
+  final FirestoreService _firestore = FirestoreService();
   late DateTime _selectedDate;
   late List<TimetableSession> _allSessions;
 
@@ -24,6 +28,14 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
     super.initState();
     _selectedDate = DateTime.now();
     _allSessions = widget.studyPlan?.sessions ?? _mockSessions();
+    
+    // Sync total hours background to fix any discrepancies (like the 0.0h bug)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null) {
+        _firestore.syncTotalStudyHours(uid);
+      }
+    });
   }
 
   List<TimetableSession> _mockSessions() {
@@ -413,11 +425,19 @@ class _DailyStudyPlanScreenState extends State<DailyStudyPlanScreen> {
       ),
       builder: (ctx) => _SessionDetailSheet(
         session: session,
-        onMarkCompleted: () {
+        onMarkCompleted: () async {
+          final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+          if (uid != null && widget.studyPlan != null) {
+            await _firestore.updateSessionStatus(uid, widget.studyPlan!.id, session.id, true);
+          }
           setState(() => session.isCompleted = true);
-          Navigator.pop(ctx);
+          if (mounted) Navigator.pop(ctx);
         },
-        onQuizCompleted: () {
+        onQuizCompleted: () async {
+          final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+          if (uid != null && widget.studyPlan != null) {
+            await _firestore.updateSessionQuizCompleted(uid, widget.studyPlan!.id, session.id, true);
+          }
           setState(() {
             session.isCompleted = true;
             session.quizCompleted = true;

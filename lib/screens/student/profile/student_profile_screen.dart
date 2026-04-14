@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'package:shared_preferences/shared_preferences.dart';
@@ -8,10 +9,12 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/theme_provider.dart';
 import '../../../services/notification_service.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/localization_service.dart';
-import '../../../widgets/common/app_card.dart';
+import 'package:vidyasetu/services/localization_service.dart';
+import 'package:vidyasetu/services/gamification_logic.dart';
+import 'package:vidyasetu/widgets/common/app_card.dart';
 import '../../../widgets/common/animated_theme_toggle.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' as cloud_firestore;
+import 'package:intl/intl.dart';
 import '../../../services/firestore_service.dart';
 import '../../../models/timetable_model.dart';
 
@@ -23,6 +26,7 @@ class StudentProfileScreen extends StatefulWidget {
 }
 
 class _StudentProfileScreenState extends State<StudentProfileScreen> {
+  final _firestore = FirestoreService();
   // Notification prefs
   bool _reminderNotifications = true;
   bool _voiceNotifications = false;
@@ -38,12 +42,43 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   String _selectedRingtone = 'nokia_classic';
   String _selectedLanguage = 'en';
 
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  final Map<String, String> _ringtoneFiles = {
+    'nokia_classic': 'freesound_community-nokia-ringtone-with-vibration-100491.mp3',
+    'classic_phone': 'soynoviembre-classic-phone-ringtone-439034.mp3',
+    'gentle_chime': 'universfield-ringtone-023-376906.mp3',
+    'morning_bell': 'universfield-ringtone-029-437512.mp3',
+    'soft_melody': 'universfield-ringtone-030-437513.mp3',
+    'bright_tone': 'universfield-ringtone-031-437514.mp3',
+    'crystal_alert': 'universfield-ringtone-055-494939.mp3',
+    'rising_pulse': 'universfield-ringtone-087-496415.mp3',
+    'echo_ring': 'universfield-ringtone-088-496414.mp3',
+  };
+
   bool _loaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadPreferences();
+    _syncStats();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _syncStats() async {
+    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (uid != null) {
+      await FirestoreService().ensureUserInitialized(uid);
+      // Trigger a local refresh if needed
+      if (mounted) {
+        Provider.of<AuthProvider>(context, listen: false).refreshUser();
+      }
+    }
   }
 
   Future<void> _loadPreferences() async {
@@ -81,6 +116,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
     _savePref(key, value);
     if (key == 'pref_reminder_notif' && !value) {
       NotificationService().cancelAll();
+    }
+  }
+
+  Future<void> _playRingtonePreview(String ringtoneKey) async {
+    try {
+      final fileName = _ringtoneFiles[ringtoneKey];
+      if (fileName != null) {
+        await _audioPlayer.stop();
+        await _audioPlayer.play(AssetSource('ringtone/$fileName'));
+      }
+    } catch (e) {
+      debugPrint('Error playing ringtone preview: $e');
     }
   }
 
@@ -256,18 +303,15 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                 children: [
                   // ── Stats ──
                   // Stats
-                  AppCard(
-                    padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 6),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStatItem(context.tr('level'), '${user?.level ?? 1}', Icons.star_rounded, AppTheme.warningAmber),
-                        Container(width: 5, height: 40, color: Colors.transparent),
-                        _buildStatItem(context.tr('points'), '${user?.points ?? 0}', Icons.bolt_rounded, AppTheme.accentPurple),
-                        Container(width: 5, height: 40, color: Colors.transparent),
-                        _buildStatItem(context.tr('streak'), '${user?.streak ?? 0}', Icons.local_fire_department, AppTheme.errorRed),
-                      ],
-                    ),
+                  // Stats
+                  Row(
+                    children: [
+                      _buildStatItem(context.tr('level'), '${user?.level ?? 1}', Icons.workspace_premium_rounded, AppTheme.warningAmber),
+                      const SizedBox(width: 12),
+                      _buildStatItem(context.tr('points'), '${user?.points ?? 0}', Icons.bolt_rounded, AppTheme.accentPurple),
+                      const SizedBox(width: 12),
+                      _buildStatItem(context.tr('streak'), '${user?.streak ?? 0}', Icons.local_fire_department_rounded, AppTheme.errorRed),
+                    ],
                   ),
                   SizedBox(height: 28),
 
@@ -297,7 +341,9 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return Center(child: CircularProgressIndicator());
                       }
-                      final docs = snapshot.data?.docs ?? [];
+                      final docs = (snapshot.data?.docs ?? [])
+                          .where((doc) => (doc.data() as Map<String, dynamic>)['type'] != 'mentor_reminder')
+                          .toList();
                       if (docs.isEmpty) {
                         return AppCard(
                           padding: const EdgeInsets.all(16),
@@ -312,41 +358,72 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                       return Column(
                         children: docs.take(3).map((doc) {
                           final data = doc.data() as Map<String, dynamic>;
-                          final content = data['content'] ?? '';
+                          final title = data['title'] ?? data['content'] ?? 'Feedback';
+                          final message = data['message'] ?? '';
                           final isPositive = data['isPositive'] ?? true;
-                          final mentorName = data['mentorName'] ?? 'Mentor';
+                          final rawMentorName = data['mentorName'];
+                          final mentorId = data['mentorId'] ?? '';
                           
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
-                            child: AppCard(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 36, height: 36,
-                                    decoration: BoxDecoration(
-                                      color: isPositive ? AppTheme.successGreen.withOpacity(0.1) : AppTheme.warningAmber.withOpacity(0.1),
-                                      shape: BoxShape.circle,
+                            child: InkWell(
+                              onTap: () => _showFeedbackDetailsDialog(data, doc.id),
+                              borderRadius: BorderRadius.circular(16),
+                              child: AppCard(
+                                padding: const EdgeInsets.all(16),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      width: 36, height: 36,
+                                      decoration: BoxDecoration(
+                                        color: isPositive ? AppTheme.successGreen.withOpacity(0.2) : AppTheme.warningAmber.withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        isPositive ? Icons.thumb_up_rounded : Icons.lightbulb_outline_rounded,
+                                        color: isPositive ? AppTheme.successGreen : AppTheme.warningAmber,
+                                        size: 18,
+                                      ),
                                     ),
-                                    child: Icon(
-                                      isPositive ? Icons.thumb_up_rounded : Icons.lightbulb_outline_rounded,
-                                      color: isPositive ? AppTheme.successGreen : AppTheme.warningAmber,
-                                      size: 18,
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              FutureBuilder<Map<String, dynamic>?>(
+                                                future: rawMentorName != null ? null : _firestore.getUser(mentorId),
+                                                builder: (context, nameSnapshot) {
+                                                  final mentorDisplayName = rawMentorName ?? nameSnapshot.data?['name'] ?? 'Your Mentor';
+                                                  return Text(mentorDisplayName, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700));
+                                                },
+                                              ),
+                                              if (data['acknowledged'] == true)
+                                                Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 16),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            title,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.9), fontSize: 14, fontWeight: FontWeight.w600),
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            message,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 12),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(mentorName, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700)),
-                                        SizedBox(height: 4),
-                                        Text(content, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8), fontSize: 13)),
-                                      ],
-                                    ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                           );
@@ -460,9 +537,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                             onChanged: (val) {
                               if (val != null) {
                                 setState(() => _selectedRingtone = val);
-                                _savePref(context.tr('prefringtone'), val);
+                                _savePref('pref_ringtone', val);
+                                _playRingtonePreview(val);
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('${context.tr('ringtone_set')} ${val.replaceAll('_', ' ').toUpperCase()}')),
+                                  SnackBar(
+                                    content: Text('${context.tr('ringtone_set')} ${val.replaceAll('_', ' ').toUpperCase()}'),
+                                    duration: const Duration(seconds: 2),
+                                    action: SnackBarAction(
+                                      label: 'STOP',
+                                      textColor: Colors.white,
+                                      onPressed: () => _audioPlayer.stop(),
+                                    ),
+                                  ),
                                 );
                               }
                             },
@@ -552,7 +638,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                   SizedBox(height: 24),
 
                   // ── Critical Actions ──
-                  _sectionTitle(context.tr('critical_actions')),
+                  _sectionTitle(context.tr('account_actions')),
                   AppCard(
                     padding: EdgeInsets.zero,
                     child: Column(
@@ -564,7 +650,7 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
                         ),
                         Divider(height: 1),
                         ListTile(
-                          leading: Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed),
+                          leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed, size: 20)),
                           title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
                           onTap: _showDeleteAccountDialog,
                         ),
@@ -585,20 +671,66 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget _buildStatItem(String label, String value, IconData icon, Color color) {
     return Expanded(
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18),
+        height: 120,
         decoration: BoxDecoration(
-          gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [color.withOpacity(0.08), color.withOpacity(0.03)]),
-          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-          border: Border.all(color: color.withOpacity(0.15)),
-        ),
-        child: Column(
-          children: [
-            Container(width: 40, height: 40, decoration: BoxDecoration(color: color.withOpacity(0.12), shape: BoxShape.circle), child: Icon(icon, color: color, size: 22)),
-            const SizedBox(height: 8),
-            Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
-            const SizedBox(height: 2),
-            Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12, fontWeight: FontWeight.w600)),
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: color.withOpacity(0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
           ],
+          border: Border.all(color: color.withOpacity(0.1), width: 1.5),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -10,
+                top: -10,
+                child: Icon(icon, size: 80, color: color.withOpacity(0.10)),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      //child: Icon(icon, color: color, size: 20),
+                    ),
+                    const Spacer(),
+                    Text(
+                      value,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -653,6 +785,148 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
       activeColor: AppTheme.accentBlue,
       onChanged: onChanged,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20),
+    );
+  }
+
+  void _showFeedbackDetailsDialog(Map<String, dynamic> data, String docId) {
+    final rawMentorName = data['mentorName'];
+    final mentorId = data['mentorId'] ?? '';
+    final title = data['title'] ?? data['content'] ?? 'Feedback';
+    final message = data['message'] ?? '';
+    final isPositive = data['isPositive'] ?? true;
+    final isAcknowledged = data['acknowledged'] ?? false;
+    final createdAt = (data['createdAt'] as cloud_firestore.Timestamp?)?.toDate() ?? DateTime.now();
+    final studentName = Provider.of<AuthProvider>(context, listen: false).userModel?.name ?? 'Student';
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          bool isProcessing = false;
+          bool success = false;
+
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+            titlePadding: const EdgeInsets.only(left: 20, right: 8, top: 12),
+            title: Row(
+              children: [
+                Icon(
+                  isPositive ? Icons.school_rounded : Icons.record_voice_over_rounded,
+                  color: isPositive ? AppTheme.accentBlue : AppTheme.warningAmber,
+                  size: 26,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FutureBuilder<Map<String, dynamic>?>(
+                    future: rawMentorName != null ? null : _firestore.getUser(mentorId),
+                    builder: (context, nameSnapshot) {
+                      final mentorDisplayName = rawMentorName ?? nameSnapshot.data?['name'] ?? 'Your Mentor';
+                      return Text(mentorDisplayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18));
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(ctx),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                  padding: EdgeInsets.zero,
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  DateFormat('MMM dd, yyyy • hh:mm a').format(createdAt),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: TextStyle(fontSize: 15, height: 1.5, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.85)),
+                ),
+                if (isAcknowledged) ...[
+                  const SizedBox(height: 24),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.successGreen.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: AppTheme.successGreen.withOpacity(0.2)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            context.tr('acknowledged'),
+                            style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.bold, fontSize: 14),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  const SizedBox(height: 30),
+                  StatefulBuilder(
+                    builder: (context, innerSetState) {
+                      return Center(
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: isProcessing ? null : () async {
+                              innerSetState(() => isProcessing = true);
+                              try {
+                                await FirestoreService().acknowledgeFeedback(docId, mentorId, studentName);
+                                innerSetState(() {
+                                  isProcessing = false;
+                                  success = true;
+                                });
+                                await Future.delayed(const Duration(milliseconds: 600));
+                                if (ctx.mounted) Navigator.pop(ctx);
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(context.tr('feedback_acknowledged_notified')), backgroundColor: AppTheme.successGreen),
+                                  );
+                                }
+                              } catch (e) {
+                                debugPrint('Acknowledgement error: $e');
+                                innerSetState(() => isProcessing = false);
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: success ? AppTheme.successGreen : AppTheme.accentBlue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+                              elevation: 0,
+                            ),
+                            child: isProcessing 
+                              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : Text(
+                                  success ? context.tr('acknowledged') : context.tr('acknowledge'),
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                ),
+                          ),
+                        ),
+                      );
+                    }
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -929,20 +1203,18 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   Widget _buildAchievementsSection(dynamic user) {
     if (user == null) return const SizedBox.shrink();
     
-    // Evaluate earned vs locked based on XP/stats
-    final streak = user.streak ?? 0;
-    final points = user.points ?? 0;
-    final tasks = user.tasksCompleted ?? 0;
+    // Use unified logic
+    final achievements = GamificationLogic.getAchievements(
+      context,
+      xpPoints: user.points ?? 0,
+      streak: user.streak ?? 0,
+      totalHours: user.totalStudyHours ?? 0.0,
+      tasksCompleted: user.tasksCompleted ?? 0,
+      level: user.level ?? 1,
+    );
 
-    // Hardcode some display values dynamically based on default badges
-    final List<Map<String, dynamic>> badges = [
-      {'key': 'week_warrior', 'name': context.tr('week_warrior'), 'icon': Icons.local_fire_department, 'color': AppTheme.warningAmber, 'unlocked': streak >= 7},
-      {'key': 'getting_started', 'name': context.tr('getting_started'), 'icon': Icons.check_circle, 'color': AppTheme.successGreen, 'unlocked': tasks >= 10},
-      {'key': 'point_master', 'name': context.tr('point_master'), 'icon': Icons.military_tech, 'color': AppTheme.accentPurple, 'unlocked': points >= 1000},
-      {'key': 'monthly_master', 'name': context.tr('monthly_master'), 'icon': Icons.whatshot, 'color': AppTheme.errorRed, 'unlocked': streak >= 30},
-      {'key': 'task_master', 'name': context.tr('task_master'), 'icon': Icons.verified, 'color': AppTheme.accentBlue, 'unlocked': tasks >= 50},
-      {'key': 'centurion', 'name': context.tr('centurion'), 'icon': Icons.star, 'color': Color(0xFFFFD700), 'unlocked': tasks >= 100},
-    ];
+    final unlocked = achievements.where((a) => a.unlocked).toList();
+    final locked = achievements.where((a) => !a.unlocked).toList();
 
     return AppCard(
       padding: const EdgeInsets.all(16),
@@ -952,7 +1224,10 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('${badges.where((b) => b['unlocked']).length} / ${badges.length} ${context.tr('unlocked')}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600)),
+              Text(
+                '${unlocked.length} / ${achievements.length} ${context.tr('unlocked')}',
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 13, fontWeight: FontWeight.w600),
+              ),
               TextButton(
                 onPressed: () => Navigator.pushNamed(context, AppRoutes.achievements),
                 child: Text(context.tr('view_all'), style: TextStyle(color: AppTheme.accentBlue, fontSize: 13, fontWeight: FontWeight.w700)),
@@ -963,48 +1238,55 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             child: Row(
-              children: badges.map((b) {
-                final isUnlocked = b['unlocked'] as bool;
-                return Container(
-                  margin: const EdgeInsets.only(right: 16),
-                  child: Column(
-                    children: [
-                      Container(
-                        width: 60, height: 60,
-                        decoration: BoxDecoration(
-                          color: isUnlocked ? b['color'].withOpacity(0.15) : Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
-                          shape: BoxShape.circle,
-                          border: isUnlocked ? Border.all(color: b['color'], width: 2) : Border.all(color: Colors.transparent),
-                        ),
-                        child: Icon(
-                          b['icon'],
-                          color: isUnlocked ? b['color'] : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
-                          size: 28,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: 70,
-                        child: Text(
-                          b['name'],
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: isUnlocked ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
-                            fontSize: 11,
-                            fontWeight: isUnlocked ? FontWeight.w700 : FontWeight.w500,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
+              children: [
+                ...unlocked.map((a) => _buildBadge(a, true)),
+                ...locked.map((a) => _buildBadge(a, false)),
+              ],
             ),
           )
         ],
       )
+    );
+  }
+
+  Widget _buildBadge(dynamic a, bool isUnlocked) {
+    return Container(
+      margin: const EdgeInsets.only(right: 18),
+      child: Column(
+        children: [
+          Container(
+            width: 64, height: 64,
+            decoration: BoxDecoration(
+              color: isUnlocked ? a.color.withOpacity(0.12) : Theme.of(context).colorScheme.onSurface.withOpacity(0.04),
+              shape: BoxShape.circle,
+              border: isUnlocked ? Border.all(color: a.color.withOpacity(0.4), width: 2) : Border.all(color: Colors.transparent),
+              boxShadow: isUnlocked ? [
+                BoxShadow(color: a.color.withOpacity(0.15), blurRadius: 10, offset: const Offset(0, 4)),
+              ] : [],
+            ),
+            child: Icon(
+              a.icon,
+              color: isUnlocked ? a.color : Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 75,
+            child: Text(
+              a.title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isUnlocked ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+                fontSize: 11,
+                fontWeight: isUnlocked ? FontWeight.w700 : FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

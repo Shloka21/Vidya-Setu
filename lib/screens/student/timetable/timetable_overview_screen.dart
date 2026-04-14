@@ -33,6 +33,14 @@ class _TimetableOverviewScreenState extends State<TimetableOverviewScreen> {
   void initState() {
     super.initState();
     _loadPlan();
+    
+    // Sync total hours background to fix any discrepancies
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+      if (uid != null) {
+        _firestore.syncTotalStudyHours(uid);
+      }
+    });
   }
 
   Future<void> _loadPlan() async {

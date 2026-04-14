@@ -35,8 +35,7 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
       final studentsData = await _firestore.getConnectedStudents(uid);
       
       final enrichedStudents = studentsData.map((s) {
-        final totalMins = s['totalStudyMinutes'] as int? ?? 0;
-        final hours = (totalMins / 60).floor();
+        final hours = (s['totalStudyHours'] as num?)?.toDouble() ?? 0.0;
         final streak = s['streak'] as int? ?? 0;
         
         // Mock progress for now if missing, as studyplans take complex querying to check overall completeness
@@ -44,7 +43,7 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
         final progress = (s['level'] as int? ?? 1) * 0.1; // Rough estimation based on level for analytics
         final cappedProgress = progress > 1.0 ? 1.0 : progress;
 
-        final trend = streak > 5 ? 'up' : (streak > 2 ? 'same' : 'down');
+        final trend = (cappedProgress >= 0.1 || streak > 3) ? 'up' : ((cappedProgress > 0 || streak > 0) ? 'same' : 'down');
 
         return {
           'id': s['uid'],
@@ -79,11 +78,11 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
     }
 
     int totalStudents = _students.length;
-    int totalHours = _students.fold<int>(0, (s, e) => s + (e['hours'] as int));
-    int avgHours = totalStudents > 0 ? (totalHours / totalStudents).floor() : 0;
-    int activeStreaks = _students.where((s) => (s['streak'] as int) > 5).length;
-    double totalProgress = _students.fold<double>(0, (s, e) => s + (e['progress'] as double));
-    double avgProgress = totalStudents > 0 ? (totalProgress / totalStudents) : 0;
+    double totalHours = _students.fold<double>(0.0, (s, e) => s + ((e['hours'] as num?)?.toDouble() ?? 0.0));
+    double avgHours = totalStudents > 0 ? (totalHours / totalStudents) : 0.0;
+    int activeStreaks = _students.where((s) => (s['streak'] as num? ?? 0).toInt() > 0).length;
+    double totalProgress = _students.fold<double>(0.0, (s, e) => s + ((e['progress'] as num?)?.toDouble() ?? 0.0));
+    double avgProgress = totalStudents > 0 ? (totalProgress / totalStudents) : 0.0;
 
     return Scaffold(
       appBar: AppBar(title: Text(context.tr('student_analytics'))),
@@ -104,7 +103,7 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
                   _overviewCard(
                       context,
                       'Avg Hours',
-                      '${avgHours}h',
+                      '${avgHours.toStringAsFixed(1)}h',
                       Icons.timer_rounded,
                       AppTheme.accentPurple),
                 ],
@@ -116,7 +115,7 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
                       Icons.local_fire_department_rounded, AppTheme.warningAmber),
                   SizedBox(width: 12),
                   _overviewCard(context, 'Avg Progress', '${(avgProgress * 100).toStringAsFixed(0)}%',
-                      Icons.trending_up_rounded, AppTheme.successGreen),
+                      Icons.speed_rounded, AppTheme.successGreen),
                 ],
               ),
               SizedBox(height: 24),
@@ -178,7 +177,7 @@ class _StudentAnalyticsMentorScreenState extends State<StudentAnalyticsMentorScr
                                               color: Theme.of(context).colorScheme.onSurface,
                                               fontSize: 15,
                                               fontWeight: FontWeight.w700)),
-                                      Text('${s['hours']}h studied • 🔥 ${s['streak']}d',
+                                      Text('${(s['hours'] as double).toStringAsFixed(1)}h studied • 🔥 ${s['streak']}d',
                                           style: TextStyle(
                                               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                               fontSize: 12)),

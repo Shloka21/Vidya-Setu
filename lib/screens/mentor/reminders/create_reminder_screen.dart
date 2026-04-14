@@ -18,8 +18,9 @@ class CreateReminderScreen extends StatefulWidget {
 class _CreateReminderScreenState extends State<CreateReminderScreen> {
   final FirestoreService _firestore = FirestoreService();
   String? _selectedStudentId;
-  String _priority = 'Normal';
-  DateTime _dueDate = DateTime.now().add(const Duration(days: 3));
+  String _priority = 'medium';
+  DateTime _dueDate = DateTime.now().add(const Duration(days: 1));
+  TimeOfDay _dueTime = const TimeOfDay(hour: 10, minute: 0);
   final _titleController = TextEditingController();
   final _messageController = TextEditingController();
   List<Map<String, dynamic>> _students = [];
@@ -70,25 +71,32 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
 
     final selectedStudentName = _students.firstWhere((s) => s['uid'] == _selectedStudentId)['name'] as String? ?? 'Student';
     final reminderId = FirebaseFirestore.instance.collection('_').doc().id;
+    final scheduledDateTime = DateTime(
+      _dueDate.year,
+      _dueDate.month,
+      _dueDate.day,
+      _dueTime.hour,
+      _dueTime.minute,
+    );
 
     try {
-      await _firestore.addReminder(_selectedStudentId!, {
+      await _firestore.assignReminderByMentor(_selectedStudentId!, {
         'id': reminderId,
         'title': _titleController.text.trim(),
         'description': _messageController.text.trim(),
-        'dateTime': Timestamp.fromDate(_dueDate),
+        'dateTime': Timestamp.fromDate(scheduledDateTime),
         'priority': _priority,
-        'type': 'mentor_assigned',
-        'isCompleted': false,
         'mentorId': uid,
-        'studentId': _selectedStudentId,
+        'mentorName': Provider.of<AuthProvider>(context, listen: false).userModel?.name ?? 'Mentor',
         'studentName': selectedStudentName,
+        'status': 'pending',
+        'createdAt': Timestamp.now(),
       });
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(context.tr('reminder_sent_successfully')),
+            content: Text(context.tr('reminder_assigned_successfully')),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -148,26 +156,39 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
 
                   _label(context.tr('priority')),
                   Row(
-                    children: ['Low', 'Normal', 'High'].map((p) {
+                    children: ['high', 'medium', 'low'].map((p) {
                       final selected = p == _priority;
-                      final color = p == 'High'
+                      final color = p == 'high'
                           ? AppTheme.errorRed
-                          : p == 'Normal'
-                              ? AppTheme.accentBlue
+                          : p == 'medium'
+                              ? AppTheme.warningAmber
                               : AppTheme.successGreen;
                       return Expanded(
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 4),
-                          child: ChoiceChip(
-                            label: Text(p),
-                            selected: selected,
-                            selectedColor: color.withOpacity(0.2),
-                            labelStyle: TextStyle(
-                              color: selected ? color : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _priority = p),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color: selected ? color.withOpacity(0.1) : AppTheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: selected ? color : AppTheme.divider,
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  context.tr(p),
+                                  style: TextStyle(
+                                    color: selected ? color : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
                             ),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            onSelected: (_) => setState(() => _priority = p),
                           ),
                         ),
                       );
@@ -175,34 +196,78 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                   ),
                   SizedBox(height: 20),
 
-                  _label(context.tr('due_date')),
-                  InkWell(
-                    onTap: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: _dueDate,
-                        firstDate: DateTime.now(),
-                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                      );
-                      if (picked != null) setState(() => _dueDate = picked);
-                    },
-                    child: AppCard(
-                      child: Row(
-                        children: [
-                          Icon(Icons.calendar_today_rounded, color: AppTheme.accentBlue, size: 22),
-                          const SizedBox(width: 12),
-                          Text(
-                            '${_dueDate.day}/${_dueDate.month}/${_dueDate.year}',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 15,
-                                fontWeight: FontWeight.w600),
-                          ),
-                          Spacer(),
-                          Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
-                        ],
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label(context.tr('date')),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _dueDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 365)),
+                                );
+                                if (picked != null) setState(() => _dueDate = picked);
+                              },
+                              child: AppCard(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.calendar_today_rounded, color: AppTheme.accentBlue, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      '${_dueDate.day}/${_dueDate.month}/${_dueDate.year}',
+                                      style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _label(context.tr('time')),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: _dueTime,
+                                );
+                                if (picked != null) setState(() => _dueTime = picked);
+                              },
+                              child: AppCard(
+                                padding: const EdgeInsets.all(12),
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.access_time_rounded, color: AppTheme.accentPurple, size: 20),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      _dueTime.format(context),
+                                      style: TextStyle(
+                                          color: Theme.of(context).colorScheme.onSurface,
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 30),
 

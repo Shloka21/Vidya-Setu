@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz_data;
 import '../app/routes.dart';
+import '../app/theme.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._();
@@ -97,7 +98,16 @@ class NotificationService {
 
     // Request notification permission (Android 13+)
     await androidPlugin?.requestNotificationsPermission();
-    await androidPlugin?.requestExactAlarmsPermission();
+    
+    // Exact alarms are required for reliable reminders on a schedule
+    try {
+      final hasExactPerm = await androidPlugin?.canScheduleExactNotifications() ?? false;
+      if (!hasExactPerm) {
+        await androidPlugin?.requestExactAlarmsPermission();
+      }
+    } catch (e) {
+      debugPrint('Error requesting exact alarm permission: $e');
+    }
 
     _initialized = true;
   }
@@ -324,8 +334,12 @@ class NotificationService {
           ongoing: true,
           playSound: true,
           sound: RawResourceAndroidNotificationSound(soundChoice),
-          enableVibration: true,
-          additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT for continuous loop
+          audioAttributesUsage: AudioAttributesUsage.alarm,
+          color: AppTheme.accentBlue,
+          ledColor: AppTheme.accentBlue,
+          ledOnMs: 1000,
+          ledOffMs: 500,
+          ticker: 'Reminder: $title',
         ),
       );
 

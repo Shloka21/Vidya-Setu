@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:do_not_disturb/do_not_disturb.dart';
 import 'package:device_apps/device_apps.dart';
+import 'package:provider/provider.dart';
 import '../../../app/theme.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../services/firestore_service.dart';
 import 'package:vidyasetu/services/localization_service.dart';
 import '../../../services/notification_service.dart';
 
@@ -126,8 +129,8 @@ class _FocusModeScreenState extends State<FocusModeScreen>
       if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
         // App went to background during strict focus session
         NotificationService().showInstantNotification(
-          'Focus Mode Enforced! 🛡️',
-          'Return to Vidyasetu immediately to maintain focus.',
+          context.tr('focus_mode_enforced'),
+          context.tr('return_to_vidyasetu_immediately'),
         );
       }
     }
@@ -186,31 +189,30 @@ class _FocusModeScreenState extends State<FocusModeScreen>
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
           title: Row(
             children: [
-              const Icon(Icons.shield_rounded, color: AppTheme.accentPurple, size: 28),
+              Icon(Icons.shield_rounded, color: Theme.of(context).colorScheme.onSurface, size: 28),
               const SizedBox(width: 12),
-              const Text('Setup Focus Enforcer', style: TextStyle(fontWeight: FontWeight.w800)),
+              Text(context.tr('setup_focus_enforcer'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('To strictly block distracting apps, we need these permissions:',
-                style: TextStyle(fontSize: 14, height: 1.4)),
+              Text(context.tr('to_block_distracting_apps_desc'),
+                style: const TextStyle(fontSize: 14, height: 1.4)),
               const SizedBox(height: 20),
               _permissionToggle(
-                title: 'Accessibility Service',
-                desc: 'Detects when distracting apps are opened.',
+                title: context.tr('accessibility_service'),
+                desc: context.tr('accessibility_service_desc'),
                 isGranted: _hasAccessibility,
                 onTap: () async {
                   await _appBlockerChannel.invokeMethod('requestAccessibilityPermission');
-                  // Since we are leaving the app, we check again when returning
                 },
               ),
               const SizedBox(height: 12),
               _permissionToggle(
-                title: 'Overlay Permission',
-                desc: 'Needed to show the blocking screen.',
+                title: context.tr('overlay_permission'),
+                desc: context.tr('overlay_permission_desc'),
                 isGranted: _hasOverlay,
                 onTap: () async {
                   await _appBlockerChannel.invokeMethod('requestOverlayPermission');
@@ -218,8 +220,8 @@ class _FocusModeScreenState extends State<FocusModeScreen>
               ),
               const SizedBox(height: 12),
               _permissionToggle(
-                title: 'Usage Access',
-                desc: 'Monitors app usage statistics.',
+                title: context.tr('usage_access'),
+                desc: context.tr('usage_access_desc'),
                 isGranted: _hasUsage,
                 onTap: () async {
                   await _appBlockerChannel.invokeMethod('requestUsagePermission');
@@ -243,7 +245,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
                 backgroundColor: (_hasAccessibility && _hasOverlay && _hasUsage) ? AppTheme.successGreen : AppTheme.accentBlue,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
-              child: Text((_hasAccessibility && _hasOverlay && _hasUsage) ? 'All Set!' : 'Check Status'),
+              child: Text((_hasAccessibility && _hasOverlay && _hasUsage) ? context.tr('all_set') : context.tr('check_status')),
             ),
           ],
         ),
@@ -350,6 +352,15 @@ class _FocusModeScreenState extends State<FocusModeScreen>
         debugPrint('App blocker stop failed: $e');
       }
     }
+
+    // Persist study hours to Firestore
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final uid = auth.userModel?.uid;
+    if (uid != null) {
+      final hours = _selectedMinutes / 60.0;
+      await FirestoreService().incrementStudyHours(uid, hours);
+      await FirestoreService().updateStreak(uid); // Also update streak/points for focus session
+    }
     
     if (mounted) {
       setState(() {
@@ -379,7 +390,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
           actions: [
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successGreen),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentBlue),
               child: Text(context.tr('done') ?? 'Done'),
             ),
           ],
@@ -437,7 +448,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  AppTheme.accentPurple.withOpacity(0.15),
+                  Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
                   AppTheme.accentBlue.withOpacity(0.1),
                 ],
                 begin: Alignment.topLeft,
@@ -445,8 +456,8 @@ class _FocusModeScreenState extends State<FocusModeScreen>
               ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.self_improvement_rounded,
-                size: 60, color: AppTheme.accentPurple),
+            child: Icon(Icons.self_improvement_rounded,
+                size: 60, color: Theme.of(context).colorScheme.onSurface),
           ),
           const SizedBox(height: 24),
           Text(
@@ -495,12 +506,12 @@ class _FocusModeScreenState extends State<FocusModeScreen>
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.accentPurple
+                        ? Theme.of(context).colorScheme.onSurface
                         : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                       color: isSelected
-                          ? AppTheme.accentPurple
+                          ? Theme.of(context).colorScheme.onSurface
                           : Theme.of(context)
                               .colorScheme
                               .onSurface
@@ -510,7 +521,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppTheme.accentPurple.withOpacity(0.3),
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             )
@@ -549,7 +560,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
           Align(
             alignment: Alignment.centerLeft,
             child: Text(
-              'Select apps to strictly restrict during session.',
+              context.tr('select_apps_to_restrict'),
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 fontSize: 13,
@@ -654,7 +665,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
                 const SizedBox(height: 12),
                 _featureRow(Icons.notifications_off_rounded,
                     context.tr('dnd_enabled') ?? 'Do Not Disturb enabled',
-                    AppTheme.accentPurple),
+                    Theme.of(context).colorScheme.onSurface),
                 _featureRow(Icons.timer_rounded,
                     context.tr('countdown_timer') ?? 'Countdown timer on screen',
                     AppTheme.accentBlue),
@@ -676,8 +687,8 @@ class _FocusModeScreenState extends State<FocusModeScreen>
             child: ElevatedButton(
               onPressed: _startFocus,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.accentPurple,
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.onSurface,
+                foregroundColor: Theme.of(context).colorScheme.surface,
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
@@ -768,7 +779,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
                   child: CircularProgressIndicator(
                     value: _progress,
                     strokeWidth: 6,
-                    color: AppTheme.accentPurple,
+                    color: Theme.of(context).colorScheme.onSurface,
                     backgroundColor: Colors.transparent,
                     strokeCap: StrokeCap.round,
                   ),
@@ -820,7 +831,7 @@ class _FocusModeScreenState extends State<FocusModeScreen>
                   width: 12 + (phase * 20),
                   height: 12 + (phase * 20),
                   decoration: BoxDecoration(
-                    color: AppTheme.accentPurple.withOpacity(0.3 + phase * 0.3),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3 + phase * 0.3),
                     shape: BoxShape.circle,
                   ),
                 ),

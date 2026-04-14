@@ -283,6 +283,8 @@ class TimetableSession {
   bool isCompleted;
   final String? location;
   final String? notes;
+  final String? notesLang; // Added for adaptive translation
+  final String? quizLang;  // Added for adaptive translation
   final bool isHolidaySession;
   List<String> resourceLinks;
   List<String> youtubeLinks;
@@ -300,6 +302,8 @@ class TimetableSession {
     this.isCompleted = false,
     this.location,
     this.notes,
+    this.notesLang,
+    this.quizLang,
     this.isHolidaySession = false,
     this.resourceLinks = const [],
     this.youtubeLinks = const [],
@@ -320,6 +324,8 @@ class TimetableSession {
         'isCompleted': isCompleted,
         'location': location,
         'notes': notes,
+        'notesLang': notesLang,
+        'quizLang': quizLang,
         'isHolidaySession': isHolidaySession,
         'resourceLinks': resourceLinks,
         'youtubeLinks': youtubeLinks,
@@ -339,6 +345,8 @@ class TimetableSession {
         isCompleted: map['isCompleted'] ?? false,
         location: map['location'],
         notes: map['notes'],
+        notesLang: map['notesLang'],
+        quizLang: map['quizLang'],
         isHolidaySession: map['isHolidaySession'] ?? false,
         resourceLinks: List<String>.from(map['resourceLinks'] ?? []),
         youtubeLinks: List<String>.from(map['youtubeLinks'] ?? []),

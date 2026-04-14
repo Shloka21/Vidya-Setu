@@ -10,6 +10,8 @@ import '../../../providers/theme_provider.dart';
 import '../../../services/firestore_service.dart';
 import '../../../services/localization_service.dart';
 import '../../../widgets/common/app_card.dart';
+import '../../../widgets/common/stat_card.dart';
+import '../../../widgets/common/translated_text.dart';
 import '../../../widgets/common/animated_theme_toggle.dart';
 
 class MentorProfileScreen extends StatefulWidget {
@@ -33,22 +35,17 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
   }
 
   Future<void> _loadPreferences() async {
-    final prefs = await SharedPreferences.getInstance();
     final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
     if (uid != null) {
       final userData = await _firestore.getUser(uid);
       if (userData != null && mounted) {
         setState(() {
           _availableForNew = userData['availableForNew'] ?? true;
+          _newRequests = userData['newRequestsNotif'] ?? true;
+          _messageNotif = userData['messageNotif'] ?? true;
+          _studentUpdates = userData['studentUpdatesNotif'] ?? true;
         });
       }
-    }
-    if (mounted) {
-      setState(() {
-        _newRequests = prefs.getBool('mentor_notif_requests') ?? true;
-        _messageNotif = prefs.getBool('mentor_notif_messages') ?? true;
-        _studentUpdates = prefs.getBool('mentor_notif_updates') ?? true;
-      });
     }
   }
 
@@ -77,7 +74,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                 flexibleSpace: FlexibleSpaceBar(
                   background: SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                      padding: const EdgeInsets.fromLTRB(24, 40, 24, 16), // Increased top padding for gap
                       child: Row(
                         children: [
                           Container(
@@ -139,7 +136,9 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                         _sectionTitle(context.tr('about_me')),
                         AppCard(
                           padding: const EdgeInsets.all(16),
-                          child: Text(user.bio!, style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13), textAlign: TextAlign.center),
+                          child: TranslatedText(user.bio!, 
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7), fontSize: 13), 
+                            textAlign: TextAlign.center),
                         ),
                         SizedBox(height: 24),
                       ],
@@ -151,9 +150,32 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                 final studentCount = snap.data?.length ?? 0;
                 return Row(
                   children: [
-                    _buildStat(context.tr('students'), '$studentCount', AppTheme.accentBlue),
-                    _buildStat(context.tr('rating'), '${(user?.rating ?? 4.9).toStringAsFixed(1)}', AppTheme.warningAmber),
-                    _buildStat(context.tr('sessions'), '${user?.sessionsCompleted ?? 0}', AppTheme.successGreen),
+                    Expanded(
+                      child: StatCard(
+                        label: context.tr('students'),
+                        value: '$studentCount',
+                        icon: Icons.people_rounded,
+                        iconColor: AppTheme.accentBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: StatCard(
+                        label: context.tr('rating'),
+                        value: '${(user?.rating ?? 4.9).toStringAsFixed(1)}',
+                        icon: Icons.star_rounded,
+                        iconColor: AppTheme.warningAmber,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: StatCard(
+                        label: context.tr('sessions'),
+                        value: '${user?.sessionsCompleted ?? 0}',
+                        icon: Icons.history_rounded,
+                        iconColor: AppTheme.successGreen,
+                      ),
+                    ),
                   ],
                 );
               },
@@ -205,17 +227,20 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
               padding: const EdgeInsets.symmetric(vertical: 4),
               child: Column(
                 children: [
-                  _toggle(context.tr('new_requests'), _newRequests, (v) {
+                  _toggle(context.tr('new_requests'), _newRequests, (v) async {
                     setState(() => _newRequests = v);
-                    _savePref(context.tr('mentornotifrequests'), v);
+                    final uid = user?.uid;
+                    if (uid != null) await _firestore.updateUser(uid, {'newRequestsNotif': v});
                   }),
-                  _toggle(context.tr('messages'), _messageNotif, (v) {
+                  _toggle(context.tr('messages'), _messageNotif, (v) async {
                     setState(() => _messageNotif = v);
-                    _savePref(context.tr('mentornotifmessages'), v);
+                    final uid = user?.uid;
+                    if (uid != null) await _firestore.updateUser(uid, {'messageNotif': v});
                   }),
-                  _toggle(context.tr('student_updates'), _studentUpdates, (v) {
+                  _toggle(context.tr('student_updates'), _studentUpdates, (v) async {
                     setState(() => _studentUpdates = v);
-                    _savePref(context.tr('mentornotifupdates'), v);
+                    final uid = user?.uid;
+                    if (uid != null) await _firestore.updateUser(uid, {'studentUpdatesNotif': v});
                   }),
                 ],
               ),
@@ -249,7 +274,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(context.tr('theme'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w500)),
-                              Text(isDark ? 'Currently using dark theme' : 'Currently using light theme',
+                              Text(isDark ? context.tr('using_dark_theme') : context.tr('using_light_theme'),
                                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 12)),
                             ],
                           ),
@@ -311,8 +336,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
             ),
             SizedBox(height: 24),
 
-            // ── Danger Zone ──
-            _sectionTitle(context.tr('danger_zone')),
+            _sectionTitle(context.tr('account_actions')),
             AppCard(
               padding: EdgeInsets.zero,
               child: Column(
@@ -321,6 +345,12 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
                     leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 20)),
                     title: Text(context.tr('logout'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
                     onTap: _showLogoutDialog,
+                  ),
+                  Divider(height: 1, indent: 20, endIndent: 20),
+                  ListTile(
+                    leading: Container(width: 36, height: 36, decoration: BoxDecoration(color: AppTheme.errorRed.withOpacity(0.1), borderRadius: BorderRadius.circular(10)), child: Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed, size: 20)),
+                    title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w600)),
+                    onTap: _showDeleteAccountDialog,
                   ),
                 ],
               ),
@@ -493,7 +523,7 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Row(children: [Icon(Icons.verified_rounded, color: AppTheme.successGreen, size: 24), SizedBox(width: 8), Text(context.tr('verification'))]),
-        content: Text(context.tr('your_mentor_account_is_verifiednnverifie')),
+        content: Text(context.tr('verified_mentor_desc')),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('ok')))],
       ),
     );
@@ -510,14 +540,14 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              _faq(context.tr('how_do_i_connect_with_students'), 'Go to Browse Students (Find Students button on Dashboard) and tap Connect.'),
-              _faq(context.tr('how_do_i_schedule_meetings'), 'Open a chat → tap the ⋮ menu → Schedule Meeting.'),
-              _faq(context.tr('how_do_i_provide_feedback'), 'Go to My Students → tap a student → Send Feedback.'),
-              _faq(context.tr('how_do_i_send_reminders'), 'Go to Reminders from Quick Actions → Create Reminder.'),
+              _faq(context.tr('how_do_i_connect_with_students'), context.tr('how_do_i_connect_with_students_ans')),
+              _faq(context.tr('how_do_i_schedule_meetings'), context.tr('how_do_i_schedule_meetings_ans')),
+              _faq(context.tr('how_do_i_provide_feedback'), context.tr('how_do_i_provide_feedback_ans')),
+              _faq(context.tr('how_do_i_send_reminders'), context.tr('how_do_i_send_reminders_ans')),
             ],
           ),
         ),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('ok')))],
       ),
     );
   }
@@ -543,8 +573,8 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(context.tr('contact_support')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _contactRow(Icons.email_rounded, 'Email', 'support@vidyasetu.app'),
-          _contactRow(Icons.language_rounded, 'Website', 'vidyasetu.app/help'),
+          _contactRow(Icons.email_rounded, context.tr('email'), 'support@vidyasetu.app'),
+          _contactRow(Icons.language_rounded, context.tr('website'), 'vidyasetu.app/help'),
         ]),
         actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
       ),
@@ -589,14 +619,14 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
       context: context,
       builder: (_) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(context.tr('about_vidyasetu')),
+        title: Text(context.tr('about_app')),
         content: Column(mainAxisSize: MainAxisSize.min, children: [
-          _aboutRow(Icons.apps_rounded, 'Version', '1.0.0'),
-          _aboutRow(Icons.build_rounded, 'Build', '2026.03.07'),
-          _aboutRow(Icons.code_rounded, 'Framework', 'Flutter'),
-          _aboutRow(Icons.cloud_rounded, 'Backend', 'Firebase'),
+          _aboutRow(Icons.apps_rounded, context.tr('version'), '1.0.0'),
+          _aboutRow(Icons.build_rounded, context.tr('build'), '2026.03.07'),
+          _aboutRow(Icons.code_rounded, context.tr('framework'), 'Flutter'),
+          _aboutRow(Icons.cloud_rounded, context.tr('backend'), 'Firebase'),
         ]),
-        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('close')))],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text(context.tr('ok')))],
       ),
     );
   }
@@ -634,6 +664,55 @@ class _MentorProfileScreenState extends State<MentorProfileScreen> {
             },
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed),
             child: Text(context.tr('logout')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(context.tr('delete_account'), style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(context.tr('are_you_sure_you_want_to_delete_account'), style: TextStyle(fontWeight: FontWeight.w600)),
+            SizedBox(height: 12),
+            Text(context.tr('delete_account_desc'), style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(color: AppTheme.warningAmber.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, color: AppTheme.warningAmber, size: 20),
+                  SizedBox(width: 10),
+                  Expanded(child: Text(context.tr('scheduled_deletion_msg'), style: TextStyle(fontSize: 12, color: AppTheme.warningAmber, fontWeight: FontWeight.w500))),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(context.tr('cancel'))),
+          ElevatedButton(
+            onPressed: () async {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final uid = auth.userModel?.uid;
+              if (uid != null) {
+                Navigator.pop(ctx);
+                await auth.softDeleteAccount(uid);
+                if (mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, elevation: 0),
+            child: Text(context.tr('delete_forever'), style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

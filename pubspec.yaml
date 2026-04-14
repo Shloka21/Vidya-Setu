@@ -48,6 +48,7 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^18.0.1
   flutter_tts: ^4.2.0
+  audioplayers: ^6.1.1
 
   # Video Calls
   jitsi_meet_flutter_sdk: ^10.3.0
@@ -83,3 +84,4 @@ flutter:
     - .env
     - assets/images/
     - assets/animations/
+    - assets/ringtone/

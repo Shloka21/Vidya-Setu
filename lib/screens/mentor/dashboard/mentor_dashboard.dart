@@ -25,15 +25,16 @@ class _MentorDashboardState extends State<MentorDashboard> {
   List<Map<String, dynamic>> _students = [];
   int _pendingRequests = 0;
   bool _loading = true;
-  StreamSubscription? _notifSubscription;
-  final Set<String> _processedNotifIds = {};
+  StreamSubscription? _chatSubscription;
+  final Set<String> _processedIds = {};
+  final DateTime _sessionStart = DateTime.now().subtract(const Duration(seconds: 10));
   Timer? _activeHeartbeatTimer;
 
   @override
   void initState() {
     super.initState();
     _loadData();
-    _setupNotificationListener();
+    _setupStreamObservers();
 
     // Setup WhatsApp-style lastActive heartbeat
     _activeHeartbeatTimer = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -54,35 +55,41 @@ class _MentorDashboardState extends State<MentorDashboard> {
 
   @override
   void dispose() {
-    _notifSubscription?.cancel();
+    _chatSubscription?.cancel();
     _activeHeartbeatTimer?.cancel();
     super.dispose();
   }
 
-  void _setupNotificationListener() {
+  void _setupStreamObservers() {
     final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
     if (uid == null) return;
 
-    _notifSubscription = _firestore.unreadNotificationsStream(uid).listen((snapshot) {
+    final notifService = NotificationService();
+
+    // Observer for Chat Messages
+    _chatSubscription = _firestore.chatRoomsStream(uid).listen((snapshot) {
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final id = data['id'] as String? ?? doc.id;
-        if (_processedNotifIds.contains(id)) continue;
-        _processedNotifIds.add(id);
+        final lastMessageSenderId = data['lastMessageSenderId'] as String?;
+        final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final roomId = doc.id;
+        final lastMsgText = data['lastMessage'] as String? ?? '';
 
-        final type = data['type'] as String? ?? '';
-        final notifService = NotificationService();
-
-        if (type == 'chat') {
+        // Only notify if the last message is from someone else and arrived after app start
+        if (lastMessageSenderId != null && 
+            lastMessageSenderId != uid && 
+            lastMessageTime.isAfter(_sessionStart) &&
+            !_processedIds.contains('$roomId-$lastMessageTime')) {
+          
+          _processedIds.add('$roomId-$lastMessageTime');
+          
           notifService.showChatNotification(
-            senderName: data['senderName'] ?? 'Student',
-            message: data['message'] ?? 'New message',
-            roomId: data['roomId'] ?? '',
-            senderId: data['senderId'] ?? '',
+            senderName: 'Vidyasetu',
+            message: lastMsgText,
+            roomId: roomId,
+            senderId: lastMessageSenderId,
           );
         }
-
-        _firestore.markNotificationRead(uid, id);
       }
     });
   }
@@ -130,7 +137,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
             children: [
               Icon(Icons.waving_hand_rounded, color: AppTheme.warningAmber, size: 28),
               const SizedBox(width: 10),
-              Expanded(child: Text('Welcome, Mentor!', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20))),
+              Expanded(child: Text(context.tr('welcome_mentor'), style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20))),
             ],
           ),
           content: SingleChildScrollView(
@@ -138,17 +145,17 @@ class _MentorDashboardState extends State<MentorDashboard> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Complete your profile so students can find you.', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14)),
+                Text(context.tr('complete_profile_desc'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14)),
                 const SizedBox(height: 16),
-                _onboardField(bioCtrl, 'Bio', 'Tell students about yourself...', maxLines: 3),
+                _onboardField(bioCtrl, context.tr('bio'), 'Tell students about yourself...', maxLines: 3),
                 const SizedBox(height: 12),
-                _onboardField(expCtrl, 'Years of Experience', 'e.g. 5'),
+                _onboardField(expCtrl, context.tr('years_of_experience'), 'e.g. 5'),
                 const SizedBox(height: 12),
-                _onboardField(langCtrl, 'Languages', 'e.g. English, Hindi, Marathi'),
+                _onboardField(langCtrl, context.tr('languages'), 'e.g. English, Hindi, Marathi'),
                 const SizedBox(height: 12),
-                _onboardField(availCtrl, 'Availability', 'e.g. Mon-Fri, 4-8 PM'),
+                _onboardField(availCtrl, context.tr('availability'), 'e.g. Mon-Fri, 4-8 PM'),
                 const SizedBox(height: 12),
-                _onboardField(specCtrl, 'Specialization', 'e.g. Mathematics, Physics'),
+                _onboardField(specCtrl, context.tr('specialization'), 'e.g. Mathematics, Physics'),
               ],
             ),
           ),
@@ -180,7 +187,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   if (mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: Text('Profile setup complete! 🎉'),
+                        content: Text(context.tr('profile_setup_complete')),
                         backgroundColor: AppTheme.successGreen,
                         behavior: SnackBarBehavior.floating,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -194,7 +201,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Save & Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                child: Text(context.tr('save_continue'), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -232,11 +239,11 @@ class _MentorDashboardState extends State<MentorDashboard> {
       return 'Unknown';
     }
     final diff = DateTime.now().difference(dt);
-    if (diff.inMinutes < 5) return 'Active now';
-    if (diff.inMinutes < 60) return 'Active ${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return 'Active ${diff.inHours}h ago';
-    if (diff.inDays < 7) return 'Active ${diff.inDays}d ago';
-    return 'Inactive ${diff.inDays}d';
+    if (diff.inMinutes < 5) return context.tr('active_now');
+    if (diff.inMinutes < 60) return context.tr('active_mins_ago').replaceFirst('{}', diff.inMinutes.toString());
+    if (diff.inHours < 24) return context.tr('active_hours_ago').replaceFirst('{}', diff.inHours.toString());
+    if (diff.inDays < 7) return context.tr('active_days_ago').replaceFirst('{}', diff.inDays.toString());
+    return context.tr('inactive_days').replaceFirst('{}', diff.inDays.toString());
   }
 
   Color _activityColor(Map<String, dynamic> student) {
@@ -416,7 +423,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               label: context.tr('students'),
               value: '${_students.length}',
               icon: Icons.people_rounded,
-              isDark: true,
+              iconColor: AppTheme.accentBlue,
             ),
           ),
           SizedBox(width: 14),
@@ -425,7 +432,7 @@ class _MentorDashboardState extends State<MentorDashboard> {
               label: context.tr('pending_requests_1'),
               value: '$_pendingRequests',
               icon: Icons.person_add_rounded,
-              isDark: true,
+              iconColor: AppTheme.accentPurple,
             ),
           ),
         ],
@@ -628,170 +635,133 @@ class _MentorDashboardState extends State<MentorDashboard> {
   }
 
   Widget _buildQuickActions() {
+    final cs = Theme.of(context).colorScheme;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(context.tr('quick_actions'), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700, fontSize: 20)),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _buildPremiumCard(
-                title: context.tr('guidance'),
-                subtitle: context.tr('send_feedback') ?? 'Send feedback',
-                icon: Icons.rate_review_rounded,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFf093fb), Color(0xFFf5576c)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.feedbackHistory),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildPremiumCard(
-                title: context.tr('analytics'),
-                subtitle: context.tr('student_progress') ?? 'Student progress',
-                icon: Icons.analytics_rounded,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.studentAnalyticsMentor),
-              ),
-            ),
-          ],
+        Text(
+          context.tr('quick_actions'),
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 20,
+                  ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildPremiumCard(
-                title: context.tr('my_students'),
-                subtitle: context.tr('manage_students') ?? 'Manage students',
-                icon: Icons.groups_rounded,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFF0acffe), Color(0xFF495aff)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.myStudents),
+        const SizedBox(height: 14),
+
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppTheme.divider),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildPremiumCard(
-                title: context.tr('settings'),
-                subtitle: context.tr('preferences') ?? 'Preferences',
-                icon: Icons.settings_rounded,
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFfa709a), Color(0xFFfee140)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+            ],
+          ),
+          child: Column(  
+            children: [
+              // 🔵 Main Button
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.studentAnalyticsMentor);
+                },
+                child: Container(
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.accentBlue.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.groups_rounded,
+                          color: Colors.white, size: 22),
+                      const SizedBox(width: 8),
+                      Text(
+                        context.tr('student_analytics'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                onTap: () => Navigator.pushNamed(context, AppRoutes.mentorSettings),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 12),
+
+              // ⚪ Bottom Small Cards
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMiniCard(
+                      icon: Icons.rate_review_rounded,
+                      label: context.tr('feedback'),
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.feedbackHistory),
+                    ),
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: _buildMiniCard(
+                      icon: Icons.notifications_active_rounded,
+                      label: context.tr('reminders'),
+                      onTap: () => Navigator.pushNamed(context, AppRoutes.mentorRemindersList),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildPremiumCard({
-    required String title,
-    required String subtitle,
+  Widget _buildMiniCard({
     required IconData icon,
-    required Gradient gradient,
+    required String label,
     required VoidCallback onTap,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        height: 100,
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
         decoration: BoxDecoration(
-          gradient: gradient,
+          color: cs.onSurface.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: (gradient as LinearGradient).colors.first.withOpacity(0.35),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          border: Border.all(color: AppTheme.divider),
         ),
-        child: Stack(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Positioned(
-              right: -12,
-              top: -12,
-              child: Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
+            Icon(icon, size: 24, color: Theme.of(context).colorScheme.onSurface),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
               ),
-            ),
-            Positioned(
-              right: 8,
-              bottom: -8,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.08),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(icon, color: Colors.white, size: 20),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          height: 1.1,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),

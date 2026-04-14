@@ -43,6 +43,7 @@ import '../screens/chat/chat_room_screen.dart';
 import '../screens/chat/video_call_screen.dart';
 import '../screens/gamification/achievements_screen.dart';
 import '../screens/gamification/leaderboard_screen.dart';
+import '../screens/gamification/leaderboard_demo_screen.dart';
 import '../screens/gamification/point_system_screen.dart';
 import '../screens/alarm/alarm_screen.dart';
 import '../screens/student/focus/focus_mode_screen.dart';
@@ -144,6 +145,7 @@ class _VidyaSetuAppState extends State<VidyaSetuApp> {
           // Gamification
           AppRoutes.achievements: (_) => const AchievementsScreen(),
           AppRoutes.leaderboard: (_) => const LeaderboardScreen(),
+          AppRoutes.leaderboardDemo: (_) => const LeaderboardDemoScreen(),
           AppRoutes.pointSystem: (_) => const PointSystemScreen(),
 
           // Alarm

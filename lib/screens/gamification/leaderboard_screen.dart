@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
-import '../../app/theme.dart';
-import '../../providers/auth_provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../services/firestore_service.dart';
-import 'package:vidyasetu/services/localization_service.dart';
+import '../../providers/auth_provider.dart';
+import '../../services/localization_service.dart';
+import '../../app/theme.dart';
+import '../../app/routes.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -13,632 +15,501 @@ class LeaderboardScreen extends StatefulWidget {
   State<LeaderboardScreen> createState() => _LeaderboardScreenState();
 }
 
-class _LeaderboardScreenState extends State<LeaderboardScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _LeaderboardScreenState extends State<LeaderboardScreen> {
   final FirestoreService _firestore = FirestoreService();
-  final ScrollController _scrollController = ScrollController();
   List<Map<String, dynamic>> _leaderboardData = [];
   Map<String, dynamic>? _currentUserRank;
-  bool _loading = true;
   int _userIndexInList = -1;
   bool _usingMockData = false;
-
-  final List<Map<String, dynamic>> _mockChampions = [
-    {'name': 'Alex Rivera', 'points': 2850, 'level': 8, 'streak': 15, 'uid': 'mock1'},
-    {'name': 'Sarah Chen', 'points': 2420, 'level': 7, 'streak': 22, 'uid': 'mock2'},
-    {'name': 'James Wilson', 'points': 2100, 'level': 6, 'streak': 9, 'uid': 'mock3'},
-    {'name': 'Priya Singh', 'points': 1850, 'level': 6, 'streak': 12, 'uid': 'mock4'},
-    {'name': 'Emma Vance', 'points': 1500, 'level': 5, 'streak': 7, 'uid': 'mock5'},
-  ];
+  final ScrollController _scrollController = ScrollController();
+  
+  static const LinearGradient royalGoldGradient = LinearGradient(
+    colors: [
+      Color(0xFFFFD700), // Gold
+      Color(0xFFFDB931), // Golden Yellow
+      Color(0xFFB8860B), // Dark Goldenrod
+    ],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    _loadLeaderboard();
+    // Pre-fetch my specific rank data if I'm not in top 50
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadMyRank());
   }
 
-  Future<void> _loadLeaderboard() async {
+  Future<void> _loadMyRank() async {
     final currentUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-    if (currentUid == null) return;
-
-    try {
+    if (currentUid != null) {
       final userRank = await _firestore.getUserRankData(currentUid);
-      if (mounted) {
-        setState(() {
-          _currentUserRank = userRank;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching user rank: $e');
-      if (mounted) setState(() => _loading = false);
+      if (mounted) setState(() => _currentUserRank = userRank);
     }
-  }
-
-  void _scrollToMyRank() {
-    if (_userIndexInList >= 0 && _userIndexInList < _leaderboardData.length) {
-      // Account for the podium header (approx 280px) + items before user
-      final itemsBeforeUser = (_userIndexInList - 3).clamp(0, _leaderboardData.length);
-      final offset = 300.0 + (itemsBeforeUser * 82.0);
-      _scrollController.animateTo(
-        offset.clamp(0, _scrollController.position.maxScrollExtent),
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      );
-    } else if (_currentUserRank != null) {
-      // User is beyond the list, scroll to bottom to show pinned card
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeOutCubic,
-      );
-    }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _scrollController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentUid = context.watch<AuthProvider>().userModel?.uid;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(context.tr('leaderboard')),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.accentBlue,
-          labelColor: AppTheme.accentBlue,
-          unselectedLabelColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-          tabs: [
-            Tab(text: context.tr('weekly')),
-            Tab(text: context.tr('monthly')),
-            Tab(text: context.tr('all_time')),
-          ],
-        ),
-      ),
-      floatingActionButton: (_userIndexInList >= 3 || _currentUserRank != null)
-          ? FloatingActionButton.extended(
-              onPressed: _scrollToMyRank,
-              backgroundColor: AppTheme.primaryNavy,
-              icon: Icon(Icons.my_location_rounded, size: 20),
-              label: Text(
-                context.tr('my_rank'),
-                style: TextStyle(fontWeight: FontWeight.w700),
+      backgroundColor: AppTheme.background,
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestore.leaderboardStream(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) return _buildErrorState();
+          
+          if (snapshot.connectionState == ConnectionState.waiting && _leaderboardData.isEmpty) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasData) {
+            _processData(snapshot.data!.docs, currentUid);
+          }
+
+          if (_leaderboardData.isEmpty && !_usingMockData) {
+            return _buildEmptyState();
+          }
+
+          return Stack(
+            children: [
+              CustomScrollView(
+                controller: _scrollController,
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  _buildAppBar(),
+                  _buildPodiumSection(currentUid),
+                  _buildRankList(currentUid),
+                  const SliverToBoxAdapter(child: SizedBox(height: 120)), // Space for pinned card
+                ],
               ),
-            )
-          : null,
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _leaderboardData.isEmpty && !_usingMockData
-              ? _buildEmpty()
-              : TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildLeaderboardContent(),
-                    _buildLeaderboardContent(isTimeLimited: true),
-                    _buildLeaderboardContent(),
-                  ],
-                ),
+              if (_userIndexInList == -1 && _currentUserRank != null)
+                _buildPinnedUserCard(_currentUserRank!, currentUid),
+            ],
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildLeaderboardContent({bool isTimeLimited = false}) {
-    if (isTimeLimited && !_usingMockData) {
-      return Center(
+  void _processData(List<DocumentSnapshot> docs, String? currentUid) {
+    final data = docs.map((doc) {
+      final map = doc.data() as Map<String, dynamic>;
+      map['uid'] = doc.id;
+      return map;
+    }).where((m) {
+      final role = (m['role'] as String?)?.toLowerCase() ?? '';
+      return role == 'student';
+    }).toList();
+
+    // Local Sort
+    data.sort((a, b) {
+      final pa = (a['points'] ?? 0) as int;
+      final pb = (b['points'] ?? 0) as int;
+      return pb.compareTo(pa);
+    });
+
+    // Assign Ranks
+    for (int i = 0; i < data.length; i++) {
+      if (i > 0 && data[i]['points'] == data[i - 1]['points']) {
+        data[i]['rank'] = data[i - 1]['rank'];
+      } else {
+        data[i]['rank'] = i + 1;
+      }
+    }
+
+    _leaderboardData = data;
+    _userIndexInList = _leaderboardData.indexWhere((d) => d['uid'] == currentUid);
+    _usingMockData = false;
+  }
+
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      expandedHeight: 120.0,
+      floating: false,
+      pinned: true,
+      backgroundColor: AppTheme.primaryNavy,
+      elevation: 0,
+      leading: const BackButton(color: Colors.white),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.leaderboardDemo),
+          child: const Text(
+            'DEMO',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12, letterSpacing: 1.2),
+          ),
+        ),
+      ],
+      flexibleSpace: FlexibleSpaceBar(
+        centerTitle: true,
+        title: Text(
+          context.tr('leaderboard'),
+          style: GoogleFonts.playfairDisplay(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            fontSize: 20,
+          ),
+        ),
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: AppTheme.navyGradient,
+          ),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -20,
+                top: -20,
+                child: Icon(Icons.stars, size: 150, color: Colors.white.withOpacity(0.05)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPodiumSection(String? currentUid) {
+    if (_leaderboardData.isEmpty) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    
+    final podiumCount = _leaderboardData.length.clamp(0, 3);
+    
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 32),
+        decoration: const BoxDecoration(
+          color: AppTheme.primaryNavy,
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(32),
+            bottomRight: Radius.circular(32),
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            if (podiumCount >= 2) 
+              _podiumItem(_leaderboardData[1], 2, 140, currentUid),
+            _podiumItem(_leaderboardData[0], 1, 180, currentUid),
+            if (podiumCount >= 3) 
+              _podiumItem(_leaderboardData[2], 3, 120, currentUid)
+            else if (podiumCount > 0)
+              const SizedBox(width: 80), // Placeholder to keep center item centered
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _podiumItem(Map<String, dynamic> user, int rank, double height, String? currentUid) {
+    final bool isCurrentUser = user['uid'] == currentUid;
+    final String name = user['name'] ?? 'Student';
+    final int points = user['points'] ?? 0;
+    final avatarChar = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+    String crownEmoji = '';
+    if (rank == 1) crownEmoji = '👑';
+    else if (rank == 2) crownEmoji = '🥈';
+    else if (rank == 3) crownEmoji = '🥉';
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        if (rank == 1) Text(crownEmoji, style: const TextStyle(fontSize: 32)),
+        const SizedBox(height: 8),
+        Container(
+          width: rank == 1 ? 80 : 70,
+          height: rank == 1 ? 80 : 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: rank == 1 ? const Color(0xFFFFD700) : (isCurrentUser ? AppTheme.accentBlue : Colors.white24),
+              width: 3,
+            ),
+            boxShadow: rank == 1 
+              ? [BoxShadow(color: const Color(0xFFFFD700).withOpacity(0.3), blurRadius: 20, spreadRadius: 2)] 
+              : (isCurrentUser ? AppTheme.elevatedShadow : null),
+          ),
+          child: CircleAvatar(
+            backgroundColor: rank == 1 ? const Color(0xFFFFD700) : (isCurrentUser ? AppTheme.accentBlue : AppTheme.darkCard),
+            child: Text(
+              avatarChar,
+              style: GoogleFonts.playfairDisplay(
+                fontSize: rank == 1 ? 32 : 28,
+                fontWeight: FontWeight.bold,
+                color: rank == 1 ? AppTheme.primaryNavy : Colors.white,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: 85,
+          height: height,
+          decoration: BoxDecoration(
+            gradient: rank == 1 ? royalGoldGradient : (isCurrentUser ? AppTheme.primaryGradient : AppTheme.navyGradient),
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(16),
+              topRight: Radius.circular(16),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.2),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '#$rank',
+                style: GoogleFonts.playfairDisplay(
+                  color: rank == 1 ? AppTheme.primaryNavy : Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: rank == 1 ? 24 : 20,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  isCurrentUser ? context.tr('you') : name.split(' ')[0],
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    color: rank == 1 ? AppTheme.primaryNavy : Colors.white.withOpacity(0.9),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: rank == 1 ? AppTheme.primaryNavy.withOpacity(0.1) : Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$points',
+                  style: TextStyle(
+                    color: rank == 1 ? AppTheme.primaryNavy : Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRankList(String? currentUid) {
+    if (_leaderboardData.length <= 3) return const SliverToBoxAdapter(child: SizedBox.shrink());
+    
+    final listItems = _leaderboardData.sublist(3);
+
+    return SliverPadding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final user = listItems[index];
+            return _buildRankItem(user, currentUid);
+          },
+          childCount: listItems.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRankItem(Map<String, dynamic> user, String? currentUid) {
+    final bool isCurrentUser = user['uid'] == currentUid;
+    final int rank = user['rank'];
+    final String name = user['name'] ?? 'Student';
+    final int points = user['points'] ?? 0;
+
+    String rankEmoji = '🚀'; 
+    if (points >= 500) rankEmoji = '💎';
+    else if (points >= 200) rankEmoji = '🔥';
+    else if (rank <= 10) rankEmoji = '⭐';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        boxShadow: AppTheme.cardBoxShadow,
+        border: isCurrentUser ? Border.all(color: AppTheme.accentBlue.withOpacity(0.5), width: 1.5) : null,
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: SizedBox(
+          width: 60,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '#$rank',
+                style: GoogleFonts.playfairDisplay(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: AppTheme.textSecondary,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(rankEmoji, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+        title: Text(
+          isCurrentUser ? '${context.tr('you')} ($name)' : name,
+          style: GoogleFonts.inter(
+            fontWeight: isCurrentUser ? FontWeight.w700 : FontWeight.w500,
+            color: isCurrentUser ? AppTheme.accentBlue : AppTheme.textPrimary,
+          ),
+        ),
+        trailing: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              '$points',
+              style: GoogleFonts.inter(
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+                color: AppTheme.primaryNavy,
+              ),
+            ),
+            Text(
+              'XP',
+              style: GoogleFonts.inter(
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textLight,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPinnedUserCard(Map<String, dynamic> user, String? currentUid) {
+    final int rank = user['rank'] ?? 0;
+    final int points = user['points'] ?? 0;
+    final String name = user['name'] ?? 'You';
+
+    return Positioned(
+      bottom: 20,
+      left: 16,
+      right: 16,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: AppTheme.primaryGradient,
+          borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+          boxShadow: AppTheme.elevatedShadow,
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              backgroundColor: Colors.white24,
+              child: Text(
+                '#$rank',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    context.tr('your_ranking'),
+                    style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 12),
+                  ),
+                  Text(
+                    name,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ],
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$points',
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 20),
+                ),
+                const Text(
+                  'XP',
+                  style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history_toggle_off_rounded, size: 48, color: AppTheme.accentPurple.withOpacity(0.5)),
+            Icon(Icons.cloud_off_rounded, size: 64, color: AppTheme.errorRed.withOpacity(0.5)),
             const SizedBox(height: 16),
-            const Text('Coming Soon!', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(context.tr('leaderboard_unavailable'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-            Text('Temporal leaderboards are currently in development.', 
-              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+            Text(
+              context.tr('network_error_msg'),
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppTheme.textSecondary),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(context.tr('retry')),
+            ),
           ],
         ),
-      );
-    }
-    return _buildLeaderboard();
+      ),
+    );
   }
 
-  Widget _buildEmpty() {
+  Widget _buildEmptyState() {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.emoji_events_outlined, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
-          SizedBox(height: 16),
-          Text(context.tr('no_leaderboard_data_yet'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontSize: 16)),
-          SizedBox(height: 8),
-          Text(context.tr('start_studying_to_earn_points'), style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), fontSize: 14)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeaderboard() {
-    final currentUid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
-
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.leaderboardStream(limit: 50),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting && _leaderboardData.isEmpty) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasData) {
-          final data = snapshot.data!.docs.asMap().entries.map((e) {
-            final d = e.value.data() as Map<String, dynamic>;
-            d['rank'] = e.key + 1;
-            return d;
-          }).toList();
-          
-          _leaderboardData = data;
-          _userIndexInList = _leaderboardData.indexWhere((d) => d['uid'] == currentUid);
-          _usingMockData = _leaderboardData.isEmpty;
-        }
-
-        final listItems = _leaderboardData.length > 3
-            ? _leaderboardData.sublist(3)
-            : <Map<String, dynamic>>[];
-
-        return RefreshIndicator(
-          onRefresh: () async {
-            // Streams refresh automatically, but we can re-sync My Rank if needed
-            if (currentUid != null && _userIndexInList == -1) {
-              final userRank = await _firestore.getUserRankData(currentUid);
-              if (mounted) setState(() => _currentUserRank = userRank);
-            }
-          },
-          child: ListView.builder(
-            controller: _scrollController,
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-            itemCount: listItems.length + 2, // +1 for podium + 1 for pinned user card
-            itemBuilder: (context, index) {
-              if (index == 0) {
-                // Top 3 podium
-                if (_leaderboardData.length >= 3) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: SizedBox(
-                      height: 220,
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          _podiumItem(_leaderboardData[1], 2, 150, currentUid),
-                          _podiumItem(_leaderboardData[0], 1, 200, currentUid),
-                          _podiumItem(_leaderboardData[2], 3, 120, currentUid),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return const SizedBox.shrink();
-              }
-
-              if (index == listItems.length + 1) {
-                // Pinned current user card (if not in top 50)
-                if (_userIndexInList == -1 && _currentUserRank != null) {
-                  return _buildPinnedUserCard(_currentUserRank!, currentUid);
-                }
-                return const SizedBox.shrink();
-              }
-
-              final listIdx = index - 1;
-              return _rankItem(listItems[listIdx], currentUid);
-            },
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _podiumItem(Map<String, dynamic> user, int position, double height, String? currentUid) {
-    final colors = {
-      1: const Color(0xFFFFD700),
-      2: const Color(0xFFC0C0C0),
-      3: const Color(0xFFCD7F32),
-    };
-    final medals = {1: '🥇', 2: '🥈', 3: '🥉'};
-    final name = (user['name'] as String?) ?? 'User';
-    final points = user['points'] ?? 0;
-    final isCurrentUser = user['uid'] == currentUid;
-
-    return Expanded(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          // Crown for #1
-          if (position == 1)
-            const Text('👑', style: TextStyle(fontSize: 24)),
-          Text(medals[position]!, style: const TextStyle(fontSize: 30)),
-          const SizedBox(height: 6),
-          // Avatar with glow for current user
-          Container(
-            width: position == 1 ? 60 : 50,
-            height: position == 1 ? 60 : 50,
-            decoration: BoxDecoration(
-              color: colors[position]!.withOpacity(0.2),
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: isCurrentUser ? AppTheme.accentBlue : colors[position]!,
-                width: isCurrentUser ? 4 : 3,
-              ),
-              boxShadow: isCurrentUser
-                  ? [
-                      BoxShadow(
-                        color: AppTheme.accentBlue.withOpacity(0.4),
-                        blurRadius: 12,
-                        spreadRadius: 2,
-                      ),
-                    ]
-                  : position == 1
-                      ? [
-                          BoxShadow(
-                            color: colors[1]!.withOpacity(0.3),
-                            blurRadius: 12,
-                            spreadRadius: 1,
-                          ),
-                        ]
-                      : [],
-            ),
-            child: Center(
-              child: Text(
-                name.isNotEmpty ? name[0].toUpperCase() : '?',
-                style: TextStyle(
-                  color: isCurrentUser ? AppTheme.accentBlue : colors[position],
-                  fontSize: position == 1 ? 26 : 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 6),
-          // Name + "You" label
+          Icon(Icons.emoji_events_outlined, size: 100, color: AppTheme.textLight.withOpacity(0.2)),
+          const SizedBox(height: 24),
           Text(
-            isCurrentUser ? context.tr('you') : name.split(' ')[0],
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: isCurrentUser ? AppTheme.accentBlue : Theme.of(context).colorScheme.onSurface,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-            textAlign: TextAlign.center,
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            '$points XP',
-            style: const TextStyle(
-              color: AppTheme.accentBlue,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
+            context.tr('no_leaderboard_data_yet'),
+            style: GoogleFonts.playfairDisplay(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.textSecondary,
             ),
           ),
           const SizedBox(height: 8),
-          // Podium bar
-          Container(
-            width: double.infinity,
-            height: (height - 110).clamp(10, 100),
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  colors[position]!.withOpacity(0.4),
-                  colors[position]!.withOpacity(0.1),
-                ],
-              ),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              border: Border.all(
-                color: colors[position]!.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                '#$position',
-                style: TextStyle(
-                  color: colors[position],
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
+          Text(
+            context.tr('start_studying_to_earn_points'),
+            style: TextStyle(color: AppTheme.textLight),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _rankItem(Map<String, dynamic> user, String? currentUid) {
-    final name = (user['name'] as String?) ?? 'User';
-    final points = user['points'] ?? 0;
-    final level = user['level'] ?? 1;
-    final streak = user['streak'] ?? 0;
-    final rank = user['rank'] ?? 0;
-    final isCurrentUser = user['uid'] == currentUid;
-
-    // Rank display: Emoji for Top 3, #Rank for others
-    Widget rankWidget;
-    if (rank == 1) rankWidget = const Text('🥇', style: TextStyle(fontSize: 22));
-    else if (rank == 2) rankWidget = const Text('🥈', style: TextStyle(fontSize: 22));
-    else if (rank == 3) rankWidget = const Text('🥉', style: TextStyle(fontSize: 22));
-    else {
-      rankWidget = Text(
-        '#$rank',
-        style: TextStyle(
-          color: isCurrentUser
-              ? AppTheme.accentBlue
-              : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-          fontSize: 15,
-          fontWeight: FontWeight.w700,
-        ),
-      );
-    }
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: isCurrentUser
-              ? AppTheme.accentBlue.withOpacity(0.12)
-              : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: isCurrentUser
-              ? Border.all(color: AppTheme.accentBlue.withOpacity(0.5), width: 2.5)
-              : Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05)),
-          boxShadow: [
-            BoxShadow(
-              color: isCurrentUser
-                  ? AppTheme.accentBlue.withOpacity(0.15)
-                  : Colors.black.withOpacity(0.04),
-              blurRadius: isCurrentUser ? 15 : 8,
-              offset: const Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            // Rank number/emoji
-            SizedBox(
-              width: 40,
-              child: Center(child: rankWidget),
-            ),
-            // Avatar
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: isCurrentUser
-                    ? LinearGradient(
-                        colors: [
-                          AppTheme.accentBlue,
-                          AppTheme.accentBlue.withOpacity(0.7),
-                        ],
-                      )
-                    : null,
-                color: isCurrentUser ? null : AppTheme.accentBlue.withOpacity(0.1),
-                shape: BoxShape.circle,
-                border: isCurrentUser ? Border.all(color: Colors.white, width: 2) : null,
-              ),
-              child: Center(
-                child: Text(
-                  name.isNotEmpty ? name[0].toUpperCase() : '?',
-                  style: TextStyle(
-                    color: isCurrentUser ? Colors.white : AppTheme.accentBlue,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            // Name + stats
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          isCurrentUser ? name : name,
-                          style: TextStyle(
-                            color: isCurrentUser
-                                ? AppTheme.accentBlue
-                                : Theme.of(context).colorScheme.onSurface,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (isCurrentUser) ...[
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: AppTheme.accentBlue,
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: [
-                              BoxShadow(color: AppTheme.accentBlue.withOpacity(0.3), blurRadius: 4),
-                            ],
-                          ),
-                          child: Text(
-                            context.tr('you').toUpperCase(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Level $level • 🔥 ${streak}d streak',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Points badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: isCurrentUser
-                    ? const LinearGradient(
-                        colors: [AppTheme.accentBlue, AppTheme.accentPurple],
-                      )
-                    : null,
-                color: isCurrentUser ? null : AppTheme.accentPurple.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: isCurrentUser ? [
-                   BoxShadow(color: AppTheme.accentBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2)),
-                ] : [],
-              ),
-              child: Text(
-                '$points XP',
-                style: TextStyle(
-                  color: isCurrentUser ? Colors.white : AppTheme.accentPurple,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Pinned card for user who is not in the top 50
-  Widget _buildPinnedUserCard(Map<String, dynamic> user, String? currentUid) {
-    final name = (user['name'] as String?) ?? 'You';
-    final points = user['points'] ?? 0;
-    final rank = user['rank'] ?? '?';
-    final level = user['level'] ?? 1;
-    final streak = user['streak'] ?? 0;
-
-    return Container(
-      margin: const EdgeInsets.only(top: 16, bottom: 20),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [AppTheme.primaryNavy, Color(0xFF1E293B)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppTheme.accentBlue.withOpacity(0.5), width: 2),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.primaryNavy.withOpacity(0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentBlue,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(color: AppTheme.accentBlue.withOpacity(0.4), blurRadius: 8),
-                  ],
-                ),
-                child: Text(
-                  '#$rank',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      context.tr('your_current_placement'),
-                      style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: Text(
-                  '$points XP',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Divider(color: Colors.white.withOpacity(0.1), height: 1),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _statItem(Icons.trending_up_rounded, 'Level $level', 'Progression'),
-              _statItem(Icons.local_fire_department_rounded, '$streak Days', 'Streak'),
-              _statItem(Icons.emoji_events_rounded, 'Rank #$rank', 'Global'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _statItem(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(icon, color: AppTheme.accentBlue, size: 24),
-        const SizedBox(height: 4),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700)),
-        Text(label, style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10)),
-      ],
     );
   }
 }

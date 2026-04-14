@@ -38,12 +38,13 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
 
   Future<void> _loadMentors() async {
     try {
-      final snapshot = await _firestoreService.searchMentors();
+      // Load all mentors. Filtering by availability/connection 
+      // is handled dynamically in _getDisplayMentors()
+      final snapshot = await _firestoreService.searchMentors(onlyAvailable: false);
       setState(() {
         _mentors = snapshot.docs
             .map((doc) => doc.data() as Map<String, dynamic>)
             .toList();
-        _filteredMentors = _mentors;
         _isLoading = false;
       });
     } catch (e) {
@@ -72,18 +73,30 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
 
   void _filterMentors(String query) {
     setState(() {
-      if (query.isEmpty) {
-        _filteredMentors = _mentors;
-      } else {
-        _filteredMentors = _mentors.where((m) {
-          final name = (m['name'] as String? ?? '').toLowerCase();
-          final subjects =
-              (List<String>.from(m['subjectsTaught'] ?? [])).join(' ').toLowerCase();
-          return name.contains(query.toLowerCase()) ||
-              subjects.contains(query.toLowerCase());
-        }).toList();
-      }
+      // _filterMentors now just triggers a rebuild; the actual filtering happens in _getDisplayMentors
     });
+  }
+
+  List<Map<String, dynamic>> _getDisplayMentors() {
+    final query = _searchController.text.toLowerCase();
+    
+    // First, filter by availability and connection status
+    final baseMentors = _mentors.where((mentor) {
+      final isAvailable = mentor['availableForNew'] ?? true;
+      final mentorId = mentor['uid'] as String? ?? '';
+      final hasConnection = _connectionStatus.containsKey(mentorId);
+      return isAvailable || hasConnection;
+    }).toList();
+
+    // Then, filter by search query
+    if (query.isEmpty) return baseMentors;
+
+    return baseMentors.where((m) {
+      final name = (m['name'] as String? ?? '').toLowerCase();
+      final subjects =
+          (List<String>.from(m['subjectsTaught'] ?? [])).join(' ').toLowerCase();
+      return name.contains(query) || subjects.contains(query);
+    }).toList();
   }
 
   Future<void> _sendRequest(Map<String, dynamic> mentor) async {
@@ -143,8 +156,9 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final displayMentors = _getDisplayMentors();
+
     return Scaffold(
-      
       appBar: AppBar(title: Text(context.tr('find_a_mentor'))),
       body: Column(
         children: [
@@ -170,7 +184,7 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
           Expanded(
             child: _isLoading
                 ? Center(child: CircularProgressIndicator())
-                : _filteredMentors.isEmpty
+                : displayMentors.isEmpty
                     ? Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -187,9 +201,9 @@ class _FindMentorScreenState extends State<FindMentorScreen> {
                       )
                     : ListView.builder(
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        itemCount: _filteredMentors.length,
+                        itemCount: displayMentors.length,
                         itemBuilder: (context, index) {
-                          final mentor = _filteredMentors[index];
+                          final mentor = displayMentors[index];
                           return _buildMentorCard(mentor);
                         },
                       ),

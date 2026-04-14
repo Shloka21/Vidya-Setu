@@ -49,6 +49,7 @@ class AppRoutes {
   static const String achievements = '/gamification/achievements';
   static const String leaderboard = '/gamification/leaderboard';
   static const String pointSystem = '/gamification/points';
+  static const String leaderboardDemo = '/gamification/leaderboard/demo';
 
   // Alarm
   static const String alarmScreen = '/alarm';

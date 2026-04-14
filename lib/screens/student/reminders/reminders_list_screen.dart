@@ -84,17 +84,14 @@ class _RemindersListScreenState extends State<RemindersListScreen> {
         backgroundColor: AppTheme.primaryNavy,
         child: const Icon(Icons.add_rounded, color: Colors.white),
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestore.remindersStream(uid),
+      body: StreamBuilder<List<ReminderModel>>(
+        stream: _firestore.allRemindersStream(uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final allReminders = (snapshot.data?.docs ?? []).map((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return ReminderModel.fromMap({...data, 'id': doc.id});
-          }).toList();
+          final allReminders = snapshot.data ?? [];
 
           // Auto-delete expired one-time reminders (5+ min past their time)
           final now = DateTime.now();

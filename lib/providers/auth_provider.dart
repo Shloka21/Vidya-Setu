@@ -312,6 +312,12 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Soft delete account
+  Future<void> softDeleteAccount(String uid) async {
+    await _authService.softDeleteAccount(uid);
+    await signOut();
+  }
+
   void _setLoading(bool value) {
     _isLoading = value;
     notifyListeners();

@@ -23,6 +23,13 @@ class UserModel {
   final int maxStudents; // mentor only
   final int sessionsCompleted; // mentor only
   final bool isTimetableCreated; // student only
+  final bool availableForNew; // mentor only
+  final bool newRequestsNotif;
+  final bool messageNotif;
+  final bool studentUpdatesNotif;
+  final String? languages; // mentor only
+  final String? availability; // mentor only
+  final bool profileCompleted; // mentor only
   final DateTime createdAt;
   final DateTime lastActive;
 
@@ -49,6 +56,13 @@ class UserModel {
     this.maxStudents = 20,
     this.sessionsCompleted = 0,
     this.isTimetableCreated = false,
+    this.availableForNew = true,
+    this.newRequestsNotif = true,
+    this.messageNotif = true,
+    this.studentUpdatesNotif = true,
+    this.languages,
+    this.availability,
+    this.profileCompleted = false,
     DateTime? createdAt,
     DateTime? lastActive,
   })  : createdAt = createdAt ?? DateTime.now(),
@@ -80,6 +94,13 @@ class UserModel {
       maxStudents: map['maxStudents'] ?? 20,
       sessionsCompleted: map['sessionsCompleted'] ?? 0,
       isTimetableCreated: map['isTimetableCreated'] ?? false,
+      availableForNew: map['availableForNew'] ?? true,
+      newRequestsNotif: map['newRequestsNotif'] ?? true,
+      messageNotif: map['messageNotif'] ?? true,
+      studentUpdatesNotif: map['studentUpdatesNotif'] ?? true,
+      languages: map['languages'],
+      availability: map['availability'],
+      profileCompleted: map['profileCompleted'] ?? false,
       createdAt: map['createdAt'] != null
           ? (map['createdAt'] as Timestamp).toDate()
           : DateTime.now(),
@@ -113,6 +134,13 @@ class UserModel {
       'maxStudents': maxStudents,
       'sessionsCompleted': sessionsCompleted,
       'isTimetableCreated': isTimetableCreated,
+      'availableForNew': availableForNew,
+      'newRequestsNotif': newRequestsNotif,
+      'messageNotif': messageNotif,
+      'studentUpdatesNotif': studentUpdatesNotif,
+      'languages': languages,
+      'availability': availability,
+      'profileCompleted': profileCompleted,
       'createdAt': Timestamp.fromDate(createdAt),
       'lastActive': Timestamp.fromDate(lastActive),
     };
@@ -141,6 +169,13 @@ class UserModel {
     int? maxStudents,
     int? sessionsCompleted,
     bool? isTimetableCreated,
+    bool? availableForNew,
+    bool? newRequestsNotif,
+    bool? messageNotif,
+    bool? studentUpdatesNotif,
+    String? languages,
+    String? availability,
+    bool? profileCompleted,
     DateTime? createdAt,
     DateTime? lastActive,
   }) {
@@ -167,6 +202,13 @@ class UserModel {
       maxStudents: maxStudents ?? this.maxStudents,
       sessionsCompleted: sessionsCompleted ?? this.sessionsCompleted,
       isTimetableCreated: isTimetableCreated ?? this.isTimetableCreated,
+      availableForNew: availableForNew ?? this.availableForNew,
+      newRequestsNotif: newRequestsNotif ?? this.newRequestsNotif,
+      messageNotif: messageNotif ?? this.messageNotif,
+      studentUpdatesNotif: studentUpdatesNotif ?? this.studentUpdatesNotif,
+      languages: languages ?? this.languages,
+      availability: availability ?? this.availability,
+      profileCompleted: profileCompleted ?? this.profileCompleted,
       createdAt: createdAt ?? this.createdAt,
       lastActive: lastActive ?? this.lastActive,
     );

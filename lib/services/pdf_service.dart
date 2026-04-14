@@ -373,6 +373,7 @@ $syllabusText
     required String subject,
     required String topic,
     required String moduleName,
+    String targetLanguage = 'English',
   }) async {
     try {
       final model = GenerativeModel(
@@ -391,6 +392,9 @@ You are a study resource finder for engineering students studying at Mumbai Univ
 Subject: $subject
 Module: $moduleName
 Topic: $topic
+
+IMPORTANT: The user's preferred language is $targetLanguage.
+Provide all generated text (quiz questions, options, explanations, resource titles) in the $targetLanguage language.
 
 Provide study resources and quiz for this specific topic. Return ONLY valid JSON:
 
@@ -419,6 +423,7 @@ RULES:
 4. Questions should test understanding, not just memorization.
 5. Make questions progressively harder (easy → medium → hard).
 6. Only provide REAL, existing URLs and video IDs that are likely valid.
+7. Return ALL content in $targetLanguage.
 ''';
 
       final response = await model.generateContent([Content.text(prompt)]);

@@ -83,12 +83,14 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
     if (uid == null) return;
 
     final selectedStudentName = _students.firstWhere((s) => s['uid'] == _selectedStudentId)['name'] as String? ?? 'Student';
+    final mentorName = Provider.of<AuthProvider>(context, listen: false).userModel?.name ?? 'Mentor';
     final feedbackId = FirebaseFirestore.instance.collection('_').doc().id;
 
     try {
       await _firestore.saveFeedback({
         'id': feedbackId,
         'mentorId': uid,
+        'mentorName': mentorName,
         'studentId': _selectedStudentId,
         'studentName': selectedStudentName,
         'type': _feedbackType,
@@ -98,16 +100,7 @@ class _SendFeedbackScreenState extends State<SendFeedbackScreen> {
         'createdAt': Timestamp.now(),
       });
 
-      // Notify the student about the feedback
-      final mentorName = Provider.of<AuthProvider>(context, listen: false).userModel?.name ?? 'Your Mentor';
-      await _firestore.writeNotification(_selectedStudentId!, {
-        'type': 'feedback',
-        'mentorName': mentorName,
-        'mentorId': uid,
-        'feedbackId': feedbackId,
-        'title': _titleController.text.trim(),
-        'message': _messageController.text.trim(),
-      });
+      // Feedback saved successfully, student-side observers will handle the notification
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

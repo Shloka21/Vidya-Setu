@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -26,8 +27,11 @@ class _StudentDashboardState extends State<StudentDashboard> {
   final FirestoreService _firestore = FirestoreService();
   StudyPlan? _studyPlan;
   bool _loadingPlan = true;
-  StreamSubscription? _notifSubscription;
-  final Set<String> _processedNotifIds = {};
+  StreamSubscription? _feedbackSubscription;
+  StreamSubscription? _remindersSubscription;
+  StreamSubscription? _chatSubscription;
+  final Set<String> _processedIds = {};
+  final DateTime _sessionStart = DateTime.now().subtract(const Duration(seconds: 10));
 
   Timer? _activeHeartbeatTimer;
 
@@ -35,7 +39,8 @@ class _StudentDashboardState extends State<StudentDashboard> {
   void initState() {
     super.initState();
     _loadStudyPlan();
-    _setupNotificationListener();
+    _setupStreamObservers();
+    _syncMissedReminders();
 
     // Setup WhatsApp-style lastActive heartbeat
     _activeHeartbeatTimer = Timer.periodic(const Duration(minutes: 1), (_) {
@@ -50,50 +55,155 @@ class _StudentDashboardState extends State<StudentDashboard> {
       final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
       if (uid != null && mounted) {
         _firestore.updateUser(uid, {'lastActive': Timestamp.now()});
+        _firestore.ensureUserInitialized(uid);
       }
     });
   }
 
   @override
   void dispose() {
-    _notifSubscription?.cancel();
+    _feedbackSubscription?.cancel();
+    _remindersSubscription?.cancel();
+    _chatSubscription?.cancel();
     _activeHeartbeatTimer?.cancel();
     super.dispose();
   }
 
-  void _setupNotificationListener() {
+  void _setupStreamObservers() {
     final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
     if (uid == null) return;
 
-    _notifSubscription = _firestore.unreadNotificationsStream(uid).listen((snapshot) {
+    final notifService = NotificationService();
+
+    // 1. Observer for New Feedback
+    _feedbackSubscription = _firestore.feedbackForStudentStream(uid).listen((snapshot) {
       for (final doc in snapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        final id = data['id'] as String? ?? doc.id;
-        if (_processedNotifIds.contains(id)) continue;
-        _processedNotifIds.add(id);
+        final id = doc.id;
+        final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
 
-        final type = data['type'] as String? ?? '';
-        final notifService = NotificationService();
+        // Only notify for new items created after app started and not processed yet
+        if (createdAt.isAfter(_sessionStart) && !_processedIds.contains(id)) {
+          _processedIds.add(id);
+          
+          final type = data['type'] as String? ?? '';
+          
+          if (type == 'mentor_reminder') {
+            // Schedule actual alarm for the mentor reminder
+            final scheduledDate = (data['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+            final title = data['title'] ?? 'Mentor Task';
+            final desc = data['description'] ?? '';
+            
+            notifService.scheduleReminderAlarm(
+              reminderId: id,
+              title: '📅 $title',
+              body: desc.isEmpty ? 'Task assigned by your mentor' : desc,
+              eventTime: scheduledDate,
+              reminderMinutesBefore: [0, 15], // Notify at time and 15 mins before
+              priority: data['priority'] ?? 'medium',
+              repeatType: 'once',
+            );
 
-        if (type == 'chat') {
-          notifService.showChatNotification(
-            senderName: data['senderName'] ?? 'Someone',
-            message: data['message'] ?? 'New message',
-            roomId: data['roomId'] ?? '',
-            senderId: data['senderId'] ?? '',
-          );
-        } else if (type == 'feedback') {
-          notifService.showFeedbackNotification(
-            mentorName: data['mentorName'] ?? 'Your Mentor',
-            feedbackTitle: data['title'] ?? 'New Feedback',
-            feedbackPreview: data['message'] ?? '',
-          );
+            notifService.showInstantNotification(
+              '📅 $title',
+              'Your mentor assigned you a task for ${DateFormat('MMM d, h:mm a').format(scheduledDate)}',
+              payload: '{"type": "reminder"}',
+            );
+          } else {
+            notifService.showFeedbackNotification(
+              mentorName: data['mentorName'] ?? 'Your Mentor',
+              feedbackTitle: data['title'] ?? 'New Feedback',
+              feedbackPreview: data['message'] ?? 'Check your feedback gallery.',
+            );
+          }
         }
-
-        // Mark as read after showing notification
-        _firestore.markNotificationRead(uid, id);
       }
     });
+
+    // 2. Observer for New Reminders
+    _remindersSubscription = _firestore.remindersStream(uid).listen((snapshot) {
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final id = doc.id;
+        final createdAt = (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final type = data['type'] as String? ?? '';
+
+        // Only notify for mentor-assigned reminders created after app started
+        if (type == 'mentor_assigned' && createdAt.isAfter(_sessionStart) && !_processedIds.contains(id)) {
+          _processedIds.add(id);
+          notifService.showInstantNotification(
+            '📅 ${data['title'] ?? 'New Reminder'}',
+            'Your mentor assigned you a new task: ${data['description'] ?? ''}',
+            payload: '{"type": "reminder"}',
+          );
+        }
+      }
+    });
+
+    // 3. Observer for Chat Messages
+    _chatSubscription = _firestore.chatRoomsStream(uid).listen((snapshot) {
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        final lastMessageSenderId = data['lastMessageSenderId'] as String?;
+        final lastMessageTime = (data['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+        final roomId = doc.id;
+        final lastMsgText = data['lastMessage'] as String? ?? '';
+
+        // Only notify if the last message is from someone else and arrived after app start
+        if (lastMessageSenderId != null && 
+            lastMessageSenderId != uid && 
+            lastMessageTime.isAfter(_sessionStart) &&
+            !_processedIds.contains('$roomId-$lastMessageTime')) {
+          
+          _processedIds.add('$roomId-$lastMessageTime');
+          
+          // We don't have the sender's name in the chatRoom doc easily without a fetch, 
+          // but we can pass 'Mentor/Student' or fetch it.
+          notifService.showChatNotification(
+            senderName: 'Vidyasetu',
+            message: lastMsgText,
+            roomId: roomId,
+            senderId: lastMessageSenderId,
+          );
+        }
+      }
+    });
+  }
+
+  Future<void> _syncMissedReminders() async {
+    final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
+    if (uid == null) return;
+
+    final notifService = NotificationService();
+    
+    try {
+      // Get all feedback items once to sync any mentor reminders sent while app was killed
+      final snapshot = await _firestore.feedbackForStudentStream(uid).first;
+      for (final doc in snapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data['type'] == 'mentor_reminder') {
+          final id = doc.id;
+          final scheduledDate = (data['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now();
+          
+          if (scheduledDate.isAfter(DateTime.now())) {
+            final title = data['title'] ?? 'Mentor Task';
+            final desc = data['description'] ?? '';
+            
+            await notifService.scheduleReminderAlarm(
+              reminderId: id,
+              title: '📅 $title',
+              body: desc.isEmpty ? 'Task assigned by your mentor' : desc,
+              eventTime: scheduledDate,
+              reminderMinutesBefore: [0, 15],
+              priority: data['priority'] ?? 'medium',
+              repeatType: 'once',
+            );
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error syncing missed reminders: $e');
+    }
   }
 
   Future<void> _loadStudyPlan() async {
@@ -365,50 +475,96 @@ class _StudentDashboardState extends State<StudentDashboard> {
   Widget _buildAnalyticsSnapshot() {
     final hours = _totalStudyHours();
     final rate = _completionRate();
+    const Color purple = AppTheme.accentPurple;
 
     return GestureDetector(
       onTap: () => Navigator.pushNamed(context, AppRoutes.progressDashboard),
-      child: AppCard(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: AppTheme.accentPurple.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(Icons.bar_chart_rounded, color: AppTheme.accentPurple, size: 26),
+      child: Container(
+        height: 100,
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: purple.withOpacity(0.12),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min, // Added to prevent column from expanding unnecessarily
-                children: [
-                  Text(
-                    context.tr('analytics_snapshot'),
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2), // Slightly reduced to give breathing room
-                  Text(
-                    '${hours.toStringAsFixed(1)}${context.tr('h')} ${context.tr('studied')} • ${(rate * 100).toInt()}% ${context.tr('complete')}',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), 
-                      fontSize: 13,
-                      height: 1.2, // Added line height to constrain text bounds predictably
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
           ],
+          border: Border.all(color: purple.withOpacity(0.1), width: 1.5),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Icon(Icons.bar_chart_rounded, size: 90, color: purple.withOpacity(0.08)),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                child: Row(
+                  children: [
+                    
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            context.tr('analytics_snapshot').toUpperCase(),
+                            style: GoogleFonts.inter(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          RichText(
+                            text: TextSpan(
+                              style: GoogleFonts.inter(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              children: [
+                                TextSpan(text: hours.toStringAsFixed(1)),
+                                TextSpan(
+                                  text: ' ${context.tr('hours')} ',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' • ',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
+                                ),
+                                TextSpan(text: '${(rate * 100).toInt()}%'),
+                                TextSpan(
+                                  text: ' ${context.tr('complete')}',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(Icons.chevron_right_rounded, color: purple.withOpacity(0.4)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -739,7 +895,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
           ],
         ),
         const SizedBox(height: 12),
-        StreamBuilder<QuerySnapshot>(
+        StreamBuilder<List<ReminderModel>>(
           stream: _firestore.upcomingRemindersStream(uid),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -748,7 +904,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               ));
             }
-            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            if (!snapshot.hasData || snapshot.data!.isEmpty) {
               return InkWell(
                 onTap: () => Navigator.pushNamed(context, AppRoutes.addReminder),
                 borderRadius: BorderRadius.circular(20),
@@ -770,9 +926,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
               );
             }
 
-            final reminders = snapshot.data!.docs.map((doc) {
-              return ReminderModel.fromMap(doc.data() as Map<String, dynamic>);
-            }).toList();
+            final reminders = snapshot.data!;
 
             return Column(
               children: reminders.map((r) {
@@ -1086,7 +1240,7 @@ class _StudentDashboardState extends State<StudentDashboard> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.self_improvement_rounded,
-                          color: Colors.white, size: 22),
+                          color: Colors.white, size: 24),
                       const SizedBox(width: 8),
                       Text(
                         context.tr('focus_mode'),

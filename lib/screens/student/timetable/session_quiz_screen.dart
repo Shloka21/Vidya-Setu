@@ -32,7 +32,14 @@ class _SessionQuizScreenState extends State<SessionQuizScreen> {
     if (args != null && _questions.isEmpty) {
       _session = args['session'] as TimetableSession?;
       _planId = args['planId'] as String?;
-      if (_session != null) _generateQuiz();
+      
+      if (_session != null) {
+        // If session already has a quiz but in a different language, we later translate it.
+        // For now, if _questions is empty, generate. 
+        // Note: _questions is currently not stored as a separate list in sessions, 
+        // it's generated on-fly unless we change the architecture to store them.
+        _generateQuiz();
+      }
     }
   }
 
@@ -45,10 +52,15 @@ class _SessionQuizScreenState extends State<SessionQuizScreen> {
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       );
 
+      final loc = Provider.of<LocalizationService>(context, listen: false);
+      final langName = loc.getLanguageName(loc.locale);
+
       final prompt = '''Generate exactly 6 multiple choice questions for:
 Subject: ${_session!.subject}
 Topic: ${_session!.topic}
 ${_session!.moduleName != null ? 'Module: ${_session!.moduleName}' : ''}
+
+IMPORTANT: The user targets the $langName language. Generate ALL questions, options, and explanations in $langName.
 
 Return a valid JSON array with exactly 6 objects. Each object must have:
 - "question": the question text
@@ -100,8 +112,9 @@ Return ONLY the JSON array, no extra text or markdown.''';
     final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
     if (uid == null || _planId == null || _session == null) return;
     try {
+      final loc = Provider.of<LocalizationService>(context, listen: false);
       await FirestoreService().updateSessionStatus(uid, _planId!, _session!.id, true);
-      await FirestoreService().updateSessionQuizCompleted(uid, _planId!, _session!.id, true);
+      await FirestoreService().updateSessionQuizCompleted(uid, _planId!, _session!.id, true, lang: loc.locale);
       await FirestoreService().updateStreak(uid);
     } catch (_) {}
   }
@@ -251,7 +264,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
-              child: Text(allAnswered ? 'Submit Quiz' : 'Answer all questions to submit'),
+              child: Text(allAnswered ? context.tr('submit_quiz') : context.tr('answer_all_questions_to_submit')),
             ),
           ),
         ),
@@ -287,7 +300,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
 
           // Result Title
           Text(
-            passed ? '🎉 Yayyy! You did it!' : '💪 Keep Going!',
+            passed ? context.tr('yayyy_you_did_it') : context.tr('keep_going'),
             style: TextStyle(color: AppTheme.primaryNavy, fontSize: 26, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 8),
@@ -315,7 +328,7 @@ Return ONLY the JSON array, no extra text or markdown.''';
                 Container(width: 1, height: 50, color: AppTheme.divider),
                 _scoreItem(context.tr('percentage'), '$percentage%', passed ? AppTheme.successGreen : AppTheme.warningAmber),
                 Container(width: 1, height: 50, color: AppTheme.divider),
-                _scoreItem(context.tr('status'), passed ? 'Passed' : 'Retry', passed ? AppTheme.successGreen : AppTheme.errorRed),
+                _scoreItem(context.tr('status'), passed ? context.tr('passed') : context.tr('retry'), passed ? AppTheme.successGreen : AppTheme.errorRed),
               ],
             ),
           ),

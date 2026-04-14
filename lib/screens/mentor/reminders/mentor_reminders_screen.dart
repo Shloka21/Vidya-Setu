@@ -33,22 +33,14 @@ class MentorRemindersScreen extends StatelessWidget {
         label: Text(context.tr('create_reminder'),
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
       ),
-      body: StreamBuilder<QuerySnapshot>(
+      body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: FirestoreService().mentorRemindersStream(uid),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final docs = snapshot.data?.docs ?? [];
-
-          // Sort manually since we aren't using an index
-          final reminders = docs.map((d) => d.data() as Map<String, dynamic>).toList();
-          reminders.sort((a, b) {
-            final aTime = (a['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now();
-            final bTime = (b['dateTime'] as Timestamp?)?.toDate() ?? DateTime.now();
-            return bTime.compareTo(aTime); // Descending
-          });
+          final reminders = snapshot.data ?? [];
 
           if (reminders.isEmpty) {
             return Center(
@@ -69,9 +61,14 @@ class MentorRemindersScreen extends StatelessWidget {
             itemBuilder: (context, index) {
               final r = reminders[index];
               final isRead = r['isCompleted'] == true;
-              final dateStr = r['dateTime'] != null
-                  ? DateFormat('MMM d, yyyy').format((r['dateTime'] as Timestamp).toDate())
-                  : 'Unknown';
+              String dateStr = 'Unknown';
+              try {
+                if (r['dateTime'] is Timestamp) {
+                  dateStr = DateFormat('MMM d, yyyy').format((r['dateTime'] as Timestamp).toDate());
+                } else if (r['dateTime'] is String) {
+                  dateStr = DateFormat('MMM d, yyyy').format(DateTime.parse(r['dateTime']));
+                }
+              } catch (_) {}
 
               final studentName = r['studentName'] as String? ?? 'Student';
               final initial = studentName.isNotEmpty ? studentName[0].toUpperCase() : 'S';

@@ -360,22 +360,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       text: context.tr('continue_with_google'),
                       onPressed: _googleSignIn,
                       isOutlined: true,
-                      icon: Icons.g_mobiledata_rounded,
+                      imageIcon: 'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
                       isLoading: auth.isLoading,
                     );
                   },
                 ),
                 SizedBox(height: 12),
 
-                // Phone sign in
-                AppButton(
-                  text: context.tr('continue_with_phone'),
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.phoneAuth);
-                  },
-                  isOutlined: true,
-                  icon: Icons.phone_rounded,
-                ),
                 SizedBox(height: 32),
 
                 // Sign up link
@@ -448,21 +439,37 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final auth =
-                  Provider.of<AuthProvider>(context, listen: false);
-              await auth.resetPassword(resetEmailController.text.trim());
+              final email = resetEmailController.text.trim();
+              if (email.isEmpty) return;
+              
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              final success = await auth.resetPassword(email);
+              
               if (context.mounted) {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(context.tr('password_reset_email_sent')),
-                    backgroundColor: AppTheme.successGreen,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                if (success) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(context.tr('password_reset_email_sent')),
+                      backgroundColor: AppTheme.successGreen,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(auth.error ?? 'Failed to send reset email'),
+                      backgroundColor: AppTheme.errorRed,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                }
               }
             },
             child: Text(context.tr('send_link')),

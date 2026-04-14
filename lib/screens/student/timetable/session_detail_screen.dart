@@ -39,6 +39,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (_session != null) {
         _generatedNotes = _session!.notes;
         _videoLinks = _session!.youtubeLinks.map((l) => {'title': l, 'url': l}).toList();
+        
+        // Initial adaptive translation check
+        _checkAdaptiveNotes();
+      }
+    }
+  }
+
+  Future<void> _checkAdaptiveNotes() async {
+    if (_session == null || _generatedNotes == null) return;
+    
+    final loc = Provider.of<LocalizationService>(context, listen: false);
+    final currentLocale = loc.locale;
+    final sourceLocale = _session!.notesLang;
+    
+    // If language mismatch detected, translate on-the-fly
+    if (sourceLocale != null && sourceLocale != currentLocale && currentLocale != 'en') {
+      final translated = await loc.translateDynamic(_generatedNotes!);
+      if (mounted) {
+        setState(() {
+          _generatedNotes = translated;
+        });
       }
     }
   }
@@ -53,13 +74,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       );
 
+      final loc = Provider.of<LocalizationService>(context, listen: false);
+      final langName = loc.getLanguageName(loc.locale);
+
       final prompt = '''Generate concise study notes for:
 Subject: ${_session!.subject}
 Topic: ${_session!.topic}
 ${_session!.moduleName != null ? 'Module: ${_session!.moduleName}' : ''}
 
+IMPORTANT: The user targets the $langName language. Generate ALL notes in $langName.
+
 Format as markdown with:
-# ${_session!.topic}
+# ${_session!.topic} (In $langName)
 
 ## Key Concepts
 - bullet points of main ideas
@@ -73,14 +99,14 @@ Format as markdown with:
 ## Quick Summary
 2-3 sentence summary
 
-Keep it concise and student-friendly.''';
+Keep it concise, student-friendly, and ENTIRELY in $langName.''';
 
       final response = await model.generateContent([Content.text(prompt)]);
       final notes = response.text ?? 'Could not generate notes.';
 
       final uid = Provider.of<AuthProvider>(context, listen: false).userModel?.uid;
       if (uid != null && _planId != null) {
-        await FirestoreService().updateSessionNotes(uid, _planId!, _session!.id, notes);
+        await FirestoreService().updateSessionNotes(uid, _planId!, _session!.id, notes, lang: loc.locale);
       }
 
       if (mounted) setState(() { _generatedNotes = notes; _loadingNotes = false; });
@@ -104,8 +130,12 @@ Keep it concise and student-friendly.''';
         apiKey: dotenv.env['GEMINI_API_KEY'] ?? '',
       );
 
+      final loc = Provider.of<LocalizationService>(context, listen: false);
+      final langName = loc.getLanguageName(loc.locale);
+
       final prompt = '''For the topic "${_session!.topic}" in subject "${_session!.subject}", 
 suggest 4 specific YouTube search queries that a student could use to find helpful tutorial videos.
+IMPORTANT: Respond in $langName.
 Return ONLY the search queries, one per line, no numbering or bullets.''';
 
       final response = await model.generateContent([Content.text(prompt)]);

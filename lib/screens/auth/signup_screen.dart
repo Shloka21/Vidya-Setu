@@ -427,7 +427,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       text: context.tr('continue_with_google'),
                       onPressed: _googleSignIn,
                       isOutlined: true,
-                      icon: Icons.g_mobiledata_rounded,
+                      imageIcon: 'https://www.gstatic.com/images/branding/product/2x/googleg_48dp.png',
                       isLoading: auth.isLoading,
                     );
                   },

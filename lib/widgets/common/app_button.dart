@@ -7,6 +7,7 @@ class AppButton extends StatelessWidget {
   final bool isLoading;
   final bool isOutlined;
   final IconData? icon;
+  final String? imageIcon;
   final Color? backgroundColor;
   final Color? textColor;
   final double? width;
@@ -20,6 +21,7 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
     this.isOutlined = false,
     this.icon,
+    this.imageIcon,
     this.backgroundColor,
     this.textColor,
     this.width,
@@ -81,13 +83,22 @@ class AppButton extends StatelessWidget {
       );
     }
 
-    if (icon != null) {
+    Widget? leading;
+    if (imageIcon != null) {
+      leading = imageIcon!.startsWith('http')
+          ? Image.network(imageIcon!, width: 22, height: 22)
+          : Image.asset(imageIcon!, width: 22, height: 22);
+    } else if (icon != null) {
+      leading = Icon(icon, size: 22, color: color);
+    }
+
+    if (leading != null) {
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 10),
+          leading,
+          const SizedBox(width: 12),
           Text(text),
         ],
       );

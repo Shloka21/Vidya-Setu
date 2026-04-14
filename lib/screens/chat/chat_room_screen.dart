@@ -88,16 +88,7 @@ class _ChatRoomScreenState extends State<ChatRoomScreen> {
       'type': 'text',
     });
 
-    // Write notification to receiver's subcollection
-    if (_otherUserId != null && _otherUserId!.isNotEmpty) {
-      _firestoreService.writeNotification(_otherUserId!, {
-        'type': 'chat',
-        'senderName': currentName,
-        'senderId': currentUid,
-        'message': sanitized.length > 100 ? '${sanitized.substring(0, 100)}...' : sanitized,
-        'roomId': _roomId,
-      });
-    }
+      // System message is sufficient, observers handle local notifications
 
     _messageController.clear();
   }

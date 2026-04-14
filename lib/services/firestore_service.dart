@@ -1,7 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'dart:async';
 import '../models/timetable_model.dart';
+import '../models/reminder_model.dart';
+import '../models/user_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -20,15 +24,24 @@ class FirestoreService {
     
     final data = doc.data() as Map<String, dynamic>;
     final updates = <String, dynamic>{};
+
+    // Role healing: crucial for leaderboard which filters by role='student'
+    if (data['role'] == null || data['role'] == '') updates['role'] = 'student';
     
+    // Gamification fields: crucial for orderBy which ignores docs with missing fields
     if (data['points'] == null) updates['points'] = 0;
     if (data['level'] == null) updates['level'] = 1;
     if (data['streak'] == null) updates['streak'] = 0;
     if (data['tasksCompleted'] == null) updates['tasksCompleted'] = 0;
     if (data['totalStudyHours'] == null) updates['totalStudyHours'] = 0.0;
+    if (data['lastStudyDate'] == null) updates['lastStudyDate'] = FieldValue.serverTimestamp();
     
     if (updates.isNotEmpty) {
+      debugPrint('--- Sync Debug ---');
+      debugPrint('Syncing user $uid with updates: $updates');
       await usersCollection.doc(uid).update(updates);
+      debugPrint('Sync complete.');
+      debugPrint('-------------------');
     }
   }
 
@@ -64,6 +77,12 @@ class FirestoreService {
     });
   }
 
+  Future<void> incrementStudyHours(String uid, double hours) async {
+    await usersCollection.doc(uid).update({
+      'totalStudyHours': FieldValue.increment(hours),
+    });
+  }
+
   Future<Map<String, dynamic>?> getUser(String uid) async {
     final doc = await usersCollection.doc(uid).get();
     return doc.data() as Map<String, dynamic>?;
@@ -87,7 +106,12 @@ class FirestoreService {
   }
 
   Future<void> deleteReminder(String userId, String reminderId) async {
+    // Try deleting from personal subcollection first
     await remindersCollection(userId).doc(reminderId).delete();
+    
+    // Also try deleting from feedback collection (no-op if not there)
+    // Mentors/Students can delete their own feedback/reminders depending on rules
+    await feedbackCollection.doc(reminderId).delete();
   }
 
   Stream<QuerySnapshot> remindersStream(String userId) {
@@ -96,10 +120,152 @@ class FirestoreService {
         .snapshots();
   }
 
-  Stream<QuerySnapshot> mentorRemindersStream(String mentorId) {
-    return _firestore.collectionGroup('reminders')
+  Stream<List<Map<String, dynamic>>> mentorRemindersStream(String mentorId) {
+    final controller = StreamController<List<Map<String, dynamic>>>();
+    final Map<String, StreamSubscription> subscriptions = {};
+    final Map<String, List<Map<String, dynamic>>> studentReminders = {};
+    StreamSubscription? sentRemindersSub;
+    List<Map<String, dynamic>> sentList = [];
+
+    void updateEmit() {
+      if (controller.isClosed) return;
+      final all = [...studentReminders.values.expand((element) => element), ...sentList];
+      // Sort by dateTime descending
+      all.sort((a, b) {
+        final aTime = (a['dateTime'] is Timestamp) ? (a['dateTime'] as Timestamp).toDate() : DateTime.tryParse(a['dateTime']?.toString() ?? '') ?? DateTime.now();
+        final bTime = (b['dateTime'] is Timestamp) ? (b['dateTime'] as Timestamp).toDate() : DateTime.tryParse(b['dateTime']?.toString() ?? '') ?? DateTime.now();
+        return bTime.compareTo(aTime);
+      });
+      controller.add(all);
+    }
+
+    // Listen to reminders assigned via feedback collection (new model)
+    sentRemindersSub = feedbackCollection
         .where('mentorId', isEqualTo: mentorId)
-        .snapshots(); 
+        .where('type', isEqualTo: 'mentor_reminder')
+        .snapshots()
+        .listen((snapshot) {
+      sentList = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return {...data, 'id': doc.id};
+      }).toList();
+      updateEmit();
+    });
+
+    // First listen to connections to know which students to track for personal reminders
+    final connectionsSub = mentorConnectionsStream(mentorId).listen((connSnapshot) {
+      final studentIds = connSnapshot.docs.map((doc) => doc['studentId'] as String).toSet();
+      
+      // Remove subscriptions for students no longer connected
+      final currentKeys = subscriptions.keys.toList();
+      for (final id in currentKeys) {
+        if (!studentIds.contains(id)) {
+          subscriptions[id]?.cancel();
+          subscriptions.remove(id);
+          studentReminders.remove(id);
+        }
+      }
+
+      // Add subscriptions for new students
+      for (final id in studentIds) {
+        if (!subscriptions.containsKey(id)) {
+          subscriptions[id] = remindersStream(id).listen((reminderSnapshot) {
+            studentReminders[id] = reminderSnapshot.docs
+                .map((d) {
+                  final data = d.data() as Map<String, dynamic>;
+                  return {...data, 'id': d.id};
+                })
+                .toList();
+            updateEmit();
+          });
+        }
+      }
+      
+      if (studentIds.isEmpty && sentList.isEmpty) {
+        studentReminders.clear();
+        updateEmit();
+      }
+    });
+
+    controller.onCancel = () {
+      connectionsSub.cancel();
+      sentRemindersSub?.cancel();
+      for (final sub in subscriptions.values) {
+        sub.cancel();
+      }
+    };
+
+    return controller.stream;
+  }
+
+  /// Merges personal reminders and mentor-assigned reminders (from feedback collection)
+  Stream<List<ReminderModel>> allRemindersStream(String userId) {
+    final controller = StreamController<List<ReminderModel>>();
+    
+    StreamSubscription? personalSub;
+    StreamSubscription? mentorSub;
+    
+    List<ReminderModel> personalList = [];
+    List<ReminderModel> mentorList = [];
+
+    void emit() {
+      if (controller.isClosed) return;
+      final combined = [...personalList, ...mentorList];
+      combined.sort((a, b) => a.dateTime.compareTo(b.dateTime));
+      controller.add(combined);
+    }
+
+    personalSub = remindersStream(userId).listen((snapshot) {
+      personalList = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return ReminderModel.fromMap({...data, 'id': doc.id});
+      }).toList();
+      emit();
+    }, onError: (e) => controller.addError(e));
+
+    mentorSub = feedbackForStudentStream(userId).listen((snapshot) {
+      mentorList = snapshot.docs
+          .where((doc) => (doc.data() as Map<String, dynamic>)['type'] == 'mentor_reminder')
+          .map((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return ReminderModel.fromMap({
+              ...data,
+              'id': doc.id,
+              'userId': userId,
+              'type': ReminderType.custom.name, // Will be displayed as mentor assigned
+              'createdByMentorId': data['mentorId'],
+            });
+          }).toList();
+      emit();
+    }, onError: (e) => controller.addError(e));
+
+    controller.onCancel = () {
+      personalSub?.cancel();
+      mentorSub?.cancel();
+    };
+
+    return controller.stream;
+  }
+
+  /// Recalculates and updates the totalStudyHours for a student based on all completed sessions
+  Future<void> syncTotalStudyHours(String userId) async {
+    final snapshots = await studyPlansCollection(userId).get();
+    double totalHours = 0.0;
+    
+    for (var doc in snapshots.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final sessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+      for (var s in sessions) {
+        if (s['isCompleted'] == true) {
+          final duration = (s['durationMinutes'] as num? ?? 0).toDouble();
+          totalHours += duration / 60.0;
+        }
+      }
+    }
+    
+    await usersCollection.doc(userId).update({
+      'totalStudyHours': totalHours,
+    });
   }
 
   // ─── Timetables ───────────────────────────────────────────
@@ -240,6 +406,15 @@ class FirestoreService {
     await feedbackCollection.doc(data['id']).set(data);
   }
 
+  /// Specialized method for mentors to assign reminders to students
+  /// (Stays in feedback collection to avoid permission errors on users/{uid}/reminders)
+  Future<void> assignReminderByMentor(String studentId, Map<String, dynamic> data) async {
+    data['type'] = 'mentor_reminder';
+    data['studentId'] = studentId;
+    data['createdAt'] = data['createdAt'] ?? Timestamp.now();
+    await sendFeedback(data);
+  }
+
   Stream<QuerySnapshot> feedbackForStudentStream(String studentId) {
     return feedbackCollection
         .where('studentId', isEqualTo: studentId)
@@ -273,9 +448,12 @@ class FirestoreService {
   }
 
   // ─── Search Mentors ───────────────────────────────────────
-  Future<QuerySnapshot> searchMentors({String? query}) async {
-    Query mentorQuery = usersCollection
-        .where('role', isEqualTo: 'mentor');
+  Future<QuerySnapshot> searchMentors({bool onlyAvailable = false}) async {
+    Query mentorQuery = usersCollection.where('role', isEqualTo: 'mentor');
+    
+    if (onlyAvailable) {
+      mentorQuery = mentorQuery.where('availableForNew', isEqualTo: true);
+    }
 
     return await mentorQuery.get();
   }
@@ -302,12 +480,8 @@ class FirestoreService {
         .get();
   }
 
-  Stream<QuerySnapshot> leaderboardStream({int limit = 50}) {
-    return usersCollection
-        .where('role', isEqualTo: 'student')
-        .orderBy('points', descending: true)
-        .limit(limit)
-        .snapshots();
+  Stream<QuerySnapshot> leaderboardStream() {
+    return usersCollection.snapshots();
   }
 
   // ─── Study Plans (Smart Timetable) ────────────────────────
@@ -339,17 +513,35 @@ class FirestoreService {
     if (!doc.exists) return;
     final data = doc.data() as Map<String, dynamic>;
     final sessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+    
+    double hoursToAdd = 0.0;
+    bool alreadyCompleted = false;
+
     for (var session in sessions) {
       if (session['id'] == sessionId) {
+        alreadyCompleted = session['isCompleted'] == true;
         session['isCompleted'] = completed;
+        
+        if (completed && !alreadyCompleted) {
+          // Marking as done for the first time
+          hoursToAdd = (session['durationMinutes'] as num? ?? 0).toDouble() / 60.0;
+        } else if (!completed && alreadyCompleted) {
+          // Unmarking as done
+          hoursToAdd = -((session['durationMinutes'] as num? ?? 0).toDouble() / 60.0);
+        }
         break;
       }
     }
+    
     await studyPlansCollection(userId).doc(planId).update({'sessions': sessions});
+    
+    if (hoursToAdd != 0) {
+      await incrementStudyHours(userId, hoursToAdd);
+    }
   }
 
   Future<void> updateSessionNotes(
-      String userId, String planId, String sessionId, String notes) async {
+      String userId, String planId, String sessionId, String notes, {String? lang}) async {
     final doc = await studyPlansCollection(userId).doc(planId).get();
     if (!doc.exists) return;
     final data = doc.data() as Map<String, dynamic>;
@@ -357,6 +549,7 @@ class FirestoreService {
     for (var session in sessions) {
       if (session['id'] == sessionId) {
         session['notes'] = notes;
+        if (lang != null) session['notesLang'] = lang;
         break;
       }
     }
@@ -364,19 +557,36 @@ class FirestoreService {
   }
 
   Future<void> updateSessionQuizCompleted(
-      String userId, String planId, String sessionId, bool completed) async {
+      String userId, String planId, String sessionId, bool completed, {String? lang}) async {
     final doc = await studyPlansCollection(userId).doc(planId).get();
     if (!doc.exists) return;
     final data = doc.data() as Map<String, dynamic>;
     final sessions = List<Map<String, dynamic>>.from(data['sessions'] ?? []);
+    
+    double hoursToAdd = 0.0;
+    bool alreadyCompleted = false;
+
     for (var session in sessions) {
       if (session['id'] == sessionId) {
+        alreadyCompleted = session['isCompleted'] == true;
         session['quizCompleted'] = completed;
         session['isCompleted'] = completed;
+        if (lang != null) session['quizLang'] = lang;
+        
+        if (completed && !alreadyCompleted) {
+          hoursToAdd = (session['durationMinutes'] as num? ?? 0).toDouble() / 60.0;
+        } else if (!completed && alreadyCompleted) {
+          hoursToAdd = -((session['durationMinutes'] as num? ?? 0).toDouble() / 60.0);
+        }
         break;
       }
     }
+    
     await studyPlansCollection(userId).doc(planId).update({'sessions': sessions});
+    
+    if (hoursToAdd != 0) {
+      await incrementStudyHours(userId, hoursToAdd);
+    }
   }
 
   Future<void> rescheduleSession(
@@ -401,13 +611,21 @@ class FirestoreService {
   }
 
   // ─── Dashboard Helpers ─────────────────────────────────────
-  Stream<QuerySnapshot> upcomingRemindersStream(String userId, {int limit = 3}) {
-    return remindersCollection(userId)
-        .where('dateTime', isGreaterThanOrEqualTo: Timestamp.now())
-        .where('status', isEqualTo: 'pending')
-        .orderBy('dateTime', descending: false)
-        .limit(limit)
-        .snapshots();
+  Stream<List<ReminderModel>> upcomingRemindersStream(String userId, {int limit = 3}) {
+    final controller = StreamController<List<ReminderModel>>();
+    
+    StreamSubscription? sub;
+    sub = allRemindersStream(userId).listen((list) {
+      final now = DateTime.now();
+      final upcoming = list
+          .where((r) => r.dateTime.isAfter(now) && r.status == ReminderStatus.pending)
+          .take(limit)
+          .toList();
+      controller.add(upcoming);
+    }, onError: (e) => controller.addError(e));
+
+    controller.onCancel = () => sub?.cancel();
+    return controller.stream;
   }
 
   Future<List<Map<String, dynamic>>> getConnectedStudents(String mentorId) async {
@@ -525,62 +743,64 @@ class FirestoreService {
         .snapshots();
   }
 
-  // ─── In-App Notifications ─────────────────────────────────
-  CollectionReference userNotificationsCollection(String userId) =>
-      usersCollection.doc(userId).collection('notifications');
+  // ─── In-App Notifications (No-op Placeholder) ───────────
+  // These are now handled via stream observation in the dashboards.
+  Future<void> writeNotification(String userId, Map<String, dynamic> data) async {}
 
-  /// Write a notification to a user's notification subcollection
-  Future<void> writeNotification(String userId, Map<String, dynamic> data) async {
-    final id = data['id'] ?? _firestore.collection('_').doc().id;
-    data['id'] = id;
-    data['createdAt'] = data['createdAt'] ?? Timestamp.now();
-    data['read'] = false;
-    await userNotificationsCollection(userId).doc(id).set(data);
-  }
-
-  /// Stream unread notifications for a user
-  Stream<QuerySnapshot> unreadNotificationsStream(String userId) {
-    return userNotificationsCollection(userId)
-        .where('read', isEqualTo: false)
-        .orderBy('createdAt', descending: true)
-        .limit(20)
-        .snapshots();
-  }
-
-  /// Mark a notification as read
-  Future<void> markNotificationRead(String userId, String notificationId) async {
-    await userNotificationsCollection(userId).doc(notificationId).update({'read': true});
-  }
-
-  /// Mark all notifications as read
-  Future<void> markAllNotificationsRead(String userId) async {
-    final snapshot = await userNotificationsCollection(userId)
-        .where('read', isEqualTo: false)
-        .get();
-    final batch = _firestore.batch();
-    for (final doc in snapshot.docs) {
-      batch.update(doc.reference, {'read': true});
+  /// Acknowledge mentor feedback and notify mentor
+  Future<void> acknowledgeFeedback(String feedbackId, String mentorId, String studentName) async {
+    try {
+      await feedbackCollection.doc(feedbackId).update({
+        'acknowledged': true,
+        'acknowledgedAt': Timestamp.now(),
+      });
+    } catch (e) {
+      debugPrint('Warning: Could not update feedback doc status: $e');
+      // If update fails (permission), we still proceed to notify the mentor via a new doc
     }
-    await batch.commit();
+
+    // Notify mentor - creating a document in their requests/notifs area
+    // Since mentors have a dedicated connection area, we'll put it there or a shared notifs collection
+    // For now, satisfy the "notify mentor" requirement by adding to a shared notifications system
+    // or updating the connection status. We'll add a 'feedback_acknowledged' document to the 
+    // root 'feedback' collection specifically formatted for the mentor to see.
+    
+    await feedbackCollection.add({
+      'mentorId': mentorId,
+      'type': 'acknowledgement',
+      'title': 'Feedback Acknowledged',
+      'content': '$studentName has acknowledged your feedback.',
+      'studentName': studentName,
+      'createdAt': Timestamp.now(),
+      'isPositive': true,
+    });
   }
 
   // ─── Leaderboard (extended) ───────────────────────────────
   /// Get user's rank even if they're not in the top N
   Future<Map<String, dynamic>?> getUserRankData(String userId) async {
-    final userDoc = await usersCollection.doc(userId).get();
-    if (!userDoc.exists) return null;
-    final userData = userDoc.data() as Map<String, dynamic>;
-    final userPoints = userData['points'] ?? 0;
+    try {
+      final userDoc = await usersCollection.doc(userId).get();
+      if (!userDoc.exists) return null;
+      
+      final userData = userDoc.data() as Map<String, dynamic>;
+      userData['uid'] = userDoc.id; // Ensure consistency
+      
+      final userPoints = (userData['points'] ?? 0) as int;
 
-    // Count how many students have more points
-    final higherRanked = await usersCollection
-        .where('role', isEqualTo: 'student')
-        .where('points', isGreaterThan: userPoints)
-        .count()
-        .get();
+      // Count how many users have more points
+      final higherRankedQuery = usersCollection
+          .where('points', isGreaterThan: userPoints);
+      
+      final countSnapshot = await higherRankedQuery.count().get();
+      final higherCount = countSnapshot.count ?? 0;
 
-    userData['rank'] = (higherRanked.count ?? 0) + 1;
-    return userData;
+      userData['rank'] = higherCount + 1;
+      return userData;
+    } catch (e) {
+      debugPrint('Error fetching rank data: $e');
+      return null;
+    }
   }
 }
 
